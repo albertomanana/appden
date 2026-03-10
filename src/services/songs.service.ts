@@ -5,7 +5,8 @@ import type { SongFormData } from '@lib/validators'
 
 export const songsService = {
     /**
-     * Fetch all songs for a group, joining uploader profile and favorite status for a user.
+     * Fetch all songs for a group, joining uploader profile and favorite status.
+     * Generates fresh signed URLs for each song on fetch.
      */
     async getSongs(groupId: string, userId: string): Promise<Song[]> {
         const { data, error } = await supabase
@@ -20,10 +21,101 @@ export const songsService = {
 
         if (error) throw error
 
-        return (data ?? []).map((song: Song & { favorites?: { user_id: string }[] }) => ({
-            ...song,
-            is_favorite: song.favorites?.some((f) => f.user_id === userId) ?? false,
-        }))
+        // Generate fresh signed URLs for all songs
+        const songsWithUrls = await Promise.all(
+            (data ?? []).map(async (song: any) => {
+                let audioUrl = song.audio_url
+                let coverUrl = song.cover_url
+
+                // Re-generate signed URL for audio
+                if (audioUrl) {
+                    try {
+                        const pathMatch = audioUrl.match(/audio\/([^/?]+\/[^/?]+)/)
+                        const path = pathMatch ? pathMatch[1] : audioUrl
+                        const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
+                        if (signed) audioUrl = signed
+                    } catch (err) {
+                        console.warn('Failed to sign audio URL:', err)
+                    }
+                }
+
+                // Re-generate signed URL for cover
+                if (coverUrl) {
+                    try {
+                        const pathMatch = coverUrl.match(/covers\/([^/?]+\/[^/?]+)/)
+                        const path = pathMatch ? pathMatch[1] : coverUrl
+                        const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, path)
+                        if (signed) coverUrl = signed
+                    } catch (err) {
+                        console.warn('Failed to sign cover URL:', err)
+                    }
+                }
+
+                return {
+                    ...song,
+                    audio_url: audioUrl,
+                    cover_url: coverUrl,
+                    is_favorite: song.favorites?.some((f: any) => f.user_id === userId) ?? false,
+                }
+            })
+        )
+
+        return songsWithUrls as Song[]
+    },
+
+    /**
+     * Get all songs by a specific artist/user
+     */
+    async getSongsByArtist(artistId: string, userId: string): Promise<Song[]> {
+        const { data, error } = await supabase
+            .from('songs')
+            .select(`
+        *,
+        uploader:profiles!songs_uploaded_by_fkey(id, display_name, avatar_url),
+        favorites!left(id, user_id)
+      `)
+            .eq('uploaded_by', artistId)
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        const songsWithUrls = await Promise.all(
+            (data ?? []).map(async (song: any) => {
+                let audioUrl = song.audio_url
+                let coverUrl = song.cover_url
+
+                if (audioUrl) {
+                    try {
+                        const pathMatch = audioUrl.match(/audio\/([^/?]+\/[^/?]+)/)
+                        const path = pathMatch ? pathMatch[1] : audioUrl
+                        const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
+                        if (signed) audioUrl = signed
+                    } catch (err) {
+                        console.warn('Failed to sign audio URL:', err)
+                    }
+                }
+
+                if (coverUrl) {
+                    try {
+                        const pathMatch = coverUrl.match(/covers\/([^/?]+\/[^/?]+)/)
+                        const path = pathMatch ? pathMatch[1] : coverUrl
+                        const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, path)
+                        if (signed) coverUrl = signed
+                    } catch (err) {
+                        console.warn('Failed to sign cover URL:', err)
+                    }
+                }
+
+                return {
+                    ...song,
+                    audio_url: audioUrl,
+                    cover_url: coverUrl,
+                    is_favorite: song.favorites?.some((f: any) => f.user_id === userId) ?? false,
+                }
+            })
+        )
+
+        return songsWithUrls as Song[]
     },
 
     /**
@@ -42,15 +134,42 @@ export const songsService = {
 
         if (error) throw error
 
+        let audioUrl = data.audio_url
+        let coverUrl = data.cover_url
+
+        if (audioUrl) {
+            try {
+                const pathMatch = audioUrl.match(/audio\/([^/?]+\/[^/?]+)/)
+                const path = pathMatch ? pathMatch[1] : audioUrl
+                const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
+                if (signed) audioUrl = signed
+            } catch (err) {
+                console.warn('Failed to sign audio URL:', err)
+            }
+        }
+
+        if (coverUrl) {
+            try {
+                const pathMatch = coverUrl.match(/covers\/([^/?]+\/[^/?]+)/)
+                const path = pathMatch ? pathMatch[1] : coverUrl
+                const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, path)
+                if (signed) coverUrl = signed
+            } catch (err) {
+                console.warn('Failed to sign cover URL:', err)
+            }
+        }
+
         return {
             ...data,
+            audio_url: audioUrl,
+            cover_url: coverUrl,
             is_favorite: (data.favorites as { user_id: string }[])?.some((f) => f.user_id === userId) ?? false,
         } as Song
     },
 
     /**
      * Upload a song audio file + optional cover image.
-     * Saves metadata and returns the new song record.
+     * Saves metadata with storage paths only (not signed URLs).
      * Automatically extracts audio duration.
      */
     async uploadSong(
@@ -69,29 +188,28 @@ export const songsService = {
         }
 
         // Upload audio
-        const audioPath = generateStoragePath('audio', groupId, audioFile.name)
+        const audioPath = generateStoragePath('audio', userId, audioFile.name)
         const { error: audioError } = await supabase.storage
             .from(STORAGE_BUCKETS.SONGS)
             .upload(audioPath, audioFile, { cacheControl: '3600', upsert: false })
 
         if (audioError) throw audioError
 
-        const audioUrl = getStorageUrl(STORAGE_BUCKETS.SONGS, audioPath)!
-
         // Upload cover (optional)
-        let coverUrl: string | null = null
+        let coverPath: string | null = null
         if (coverFile) {
-            const coverPath = generateStoragePath('covers', groupId, coverFile.name)
+            coverPath = generateStoragePath('covers', userId, coverFile.name)
             const { error: coverError } = await supabase.storage
                 .from(STORAGE_BUCKETS.SONG_COVERS)
                 .upload(coverPath, coverFile, { cacheControl: '3600', upsert: false })
 
-            if (!coverError) {
-                coverUrl = getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, coverPath)
+            if (coverError) {
+                console.warn('Failed to upload cover:', coverError)
+                coverPath = null
             }
         }
 
-        // Save metadata
+        // Save metadata with storage paths (not signed URLs)
         const { data, error } = await supabase
             .from('songs')
             .insert({
@@ -100,8 +218,8 @@ export const songsService = {
                 title: metadata.title,
                 artist_name: metadata.artist_name,
                 album_name: metadata.album_name || null,
-                cover_url: coverUrl,
-                audio_url: audioUrl,
+                cover_url: coverPath, // Store path, not signed URL
+                audio_url: audioPath, // Store path, not signed URL
                 duration_seconds: duration,
                 file_size: audioFile.size,
                 mime_type: audioFile.type,
@@ -110,7 +228,32 @@ export const songsService = {
             .single()
 
         if (error) throw error
-        return data as Song
+
+        // Generate signed URLs for response
+        let responseAudioUrl = data.audio_url
+        let responseCoverUrl = data.cover_url
+
+        try {
+            const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, audioPath)
+            if (signed) responseAudioUrl = signed
+        } catch (err) {
+            console.warn('Failed to sign audio URL:', err)
+        }
+
+        if (responseCoverUrl) {
+            try {
+                const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, coverPath!)
+                if (signed) responseCoverUrl = signed
+            } catch (err) {
+                console.warn('Failed to sign cover URL:', err)
+            }
+        }
+
+        return {
+            ...data,
+            audio_url: responseAudioUrl,
+            cover_url: responseCoverUrl,
+        } as Song
     },
 
     /**
@@ -120,6 +263,24 @@ export const songsService = {
     async deleteSong(songId: string): Promise<void> {
         const { error } = await supabase.from('songs').delete().eq('id', songId)
         if (error) throw error
-        // Storage cleanup is handled by a DB trigger or bucket lifecycle policy
+    },
+
+    /**
+     * Update song metadata (title, artist, album).
+     * Only the uploader can update.
+     */
+    async updateSong(
+        songId: string,
+        data: Partial<{ title: string; artist_name: string; album_name: string | null }>
+    ): Promise<Song> {
+        const { data: updated, error } = await supabase
+            .from('songs')
+            .update(data)
+            .eq('id', songId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return updated as Song
     },
 }

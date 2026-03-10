@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react'
 import { usePlayerStore } from '@app/store/player.store'
-import { Avatar } from '@components/common/Avatar'
 import { formatDuration } from '@lib/utils'
 import {
     Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
@@ -33,15 +32,22 @@ export const MusicPlayer: React.FC = () => {
     // Sync audio src when song changes
     useEffect(() => {
         const audio = audioRef.current
-        if (!audio || !currentSong) return
+        if (!audio || !currentSong?.audio_url) return
+
         audio.src = currentSong.audio_url
         audio.volume = volume
         audio.muted = isMuted
+        audio.currentTime = 0
+        setCurrentTime(0)
+        setDuration(0)
+
         if (isPlaying) {
-            void audio.play()
+            void audio.play().catch((err) => {
+                console.error('Failed to play:', err)
+                setPlaying(false)
+            })
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentSong?.id])
+    }, [currentSong?.id, currentSong?.audio_url, isPlaying, volume, isMuted, setCurrentTime, setDuration, setPlaying])
 
     // Sync play/pause with store
     useEffect(() => {
@@ -65,8 +71,9 @@ export const MusicPlayer: React.FC = () => {
     }
 
     const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setVolume(parseFloat(e.target.value))
-        if (audioRef.current) audioRef.current.volume = parseFloat(e.target.value)
+        const newVolume = parseFloat(e.target.value)
+        setVolume(newVolume)
+        if (audioRef.current) audioRef.current.volume = newVolume
     }
 
     return (
@@ -87,6 +94,7 @@ export const MusicPlayer: React.FC = () => {
                 onPlay={() => setPlaying(true)}
                 onPause={() => setPlaying(false)}
                 preload="auto"
+                crossOrigin="anonymous"
             />
 
             {/* Player bar */}

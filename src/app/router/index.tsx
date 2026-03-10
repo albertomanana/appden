@@ -9,6 +9,7 @@ const RegisterPage = React.lazy(() => import('@pages/auth/RegisterPage'))
 const ResetPasswordPage = React.lazy(() => import('@pages/auth/ResetPasswordPage'))
 const DashboardPage = React.lazy(() => import('@pages/DashboardPage'))
 const ProfilePage = React.lazy(() => import('@pages/profile/ProfilePage'))
+const ArtistProfilePage = React.lazy(() => import('@pages/ArtistProfilePage'))
 const MusicPage = React.lazy(() => import('@pages/music/MusicPage'))
 const SongDetailPage = React.lazy(() => import('@pages/music/SongDetailPage'))
 const PlaylistsPage = React.lazy(() => import('@pages/playlists/PlaylistsPage'))
@@ -48,7 +49,7 @@ export const AppRouter: React.FC = () => (
                 >
                     <Route index element={<DashboardPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/profile/:id" element={<ProfilePage />} />
+                    <Route path="/profile/:id" element={<ArtistProfilePage />} />
                     <Route path="/groups" element={<GroupsPage />} />
                     <Route path="/groups/:groupId" element={<GroupDetailPage />} />
                     <Route path="/notifications" element={<NotificationsPage />} />

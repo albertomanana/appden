@@ -5,6 +5,7 @@ import { groupsService } from '@services/groups.service'
 import { GroupForm, type GroupFormData } from '@components/groups/GroupForm'
 import { GroupCard } from '@components/groups/GroupCard'
 import { EmptyState } from '@components/ui/EmptyState'
+import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { useNotifications } from '@hooks/useNotifications'
 import type { Group } from '@/types'
 
@@ -136,10 +137,15 @@ export default function GroupsPage() {
                     icon="Users"
                     title="No groups yet"
                     description="Create a group to start sharing music and managing debts with your friends"
-                    action={{
-                        label: 'Create Group',
-                        onClick: () => setShowForm(true),
-                    }}
+                    action={
+                        <button
+                            onClick={() => setShowForm(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors"
+                        >
+                            <Plus size={20} />
+                            Create Group
+                        </button>
+                    }
                 />
             ) : (
                 <div className="grid gap-3">

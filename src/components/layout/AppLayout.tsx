@@ -2,7 +2,7 @@ import React from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from '@components/layout/Navigation'
 import { BottomNav } from '@components/layout/Navigation'
-import { MusicPlayer } from '@components/music/MusicPlayer'
+import { SpotifyMusicPlayer } from '@components/music/SpotifyMusicPlayer'
 import { usePlayerStore } from '@app/store/player.store'
 
 /**
@@ -23,7 +23,7 @@ export const AppLayout: React.FC = () => {
             <main
                 className={`flex-1 flex flex-col min-h-screen overflow-y-auto
           pb-safe
-          ${hasPlayer ? 'pb-36 md:pb-24' : 'pb-20 md:pb-0'}
+          ${hasPlayer ? 'pb-36 md:pb-28' : 'pb-20 md:pb-0'}
         `}
             >
                 <Outlet />
@@ -32,8 +32,8 @@ export const AppLayout: React.FC = () => {
             {/* Mobile bottom navigation */}
             <BottomNav />
 
-            {/* Global music player - floats above bottom nav */}
-            <MusicPlayer />
+            {/* Global Spotify-style music player */}
+            <SpotifyMusicPlayer />
         </div>
     )
 }

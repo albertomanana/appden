@@ -1,14 +1,16 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { X, Upload, Music, Image } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { songsService } from '@services/songs.service'
+import { groupsService } from '@services/groups.service'
 import { songSchema, validateAudioFile, validateImageFile, type SongFormData } from '@lib/validators'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { useToast } from '@components/ui/Toast'
 import { formatBytes } from '@lib/utils'
+import type { GroupMember } from '@/types'
 
 interface SongUploadFormProps {
     onClose: () => void
@@ -25,12 +27,25 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
     const [coverFile, setCoverFile] = useState<File | null>(null)
     const [audioError, setAudioError] = useState<string | null>(null)
     const [coverError, setCoverError] = useState<string | null>(null)
+    const [members, setMembers] = useState<GroupMember[]>([])
+    const [useCustomArtist, setUseCustomArtist] = useState(false)
     const audioInputRef = useRef<HTMLInputElement>(null)
     const coverInputRef = useRef<HTMLInputElement>(null)
 
-    const { register, handleSubmit, formState: { errors } } = useForm<SongFormData>({
+    const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<SongFormData>({
         resolver: zodResolver(songSchema),
     })
+
+    const artistValue = watch('artist_name')
+
+    // Load group members
+    useEffect(() => {
+        if (groupId) {
+            groupsService.getGroupMembers(groupId)
+                .then(setMembers)
+                .catch(() => setMembers([]))
+        }
+    }, [groupId])
 
     const { mutate: upload, isPending } = useMutation({
         mutationFn: async (data: SongFormData) => {
@@ -66,10 +81,15 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
         setCoverFile(file)
     }
 
+    const handleSelectMember = (displayName: string) => {
+        setValue('artist_name', displayName)
+        setUseCustomArtist(false)
+    }
+
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-full sm:max-w-md card rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up">
+            <div className="relative w-full sm:max-w-md card rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-lg font-bold text-white">Subir canción</h2>
@@ -104,7 +124,7 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
                             </div>
                             <Upload className="w-4 h-4 text-gray-500 flex-shrink-0" />
                         </button>
-                        <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={handleAudioChange} />
+                        <input ref={audioInputRef} type="file" accept="audio/*,.mp4,.mov" className="hidden" onChange={handleAudioChange} />
                         {audioError && <p className="text-xs text-red-400 mt-1">{audioError}</p>}
                     </div>
 
@@ -143,10 +163,74 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
                         {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title.message}</p>}
                     </div>
 
-                    {/* Artist */}
+                    {/* Artist - with member selector */}
                     <div>
-                        <label className="label" htmlFor="artist_name">Artista *</label>
-                        <input id="artist_name" type="text" placeholder="Nombre del artista" className={`input ${errors.artist_name ? 'border-red-500' : ''}`} {...register('artist_name')} />
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="label" htmlFor="artist_name">Artista *</label>
+                            {!useCustomArtist && (
+                                <button
+                                    type="button"
+                                    onClick={() => setUseCustomArtist(true)}
+                                    className="text-xs text-brand-400 hover:text-brand-300 transition-colors"
+                                >
+                                    + Otro
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Member selector */}
+                        {!useCustomArtist && members.length > 0 && (
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                                {members.map((member) => (
+                                    <button
+                                        key={member.user_id}
+                                        type="button"
+                                        onClick={() => handleSelectMember(member.profile?.display_name || 'Unknown')}
+                                        className={`text-xs p-2 rounded-lg transition-colors ${
+                                            artistValue === member.profile?.display_name
+                                                ? 'bg-brand-500 text-white'
+                                                : 'bg-surface-600 text-gray-300 hover:bg-surface-500'
+                                        }`}
+                                    >
+                                        {member.profile?.display_name || 'Unknown'}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Custom artist input */}
+                        {useCustomArtist && (
+                            <div className="mb-3">
+                                <input
+                                    id="artist_name"
+                                    type="text"
+                                    placeholder="Nombre del artista"
+                                    className={`input ${errors.artist_name ? 'border-red-500' : ''}`}
+                                    {...register('artist_name')}
+                                />
+                                {members.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setUseCustomArtist(false)}
+                                        className="text-xs text-brand-400 hover:text-brand-300 transition-colors mt-2"
+                                    >
+                                        ← Seleccionar del grupo
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Default input if no custom mode */}
+                        {!useCustomArtist && !artistValue && (
+                            <input
+                                id="artist_name"
+                                type="text"
+                                placeholder="Nombre del artista"
+                                className={`input ${errors.artist_name ? 'border-red-500' : ''}`}
+                                {...register('artist_name')}
+                            />
+                        )}
+
                         {errors.artist_name && <p className="text-xs text-red-400 mt-1">{errors.artist_name.message}</p>}
                     </div>
 

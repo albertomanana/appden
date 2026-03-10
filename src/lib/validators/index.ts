@@ -98,8 +98,13 @@ export const fileSchema = z.object({
 // ── File input validation helpers ────────────────────────────
 
 export function validateAudioFile(file: File): string | null {
-    if (!ALLOWED_AUDIO_TYPES.includes(file.type)) {
-        return 'Formato de audio no permitido. Usa MP3, MP4, OGG, WAV o FLAC.'
+    // Be flexible with MIME types - some files detected incorrectly by browser
+    const isAudioLike = file.type.startsWith('audio/') ||
+                        file.type.startsWith('video/') ||
+                        ALLOWED_AUDIO_TYPES.includes(file.type)
+
+    if (!isAudioLike) {
+        return 'Formato de audio no permitido. Usa MP3, MP4, OGG, WAV, FLAC, WebM o AAC.'
     }
     if (file.size > MAX_AUDIO_SIZE) {
         return 'El archivo supera el límite de 50 MB.'

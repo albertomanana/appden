@@ -34,14 +34,24 @@ export const STORAGE_BUCKETS = {
 } as const
 
 /**
- * Get a public URL for a file in a Supabase Storage bucket.
- * Returns null if the path is null/undefined.
+ * Get a signed URL for a file in a Supabase Storage bucket.
+ * Signed URLs are valid for 1 hour and work even with restricted access.
  */
-export function getStorageUrl(
+export async function getStorageUrl(
     bucket: string,
     path: string | null | undefined
-): string | null {
+): Promise<string | null> {
     if (!path) return null
-    const { data } = supabase.storage.from(bucket).getPublicUrl(path)
-    return data.publicUrl
+    try {
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(path, 3600) // 1 hour validity
+
+        if (error) throw error
+        return data.signedUrl
+    } catch {
+        // Fallback to public URL if signed URL fails
+        if (!supabaseUrl) return null
+        return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+    }
 }

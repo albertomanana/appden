@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Plus, Music, Search, Upload, Play } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
@@ -7,13 +7,16 @@ import { songsService } from '@services/songs.service'
 import { usePlayerStore } from '@app/store/player.store'
 import { SongCard } from '@components/music/SongCard'
 import { SongUploadForm } from '@components/music/SongUploadForm'
+import { EditSongForm } from '@components/music/EditSongForm'
 import { EmptyState } from '@components/ui/EmptyState'
 import { ListSkeleton } from '@components/ui/LoadingSkeleton'
+import type { Song } from '@/types'
 
 const MusicPage: React.FC = () => {
     const { userId } = useAuth()
     const { groupId, hasGroup } = useActiveGroup()
     const [showUpload, setShowUpload] = useState(false)
+    const [editingSong, setEditingSong] = useState<Song | null>(null)
     const [search, setSearch] = useState('')
     const setQueue = usePlayerStore((s) => s.setQueue)
 
@@ -100,6 +103,7 @@ const MusicPage: React.FC = () => {
                             key={song.id}
                             song={song}
                             onPlay={() => setQueue(filtered, idx)}
+                            onEdit={() => setEditingSong(song)}
                         />
                     ))}
                 </div>
@@ -109,8 +113,14 @@ const MusicPage: React.FC = () => {
             {showUpload && (
                 <SongUploadForm onClose={() => setShowUpload(false)} />
             )}
+
+            {/* Edit modal */}
+            {editingSong && (
+                <EditSongForm song={editingSong} onClose={() => setEditingSong(null)} />
+            )}
         </div>
     )
 }
 
 export default MusicPage
+

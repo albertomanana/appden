@@ -19,6 +19,8 @@ export const ALLOWED_AUDIO_TYPES = [
     'audio/webm',
     'audio/flac',
     'audio/aac',
+    'video/mp4', // Allow video/mp4 for audio files saved as .mp4
+    'video/quicktime', // MOV files
 ]
 
 export const ALLOWED_IMAGE_TYPES = [

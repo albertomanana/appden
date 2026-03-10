@@ -4,6 +4,7 @@ import { ArrowLeft, AlertCircle, CopyIcon } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { groupsService } from '@services/groups.service'
 import { GroupMemberList } from '@components/groups/GroupMemberList'
+import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { ConfirmDialog } from '@components/ui/ConfirmDialog'
 import { useNotifications } from '@hooks/useNotifications'
 import type { Group, GroupMember } from '@/types'
@@ -204,8 +205,8 @@ export default function GroupDetailPage() {
             <ConfirmDialog
                 isOpen={showDeleteDialog}
                 title="Delete Group"
-                message={`Are you sure you want to delete "${group.name}"? This action cannot be undone.`}
-                isDangerous
+                description={`Are you sure you want to delete "${group.name}"? This action cannot be undone.`}
+                variant="danger"
                 isLoading={isDeleting}
                 onConfirm={handleDeleteGroup}
                 onCancel={() => setShowDeleteDialog(false)}
