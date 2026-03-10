@@ -30,24 +30,30 @@ export const songsService = {
                 // Re-generate signed URL for audio
                 if (audioUrl) {
                     try {
-                        const pathMatch = audioUrl.match(/audio\/([^/?]+\/[^/?]+)/)
-                        const path = pathMatch ? pathMatch[1] : audioUrl
+                        // Clean prefix if exists (stored as "audio/userId/filename")
+                        const path = audioUrl.startsWith('audio/')
+                            ? audioUrl.replace(/^audio\//, '')
+                            : audioUrl
+                        console.log('[Songs] Signing audio URL, path:', path)
                         const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
                         if (signed) audioUrl = signed
                     } catch (err) {
-                        console.warn('Failed to sign audio URL:', err)
+                        console.warn('[Songs] Failed to sign audio URL:', err)
                     }
                 }
 
                 // Re-generate signed URL for cover
                 if (coverUrl) {
                     try {
-                        const pathMatch = coverUrl.match(/covers\/([^/?]+\/[^/?]+)/)
-                        const path = pathMatch ? pathMatch[1] : coverUrl
+                        // Clean prefix if exists (stored as "covers/userId/filename")
+                        const path = coverUrl.startsWith('covers/')
+                            ? coverUrl.replace(/^covers\//, '')
+                            : coverUrl
+                        console.log('[Songs] Signing cover URL, path:', path)
                         const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, path)
                         if (signed) coverUrl = signed
                     } catch (err) {
-                        console.warn('Failed to sign cover URL:', err)
+                        console.warn('[Songs] Failed to sign cover URL:', err)
                     }
                 }
 
@@ -86,23 +92,25 @@ export const songsService = {
 
                 if (audioUrl) {
                     try {
-                        const pathMatch = audioUrl.match(/audio\/([^/?]+\/[^/?]+)/)
-                        const path = pathMatch ? pathMatch[1] : audioUrl
+                        const path = audioUrl.startsWith('audio/')
+                            ? audioUrl.replace(/^audio\//, '')
+                            : audioUrl
                         const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
                         if (signed) audioUrl = signed
                     } catch (err) {
-                        console.warn('Failed to sign audio URL:', err)
+                        console.warn('[Songs] Failed to sign audio URL:', err)
                     }
                 }
 
                 if (coverUrl) {
                     try {
-                        const pathMatch = coverUrl.match(/covers\/([^/?]+\/[^/?]+)/)
-                        const path = pathMatch ? pathMatch[1] : coverUrl
+                        const path = coverUrl.startsWith('covers/')
+                            ? coverUrl.replace(/^covers\//, '')
+                            : coverUrl
                         const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, path)
                         if (signed) coverUrl = signed
                     } catch (err) {
-                        console.warn('Failed to sign cover URL:', err)
+                        console.warn('[Songs] Failed to sign cover URL:', err)
                     }
                 }
 
@@ -139,23 +147,25 @@ export const songsService = {
 
         if (audioUrl) {
             try {
-                const pathMatch = audioUrl.match(/audio\/([^/?]+\/[^/?]+)/)
-                const path = pathMatch ? pathMatch[1] : audioUrl
+                const path = audioUrl.startsWith('audio/')
+                    ? audioUrl.replace(/^audio\//, '')
+                    : audioUrl
                 const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
                 if (signed) audioUrl = signed
             } catch (err) {
-                console.warn('Failed to sign audio URL:', err)
+                console.warn('[Songs] Failed to sign audio URL:', err)
             }
         }
 
         if (coverUrl) {
             try {
-                const pathMatch = coverUrl.match(/covers\/([^/?]+\/[^/?]+)/)
-                const path = pathMatch ? pathMatch[1] : coverUrl
+                const path = coverUrl.startsWith('covers/')
+                    ? coverUrl.replace(/^covers\//, '')
+                    : coverUrl
                 const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, path)
                 if (signed) coverUrl = signed
             } catch (err) {
-                console.warn('Failed to sign cover URL:', err)
+                console.warn('[Songs] Failed to sign cover URL:', err)
             }
         }
 
