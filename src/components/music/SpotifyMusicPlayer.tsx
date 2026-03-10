@@ -11,6 +11,7 @@ import { cn } from '@lib/utils'
 
 /**
  * Premium Spotify-style music player
+ * Handles all audio playback, volume, seek, and queue management
  */
 export const SpotifyMusicPlayer: React.FC = () => {
     const {
@@ -24,28 +25,49 @@ export const SpotifyMusicPlayer: React.FC = () => {
     const audioRef = useRef<HTMLAudioElement>(null)
     const [isExpanded, setIsExpanded] = useState(false)
 
-    // Register audio ref
+    // Register audio ref on mount
     useEffect(() => {
-        setAudioRef(audioRef.current)
-    }, [setAudioRef])
+        if (audioRef.current) {
+            console.log('[Player] Registering audio ref')
+            setAudioRef(audioRef.current)
+        }
+    }, [])
 
-    // Sync audio when song changes
+    // Load new song when song changes
     useEffect(() => {
         const audio = audioRef.current
-        if (!audio || !currentSong?.audio_url) return
-
-        console.log('Loading audio:', currentSong.audio_url)
-        audio.src = currentSong.audio_url
-        audio.volume = isMuted ? 0 : volume
-        audio.currentTime = 0
-
-        if (isPlaying) {
-            audio.play().catch((err) => {
-                console.error('Play failed:', err)
-                setPlaying(false)
-            })
+        if (!audio || !currentSong?.audio_url) {
+            console.log('[Player] No audio element or song URL')
+            return
         }
-    }, [currentSong?.id, currentSong?.audio_url])
+
+        console.log('[Player] Loading song:', {
+            title: currentSong.title,
+            artist: currentSong.artist_name,
+            url: currentSong.audio_url?.substring(0, 50) + '...',
+        })
+
+        // Set source
+        audio.src = currentSong.audio_url
+        audio.load()
+
+        // Auto-play if should be playing
+        if (isPlaying) {
+            const playPromise = audio.play()
+            if (playPromise) {
+                playPromise.catch((err: Error) => {
+                    console.error('[Player] Auto-play failed:', err.message)
+                    setPlaying(false)
+                })
+            }
+        }
+
+        return () => {
+            if (audio && !audio.paused) {
+                audio.pause()
+            }
+        }
+    }, [currentSong?.id])
 
     // Sync play/pause
     useEffect(() => {
@@ -53,11 +75,30 @@ export const SpotifyMusicPlayer: React.FC = () => {
         if (!audio) return
 
         if (isPlaying) {
-            audio.play().catch(() => setPlaying(false))
+            const promise = audio.play()
+            if (promise) {
+                promise.catch((err: Error) => {
+                    console.error('[Player] Play failed:', err.message)
+                    setPlaying(false)
+                    // Reset state if play fails
+                    setPlaying(false)
+                })
+            }
         } else {
             audio.pause()
         }
-    }, [isPlaying, setPlaying])
+    }, [isPlaying])
+
+    // Sync volume and mute
+    useEffect(() => {
+        const audio = audioRef.current
+        if (!audio) return
+
+        const newVolume = isMuted ? 0 : volume
+        audio.volume = newVolume
+        audio.muted = isMuted
+        console.log('[Player] Volume updated:', { volume: newVolume, isMuted })
+    }, [volume, isMuted])
 
     if (!currentSong) return null
 
@@ -67,9 +108,16 @@ export const SpotifyMusicPlayer: React.FC = () => {
         <>
             <audio
                 ref={audioRef}
-                onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                onDurationChange={(e) => setDuration(e.currentTarget.duration)}
+                onTimeUpdate={(e) => {
+                    setCurrentTime(e.currentTarget.currentTime)
+                }}
+                onDurationChange={(e) => {
+                    const newDuration = e.currentTarget.duration
+                    console.log('[Player] Duration:', newDuration)
+                    setDuration(newDuration)
+                }}
                 onEnded={() => {
+                    console.log('[Player] Song ended')
                     if (repeatMode === 'one') {
                         audioRef.current!.currentTime = 0
                         audioRef.current!.play().catch(() => {})
@@ -77,9 +125,21 @@ export const SpotifyMusicPlayer: React.FC = () => {
                         nextTrack()
                     }
                 }}
-                onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
-                onError={(e) => console.error('Audio error:', e)}
+                onPlay={() => {
+                    console.log('[Player] Playing')
+                    setPlaying(true)
+                }}
+                onPause={() => {
+                    console.log('[Player] Paused')
+                    setPlaying(false)
+                }}
+                onError={(e) => {
+                    const error = e.currentTarget.error
+                    console.error('[Player] Audio error:', {
+                        code: error?.code,
+                        message: error?.message,
+                    })
+                }}
                 crossOrigin="anonymous"
             />
 
@@ -94,7 +154,7 @@ export const SpotifyMusicPlayer: React.FC = () => {
                         <ChevronDown className="w-6 h-6" />
                     </button>
 
-                    {/*Large cover */}
+                    {/* Large cover */}
                     <div className="flex-1 flex items-center justify-center mb-8">
                         <div className="w-64 h-64 rounded-2xl overflow-hidden shadow-2xl bg-surface-600">
                             {currentSong.cover_url ? (
@@ -102,6 +162,7 @@ export const SpotifyMusicPlayer: React.FC = () => {
                                     src={currentSong.cover_url}
                                     alt={currentSong.title}
                                     className="w-full h-full object-cover"
+                                    onError={() => console.error('[Player] Cover load error')}
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
