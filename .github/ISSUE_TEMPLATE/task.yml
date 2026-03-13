@@ -1,0 +1,27 @@
+name: Task
+description: Technical or operational task
+title: "[Task]: "
+labels: ["task"]
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What needs to be done?
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist
+      placeholder: |
+        - [ ] Step 1
+        - [ ] Step 2
+        - [ ] Step 3
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Suggested owner
+      placeholder: @username

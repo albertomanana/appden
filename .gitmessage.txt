@@ -1,0 +1,11 @@
+# <type>(<scope>): <short summary>
+#
+# Types: feat, fix, refactor, docs, chore, test, ci
+#
+# Body (optional):
+# - What changed?
+# - Why?
+# - Risk / migration notes?
+#
+# Footer (optional):
+# Closes #123

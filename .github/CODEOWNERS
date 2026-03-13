@@ -1,0 +1,9 @@
+# Default owner for the whole repository
+* @albertomanana
+
+# Critical areas
+/src/services/ @albertomanana
+/src/lib/supabase/ @albertomanana
+/supabase/ @albertomanana
+/vite.config.ts @albertomanana
+/package.json @albertomanana
