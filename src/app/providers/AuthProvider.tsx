@@ -1,11 +1,9 @@
-import React, { useEffect, useCallback, useState } from 'react'
-import { supabase } from '@lib/supabase/client'
+import React, { useEffect, useCallback } from 'react'
 import { authService } from '@services/auth.service'
 import { profileService } from '@services/profile.service'
 import { useAuthStore } from '@app/store/auth.store'
 import { useGroupStore } from '@app/store/group.store'
 import { groupsService } from '@services/groups.service'
-import { DiagnosticPage } from '@pages/DiagnosticPage'
 
 /**
  * AuthProvider - initializes session on app boot and listens for auth changes.
@@ -14,7 +12,6 @@ import { DiagnosticPage } from '@pages/DiagnosticPage'
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { setUser, setLoading, setInitialized } = useAuthStore()
     const { setMyGroups, setActiveGroup, activeGroup } = useGroupStore()
-    const [initError, setInitError] = useState<string | null>(null)
 
     const initUser = useCallback(async (userId: string | null) => {
         if (!userId) {
@@ -55,30 +52,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [setUser, setLoading, setInitialized, setMyGroups, setActiveGroup, activeGroup])
 
     useEffect(() => {
-        // Initialize session from existing stored session WITH TIMEOUT
+        // Initialize session from existing stored session with timeout.
+        // If it fails, continue as logged-out to avoid blocking the app.
         void (async () => {
             try {
-                console.log('🔐 Initializing auth session...')
+                console.log('[Auth] Initializing auth session...')
 
-                // Create a timeout promise that rejects after 15 seconds
-                const timeoutPromise = new Promise((_resolve, reject) => {
+                const timeoutPromise: Promise<never> = new Promise((_resolve, reject) => {
                     setTimeout(() => {
                         reject(new Error('Supabase connection timeout. Check your .env.local credentials.'))
                     }, 15000)
                 })
 
-                // Race between getting session and timeout
                 const sessionPromise = authService.getSession()
                 const session = await Promise.race([sessionPromise, timeoutPromise])
 
-                console.log('✅ Session loaded:', session ? 'authenticated' : 'no session')
+                console.log('[Auth] Session loaded:', session ? 'authenticated' : 'no session')
                 await initUser(session?.user?.id ?? null)
             } catch (err) {
                 const errorMsg = err instanceof Error ? err.message : 'Failed to load session'
-                console.error('❌ Auth init error:', errorMsg)
-                setInitError(errorMsg)
-                setLoading(false)
-                setInitialized(true)
+                console.error('[Auth] Session init failed, falling back to logged-out state:', errorMsg)
+                await initUser(null)
             }
         })()
 
@@ -88,12 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
 
         return unsubscribe
-    }, [initUser, setLoading, setInitialized])
-
-    // If there's an error, show diagnostic page
-    if (initError) {
-        return <DiagnosticPage />
-    }
+    }, [initUser])
 
     return <>{children}</>
 }

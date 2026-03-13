@@ -14,6 +14,7 @@ const SongDetailPage: React.FC = () => {
     const { songId } = useParams<{ songId: string }>()
     const navigate = useNavigate()
     const { userId } = useAuth()
+    const { groupId } = useActiveGroup()
     const setQueue = usePlayerStore((s) => s.setQueue)
 
     const { data: song, isLoading } = useQuery({
@@ -21,6 +22,24 @@ const SongDetailPage: React.FC = () => {
         queryFn: () => songsService.getSong(songId!, userId!),
         enabled: !!songId && !!userId,
     })
+
+    const { data: groupSongs } = useQuery({
+        queryKey: ['songs', groupId],
+        queryFn: () => songsService.getSongs(groupId!, userId!),
+        enabled: !!groupId && !!userId,
+    })
+
+    const handlePlay = () => {
+        if (!song) return
+
+        if (groupSongs && groupSongs.length > 0) {
+            const idx = groupSongs.findIndex((s) => s.id === song.id)
+            setQueue(groupSongs, idx >= 0 ? idx : 0)
+            return
+        }
+
+        setQueue([song], 0)
+    }
 
     if (isLoading) {
         return (
@@ -59,7 +78,7 @@ const SongDetailPage: React.FC = () => {
                     {song.album_name && <p className="text-sm text-gray-500">{song.album_name}</p>}
                 </div>
                 <button
-                    onClick={() => setQueue([song], 0)}
+                    onClick={handlePlay}
                     className="w-14 h-14 rounded-full bg-brand-600 hover:bg-brand-500 flex items-center justify-center flex-shrink-0 transition-colors shadow-glow-brand active:scale-95"
                     aria-label="Reproducir"
                 >

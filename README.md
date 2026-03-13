@@ -112,7 +112,7 @@ the-appden/
    - Go to **Storage** in your Supabase dashboard
    - Create these buckets (make them **private**):
      - `avatars`
-     - `song-covers`
+     - `covers`
      - `songs`
      - `files`
    - Note: Files are secured via Row Level Security (RLS) policies
@@ -452,3 +452,4 @@ MIT License - feel free to use this for personal or commercial projects.
 **Built with 🎵 & ☕ for private friend groups.**
 
 Made with React, Supabase, and lots of coffee ☕
+

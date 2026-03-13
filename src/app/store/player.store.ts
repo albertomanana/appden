@@ -76,11 +76,14 @@ export const usePlayerStore = create<PlayerState>()(
 
             togglePlay: () => {
                 const { isPlaying, audioRef } = get()
-                if (!audioRef) return
-                if (isPlaying) {
-                    audioRef.pause()
-                } else {
-                    void audioRef.play()
+                if (audioRef) {
+                    if (isPlaying) {
+                        audioRef.pause()
+                    } else {
+                        void audioRef.play().catch(() => {
+                            set({ isPlaying: false })
+                        })
+                    }
                 }
                 set({ isPlaying: !isPlaying })
             },
@@ -105,8 +108,12 @@ export const usePlayerStore = create<PlayerState>()(
             },
 
             nextTrack: () => {
-                const { queue, queueIndex, repeatMode, isShuffle } = get()
-                if (queue.length === 0) return
+                const { queue, queueIndex, repeatMode, isShuffle, audioRef } = get()
+                if (queue.length <= 1) {
+                    if (audioRef) audioRef.currentTime = 0
+                    set({ currentTime: 0, isPlaying: true })
+                    return
+                }
 
                 let nextIndex: number
                 if (isShuffle) {
@@ -130,7 +137,12 @@ export const usePlayerStore = create<PlayerState>()(
 
             prevTrack: () => {
                 const { queue, queueIndex, currentTime } = get()
-                if (queue.length === 0) return
+                if (queue.length <= 1) {
+                    const { audioRef } = get()
+                    if (audioRef) audioRef.currentTime = 0
+                    set({ currentTime: 0, isPlaying: true })
+                    return
+                }
 
                 // If more than 3 seconds in, restart current track
                 if (currentTime > 3) {

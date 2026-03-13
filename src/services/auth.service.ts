@@ -1,5 +1,4 @@
-import { supabase } from '@lib/supabase/client'
-import type { Profile } from '@/types'
+import { supabase, AUTH_STORAGE_KEY } from '@lib/supabase/client'
 
 /**
  * Auth service - wraps Supabase auth methods.
@@ -7,6 +6,22 @@ import type { Profile } from '@/types'
  */
 
 export const authService = {
+    clearStoredSession() {
+        if (typeof window === 'undefined') return
+
+        try {
+            window.localStorage.removeItem(AUTH_STORAGE_KEY)
+
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+            const projectRef = supabaseUrl?.replace(/^https?:\/\//, '').split('.')[0]
+            if (projectRef) {
+                window.localStorage.removeItem(`sb-${projectRef}-auth-token`)
+            }
+        } catch {
+            // Ignore storage errors (private mode / blocked storage)
+        }
+    },
+
     /**
      * Register a new user with email + password.
      * Creates the profile record via DB trigger.
@@ -65,9 +80,31 @@ export const authService = {
      * Get current Supabase session (used at app boot).
      */
     async getSession() {
-        const { data, error } = await supabase.auth.getSession()
-        if (error) throw error
-        return data.session
+        try {
+            const { data, error } = await supabase.auth.getSession()
+            if (error) throw error
+            return data.session
+        } catch (err) {
+            const message = err instanceof Error ? err.message.toLowerCase() : ''
+            const isRecoverable =
+                message.includes('refresh token') ||
+                message.includes('invalid') ||
+                message.includes('jwt') ||
+                message.includes('parse') ||
+                message.includes('json')
+
+            if (isRecoverable) {
+                this.clearStoredSession()
+                try {
+                    await supabase.auth.signOut({ scope: 'local' })
+                } catch {
+                    // Ignore cleanup errors.
+                }
+                return null
+            }
+
+            throw err
+        }
     },
 
     /**

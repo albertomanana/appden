@@ -25,13 +25,11 @@ export const SpotifyMusicPlayer: React.FC = () => {
     const audioRef = useRef<HTMLAudioElement>(null)
     const [isExpanded, setIsExpanded] = useState(false)
 
-    // Register audio ref on mount
+    // Keep audioRef synced in store whenever the player mounts/unmounts a track.
+    // The component can mount with no currentSong, so a one-time effect is not enough.
     useEffect(() => {
-        if (audioRef.current) {
-            console.log('[Player] Registering audio ref')
-            setAudioRef(audioRef.current)
-        }
-    }, [])
+        setAudioRef(audioRef.current ?? null)
+    }, [currentSong?.id, setAudioRef])
 
     // Load new song when song changes
     useEffect(() => {
@@ -67,7 +65,7 @@ export const SpotifyMusicPlayer: React.FC = () => {
                 audio.pause()
             }
         }
-    }, [currentSong?.id])
+    }, [currentSong?.id, currentSong?.audio_url])
 
     // Sync play/pause
     useEffect(() => {
@@ -255,7 +253,7 @@ export const SpotifyMusicPlayer: React.FC = () => {
             )}
 
             {/* Mini player bar */}
-            <div className="fixed left-0 right-0 bottom-0 z-30 bg-gradient-to-t from-surface-900 to-surface-800/80 border-t border-surface-700 backdrop-blur-md">
+            <div className="fixed left-0 right-0 bottom-16 md:bottom-0 z-50 bg-gradient-to-t from-surface-900 to-surface-800/80 border-t border-surface-700 backdrop-blur-md">
                 {/* Progress bar */}
                 <div className="h-1 w-full bg-surface-700/50">
                     <div
@@ -269,7 +267,7 @@ export const SpotifyMusicPlayer: React.FC = () => {
                     {/* Song info */}
                     <button
                         onClick={() => setIsExpanded(true)}
-                        className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity md:hidden"
+                        className="flex items-center flex-1 min-w-0 text-left hover:opacity-80 transition-opacity md:hidden"
                     >
                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-surface-600 flex-shrink-0">
                             {currentSong.cover_url ? (
@@ -318,14 +316,14 @@ export const SpotifyMusicPlayer: React.FC = () => {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => prevTrack()}
-                            className="p-2 text-gray-400 hover:text-white transition-colors"
+                            className="w-9 h-9 flex items-center justify-center rounded-full text-gray-300 bg-surface-700/70 hover:bg-surface-600 hover:text-white transition-colors"
                         >
                             <SkipBack className="w-4 h-4" />
                         </button>
 
                         <button
                             onClick={() => togglePlay()}
-                            className="w-10 h-10 flex items-center justify-center rounded-full bg-brand-500 hover:bg-brand-400 text-white transition-colors"
+                            className="w-11 h-11 flex items-center justify-center rounded-full bg-brand-500 hover:bg-brand-400 text-white transition-colors shadow-glow-brand"
                         >
                             {isPlaying ? (
                                 <Pause className="w-5 h-5" />
@@ -336,7 +334,7 @@ export const SpotifyMusicPlayer: React.FC = () => {
 
                         <button
                             onClick={() => nextTrack()}
-                            className="p-2 text-gray-400 hover:text-white transition-colors"
+                            className="w-9 h-9 flex items-center justify-center rounded-full text-gray-300 bg-surface-700/70 hover:bg-surface-600 hover:text-white transition-colors"
                         >
                             <SkipForward className="w-4 h-4" />
                         </button>

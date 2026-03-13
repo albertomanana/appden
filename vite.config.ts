@@ -41,7 +41,20 @@ export default defineConfig({
             },
             workbox: {
                 globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+                cleanupOutdatedCaches: true,
+                clientsClaim: true,
+                skipWaiting: true,
                 runtimeCaching: [
+                    {
+                        // Never cache auth/session endpoints.
+                        urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/v1\/.*/i,
+                        handler: 'NetworkOnly',
+                    },
+                    {
+                        // Signed storage URLs expire quickly; serving stale cache breaks playback/covers.
+                        urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/sign\/.*/i,
+                        handler: 'NetworkOnly',
+                    },
                     {
                         urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
                         handler: 'NetworkFirst',

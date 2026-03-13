@@ -3,6 +3,51 @@ import { generateStoragePath, extractAudioDuration } from '@lib/utils'
 import type { Song } from '@/types'
 import type { SongFormData } from '@lib/validators'
 
+function normalizeStoragePath(
+    rawValue: string | null | undefined,
+    bucket: string
+): string | null {
+    if (!rawValue) return null
+
+    const trimmed = rawValue.trim()
+    if (!trimmed) return null
+
+    if (/^https?:\/\//i.test(trimmed)) {
+        try {
+            const url = new URL(trimmed)
+            const pathname = decodeURIComponent(url.pathname)
+
+            const signedPrefix = `/storage/v1/object/sign/${bucket}/`
+            const publicPrefix = `/storage/v1/object/public/${bucket}/`
+            const objectPrefix = `/storage/v1/object/${bucket}/`
+
+            if (pathname.includes(signedPrefix)) {
+                return pathname.split(signedPrefix)[1] ?? null
+            }
+            if (pathname.includes(publicPrefix)) {
+                return pathname.split(publicPrefix)[1] ?? null
+            }
+            if (pathname.includes(objectPrefix)) {
+                return pathname.split(objectPrefix)[1] ?? null
+            }
+
+            return null
+        } catch {
+            return null
+        }
+    }
+
+    return trimmed.replace(/^\/+/, '')
+}
+
+function normalizeCoverPath(rawValue: string | null | undefined): string | null {
+    return normalizeStoragePath(rawValue, STORAGE_BUCKETS.COVERS)
+}
+
+async function signCoverUrl(path: string): Promise<string | null> {
+    return getStorageUrl(STORAGE_BUCKETS.COVERS, path)
+}
+
 export const songsService = {
     /**
      * Fetch all songs for a group, joining uploader profile and favorite status.
@@ -30,13 +75,14 @@ export const songsService = {
                 // Re-generate signed URL for audio
                 if (audioUrl) {
                     try {
-                        // Clean prefix if exists (stored as "audio/userId/filename")
-                        const path = audioUrl.startsWith('audio/')
-                            ? audioUrl.replace(/^audio\//, '')
-                            : audioUrl
-                        console.log('[Songs] Signing audio URL, path:', path)
-                        const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
-                        if (signed) audioUrl = signed
+                        const path = normalizeStoragePath(audioUrl, STORAGE_BUCKETS.SONGS)
+                        if (!path) {
+                            console.warn('[Songs] Invalid audio path format, using original value')
+                        } else {
+                            console.log('[Songs] Signing audio URL, path:', path)
+                            const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
+                            if (signed) audioUrl = signed
+                        }
                     } catch (err) {
                         console.warn('[Songs] Failed to sign audio URL:', err)
                     }
@@ -45,13 +91,14 @@ export const songsService = {
                 // Re-generate signed URL for cover
                 if (coverUrl) {
                     try {
-                        // Clean prefix if exists (stored as "covers/userId/filename")
-                        const path = coverUrl.startsWith('covers/')
-                            ? coverUrl.replace(/^covers\//, '')
-                            : coverUrl
-                        console.log('[Songs] Signing cover URL, path:', path)
-                        const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, path)
-                        if (signed) coverUrl = signed
+                        const path = normalizeCoverPath(coverUrl)
+                        if (!path) {
+                            console.warn('[Songs] Invalid cover path format, using original value')
+                        } else {
+                            console.log('[Songs] Signing cover URL, path:', path)
+                            const signed = await signCoverUrl(path)
+                            if (signed) coverUrl = signed
+                        }
                     } catch (err) {
                         console.warn('[Songs] Failed to sign cover URL:', err)
                     }
@@ -92,11 +139,13 @@ export const songsService = {
 
                 if (audioUrl) {
                     try {
-                        const path = audioUrl.startsWith('audio/')
-                            ? audioUrl.replace(/^audio\//, '')
-                            : audioUrl
-                        const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
-                        if (signed) audioUrl = signed
+                        const path = normalizeStoragePath(audioUrl, STORAGE_BUCKETS.SONGS)
+                        if (!path) {
+                            console.warn('[Songs] Invalid audio path format, using original value')
+                        } else {
+                            const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
+                            if (signed) audioUrl = signed
+                        }
                     } catch (err) {
                         console.warn('[Songs] Failed to sign audio URL:', err)
                     }
@@ -104,11 +153,13 @@ export const songsService = {
 
                 if (coverUrl) {
                     try {
-                        const path = coverUrl.startsWith('covers/')
-                            ? coverUrl.replace(/^covers\//, '')
-                            : coverUrl
-                        const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, path)
-                        if (signed) coverUrl = signed
+                        const path = normalizeCoverPath(coverUrl)
+                        if (!path) {
+                            console.warn('[Songs] Invalid cover path format, using original value')
+                        } else {
+                            const signed = await signCoverUrl(path)
+                            if (signed) coverUrl = signed
+                        }
                     } catch (err) {
                         console.warn('[Songs] Failed to sign cover URL:', err)
                     }
@@ -147,11 +198,13 @@ export const songsService = {
 
         if (audioUrl) {
             try {
-                const path = audioUrl.startsWith('audio/')
-                    ? audioUrl.replace(/^audio\//, '')
-                    : audioUrl
-                const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
-                if (signed) audioUrl = signed
+                const path = normalizeStoragePath(audioUrl, STORAGE_BUCKETS.SONGS)
+                if (!path) {
+                    console.warn('[Songs] Invalid audio path format, using original value')
+                } else {
+                    const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
+                    if (signed) audioUrl = signed
+                }
             } catch (err) {
                 console.warn('[Songs] Failed to sign audio URL:', err)
             }
@@ -159,11 +212,13 @@ export const songsService = {
 
         if (coverUrl) {
             try {
-                const path = coverUrl.startsWith('covers/')
-                    ? coverUrl.replace(/^covers\//, '')
-                    : coverUrl
-                const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, path)
-                if (signed) coverUrl = signed
+                const path = normalizeCoverPath(coverUrl)
+                if (!path) {
+                    console.warn('[Songs] Invalid cover path format, using original value')
+                } else {
+                    const signed = await signCoverUrl(path)
+                    if (signed) coverUrl = signed
+                }
             } catch (err) {
                 console.warn('[Songs] Failed to sign cover URL:', err)
             }
@@ -210,7 +265,7 @@ export const songsService = {
         if (coverFile) {
             coverPath = generateStoragePath('covers', userId, coverFile.name)
             const { error: coverError } = await supabase.storage
-                .from(STORAGE_BUCKETS.SONG_COVERS)
+                .from(STORAGE_BUCKETS.COVERS)
                 .upload(coverPath, coverFile, { cacheControl: '3600', upsert: false })
 
             if (coverError) {
@@ -252,7 +307,7 @@ export const songsService = {
 
         if (responseCoverUrl) {
             try {
-                const signed = await getStorageUrl(STORAGE_BUCKETS.SONG_COVERS, coverPath!)
+                const signed = await signCoverUrl(coverPath!)
                 if (signed) responseCoverUrl = signed
             } catch (err) {
                 console.warn('Failed to sign cover URL:', err)

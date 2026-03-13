@@ -8,7 +8,7 @@
 INSERT INTO storage.buckets (id, name, public)
 VALUES
     ('avatars', 'avatars', false),
-    ('song-covers', 'song-covers', false),
+    ('covers', 'covers', false),
     ('songs', 'songs', false),
     ('files', 'files', false)
 ON CONFLICT (id) DO NOTHING;
@@ -52,26 +52,26 @@ CREATE POLICY "avatars_delete_own" ON storage.objects
 -- ── SONG COVERS BUCKET ──────────────────────────────────────
 
 -- Group members can select song covers
-CREATE POLICY "song_covers_select_authenticated" ON storage.objects
+CREATE POLICY "covers_select_authenticated" ON storage.objects
     FOR SELECT
     USING (
-        bucket_id = 'song-covers'
+        bucket_id = 'covers'
         AND auth.role() = 'authenticated'
     );
 
 -- Group members can upload song covers
-CREATE POLICY "song_covers_insert_authenticated" ON storage.objects
+CREATE POLICY "covers_insert_authenticated" ON storage.objects
     FOR INSERT
     WITH CHECK (
-        bucket_id = 'song-covers'
+        bucket_id = 'covers'
         AND auth.role() = 'authenticated'
     );
 
 -- Uploader can delete their song covers
-CREATE POLICY "song_covers_delete_own" ON storage.objects
+CREATE POLICY "covers_delete_own" ON storage.objects
     FOR DELETE
     USING (
-        bucket_id = 'song-covers'
+        bucket_id = 'covers'
         AND auth.role() = 'authenticated'
         AND owner_id = auth.uid()
     );
@@ -129,3 +129,5 @@ CREATE POLICY "files_delete_own" ON storage.objects
         AND auth.role() = 'authenticated'
         AND owner_id = auth.uid()
     );
+
+
