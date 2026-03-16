@@ -66,6 +66,128 @@ export interface Song {
     is_favorite?: boolean
 }
 
+export type LyricsSource = 'manual' | 'auto'
+export type LyricsProposalStatus = 'pending' | 'approved' | 'rejected'
+export type TranslationLanguage = 'es' | 'en'
+export type SongReactionType = 'fire' | 'heart' | 'headphones'
+export type GroupActivityAction =
+    | 'song_uploaded'
+    | 'song_liked'
+    | 'song_reacted'
+    | 'song_commented'
+    | 'lyrics_updated'
+    | 'lyrics_proposed'
+    | 'lyrics_verified'
+
+export interface SongLyricLine {
+    id?: string
+    song_id: string
+    line_index: number
+    content: string
+    start_seconds: number | null
+    end_seconds: number | null
+}
+
+export interface SongLyrics {
+    id: string
+    song_id: string
+    raw_text: string
+    language: string
+    source: LyricsSource
+    is_auto_generated: boolean
+    confidence: number | null
+    is_verified?: boolean
+    verified_by?: string | null
+    verified_at?: string | null
+    updated_by: string
+    created_at: string
+    updated_at: string
+    lines?: SongLyricLine[]
+}
+
+export interface SongLyricsVersion {
+    id: string
+    song_id: string
+    version_number: number
+    raw_text: string
+    language: string
+    source: LyricsSource
+    is_auto_generated: boolean
+    confidence: number | null
+    created_by: string
+    created_at: string
+}
+
+export interface SongLyricsProposal {
+    id: string
+    song_id: string
+    proposed_by: string
+    proposed_raw_text: string
+    note: string | null
+    status: LyricsProposalStatus
+    reviewed_by: string | null
+    reviewed_at: string | null
+    created_at: string
+    proposer?: Profile
+}
+
+export interface SongLyricsTranslation {
+    id: string
+    song_id: string
+    language: TranslationLanguage
+    raw_text: string
+    source: 'machine' | 'manual'
+    updated_by: string
+    created_at: string
+    updated_at: string
+}
+
+export interface SongLike {
+    id: string
+    song_id: string
+    user_id: string
+    created_at: string
+}
+
+export interface SongComment {
+    id: string
+    song_id: string
+    user_id: string
+    body: string
+    parent_id: string | null
+    created_at: string
+    updated_at: string
+    profile?: Profile
+}
+
+export interface SongCommentLike {
+    id: string
+    comment_id: string
+    user_id: string
+    created_at: string
+}
+
+export interface SongReaction {
+    id: string
+    song_id: string
+    user_id: string
+    reaction: SongReactionType
+    created_at: string
+}
+
+export interface GroupActivity {
+    id: string
+    group_id: string
+    actor_id: string
+    action_type: GroupActivityAction
+    song_id: string | null
+    comment_id: string | null
+    payload: Record<string, unknown>
+    created_at: string
+    actor?: Profile
+    song?: Pick<Song, 'id' | 'title' | 'artist_name' | 'cover_url'>
+}
+
 // -- Favorite --
 
 export interface Favorite {

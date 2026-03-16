@@ -16,7 +16,9 @@ import type {
     DynamicPalette,
     EqualizerPreset,
     PlaybackHistoryItem,
+    PlayerTheme,
     PlayerMetrics,
+    PlayerPreferences,
     PlayerSong,
     RepeatMode,
 } from '@features/player/player.types'
@@ -45,6 +47,9 @@ interface PlayerStoreState {
     radioSeedSong: PlayerSong | null
     continueOffer: ContinueOffer
     hasInitialized: boolean
+    theme: PlayerTheme
+    isCompactMode: boolean
+    rhythmMode: boolean
 
     initialize: (catalog?: PlayerSong[], userId?: string) => Promise<void>
     setCatalog: (catalog: PlayerSong[]) => void
@@ -71,6 +76,9 @@ interface PlayerStoreState {
     stopRadio: () => void
     resumeFromContinueOffer: () => Promise<void>
     dismissContinueOffer: () => void
+    setTheme: (theme: PlayerTheme) => void
+    toggleCompactMode: (next?: boolean) => void
+    setRhythmMode: (enabled: boolean) => void
 }
 
 const DEFAULT_PALETTE: DynamicPalette = {
@@ -104,6 +112,9 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
     radioSeedSong: null,
     continueOffer: null,
     hasInitialized: false,
+    theme: 'dark',
+    isCompactMode: false,
+    rhythmMode: true,
 
     initialize: async (catalog = [], userId = 'local-user') => {
         await playerEngine.initialize()
@@ -127,6 +138,7 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
         const persistedQueue = playerPersistence.loadQueue()
         const persistedHistory = playerPersistence.loadHistory()
         const continueSnapshot = playerPersistence.loadSnapshot()
+        const persistedPreferences = playerPersistence.loadPreferences()
 
         if (persistedQueue && persistedQueue.queue.length > 0) {
             const hydratedQueue = await refreshQueueMedia(persistedQueue.queue)
@@ -149,6 +161,14 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
 
         if (continueSnapshot) {
             set({ continueOffer: continueSnapshot })
+        }
+
+        if (persistedPreferences) {
+            set({
+                theme: persistedPreferences.theme,
+                isCompactMode: persistedPreferences.isCompactMode,
+                rhythmMode: persistedPreferences.rhythmMode,
+            })
         }
 
         playerEngine.setVolume(get().volume)
@@ -382,6 +402,21 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
         playerPersistence.clearSnapshot()
         set({ continueOffer: null })
     },
+
+    setTheme: (theme) => {
+        set({ theme })
+        persistPreferences(get())
+    },
+
+    toggleCompactMode: (next) => {
+        set((state) => ({ isCompactMode: next ?? !state.isCompactMode }))
+        persistPreferences(get())
+    },
+
+    setRhythmMode: (enabled) => {
+        set({ rhythmMode: enabled })
+        persistPreferences(get())
+    },
 }))
 
 function maybePersistContinueSnapshot(state: PlayerStoreState, metrics: PlayerMetrics): void {
@@ -396,6 +431,15 @@ function maybePersistContinueSnapshot(state: PlayerStoreState, metrics: PlayerMe
         time: metrics.currentTime,
         savedAt: new Date(now).toISOString(),
     })
+}
+
+function persistPreferences(state: PlayerStoreState): void {
+    const preferences: PlayerPreferences = {
+        theme: state.theme,
+        isCompactMode: state.isCompactMode,
+        rhythmMode: state.rhythmMode,
+    }
+    playerPersistence.savePreferences(preferences)
 }
 
 function replaceQueueSongAt(queue: PlayerSong[], index: number, song: PlayerSong): PlayerSong[] {

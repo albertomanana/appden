@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, FolderOpen, Image, FileText, Download, Trash2, ExternalLink } from 'lucide-react'
+import { Plus, FolderOpen, Image, FileText, Trash2, ExternalLink } from 'lucide-react'
 import { filesService } from '@services/files.service'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'

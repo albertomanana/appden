@@ -35,7 +35,7 @@ export const GroupMemberList: React.FC<GroupMemberListProps> = ({
                     <div className="flex items-center gap-3">
                         <Avatar
                             src={member.profile?.avatar_url}
-                            alt={member.profile?.display_name}
+                            name={member.profile?.display_name}
                             size="sm"
                         />
                         <div className="flex-1">

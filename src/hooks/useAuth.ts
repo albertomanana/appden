@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { useAuthStore } from '@app/store/auth.store'
 
 /**

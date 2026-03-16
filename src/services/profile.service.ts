@@ -54,7 +54,10 @@ export const profileService = {
 
         if (uploadError) throw uploadError
 
-        const url = getStorageUrl(STORAGE_BUCKETS.AVATARS, path)!
+        const url = await getStorageUrl(STORAGE_BUCKETS.AVATARS, path)
+        if (!url) {
+            throw new Error('No se pudo firmar la URL del avatar.')
+        }
 
         const { error: updateError } = await supabase
             .from('profiles')

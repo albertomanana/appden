@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { Home, Music, ListMusic, Heart, CreditCard, FolderOpen, User, Users, Bell } from 'lucide-react'
 import { cn } from '@lib/utils'
 import { ROUTES } from '@lib/constants'

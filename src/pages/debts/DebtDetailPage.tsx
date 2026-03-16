@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle, PlusCircle, Trash2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle, PlusCircle } from 'lucide-react'
 import { debtsService } from '@services/debts.service'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'

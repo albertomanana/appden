@@ -18,6 +18,7 @@ export function usePlayer(options?: UsePlayerOptions) {
     const playSong = useAdvancedPlayerStore((state) => state.playSong)
     const addToQueue = useAdvancedPlayerStore((state) => state.addToQueue)
     const startRadioFromSong = useAdvancedPlayerStore((state) => state.startRadioFromSong)
+    const theme = useAdvancedPlayerStore((state) => state.theme)
 
     useEffect(() => {
         if (hasInitialized) return
@@ -49,6 +50,11 @@ export function usePlayer(options?: UsePlayerOptions) {
             cancelled = true
         }
     }, [currentSongId, currentSongCover, setDynamicPalette])
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return
+        document.documentElement.setAttribute('data-app-theme', theme)
+    }, [theme])
 
     return {
         playSong,

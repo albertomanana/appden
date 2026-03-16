@@ -3,6 +3,7 @@ import type { Song } from '@/types'
 export type RepeatMode = 'off' | 'all' | 'one'
 export type CrossfadeDuration = 0 | 2 | 4 | 6
 export type EqualizerPreset = 'flat' | 'rock' | 'pop' | 'bass-boost' | 'voice'
+export type PlayerTheme = 'dark' | 'neon' | 'minimal'
 
 export interface PlayerSong extends Song {
     tempo_bpm?: number | null
@@ -29,6 +30,12 @@ export interface ContinueListeningSnapshot {
     time: number
     queueIndex: number
     savedAt: string
+}
+
+export interface PlayerPreferences {
+    theme: PlayerTheme
+    isCompactMode: boolean
+    rhythmMode: boolean
 }
 
 export interface QueueState {

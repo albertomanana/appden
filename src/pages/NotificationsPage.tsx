@@ -1,19 +1,16 @@
-import React from 'react'
-import { Trash2, AlertCircle, Bell } from 'lucide-react'
-import { useAuth } from '@hooks/useAuth'
-import { useNotifications } from '@hooks/useNotifications'
+﻿import React from 'react'
+import { Trash2, Bell } from 'lucide-react'
 import { EmptyState } from '@components/ui/EmptyState'
 import type { AppNotification } from '@/types'
 
-// Mock notifications for now - in production, fetch from Supabase
 const mockNotifications: AppNotification[] = [
     {
         id: '1',
         user_id: 'user1',
         group_id: 'group1',
         type: 'song_added',
-        title: 'New Song Added',
-        body: 'Alice added "Song Name" to the group',
+        title: 'Nueva cancion',
+        body: 'Alice anadio "Song Name" al grupo',
         read: false,
         resource_type: 'song',
         resource_id: 'song1',
@@ -24,8 +21,8 @@ const mockNotifications: AppNotification[] = [
         user_id: 'user1',
         group_id: 'group1',
         type: 'debt_created',
-        title: 'New Debt',
-        body: 'Bob created a debt: "Dinner" €50',
+        title: 'Nueva deuda',
+        body: 'Bob creo una deuda: "Cena" 50 EUR',
         read: false,
         resource_type: 'debt',
         resource_id: 'debt1',
@@ -34,26 +31,17 @@ const mockNotifications: AppNotification[] = [
 ]
 
 export default function NotificationsPage() {
-    const { user } = useAuth()
-    const { addNotification } = useNotifications()
-
     const [notifications, setNotifications] = React.useState<AppNotification[]>(mockNotifications)
-    const [loading, setLoading] = React.useState(false)
-    const [error, setError] = React.useState<string | null>(null)
 
-    async function handleDeleteNotification(id: string) {
-        setNotifications(notifications.filter((n) => n.id !== id))
+    function handleDeleteNotification(id: string) {
+        setNotifications((prev) => prev.filter((n) => n.id !== id))
     }
 
-    async function handleMarkAsRead(id: string) {
-        setNotifications(
-            notifications.map((n) =>
-                n.id === id ? { ...n, read: true } : n
-            )
-        )
+    function handleMarkAsRead(id: string) {
+        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
     }
 
-    async function handleClearAll() {
+    function handleClearAll() {
         if (confirm('Clear all notifications?')) {
             setNotifications([])
         }
@@ -61,23 +49,8 @@ export default function NotificationsPage() {
 
     const unreadCount = notifications.filter((n) => !n.read).length
 
-    if (error) {
-        return (
-            <div className="max-w-2xl mx-auto px-4 py-6">
-                <div className="p-4 bg-red-500/10 border border-red-500 rounded-lg flex items-start gap-3">
-                    <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                        <p className="font-medium text-red-400">Error loading notifications</p>
-                        <p className="text-sm text-red-300">{error}</p>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
     return (
         <div className="max-w-2xl mx-auto px-4 py-6">
-            {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-3xl font-bold text-white mb-1">Notifications</h1>
@@ -85,22 +58,21 @@ export default function NotificationsPage() {
                         {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
                     </p>
                 </div>
-                {notifications.length > 0 && (
+                {notifications.length > 0 ? (
                     <button
                         onClick={handleClearAll}
                         className="px-4 py-2 text-sm text-neutral-400 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors"
                     >
                         Clear All
                     </button>
-                )}
+                ) : null}
             </div>
 
-            {/* Notifications List */}
             {notifications.length === 0 ? (
                 <EmptyState
-                    icon="Bell"
+                    icon={<Bell className="w-7 h-7" />}
                     title="No notifications"
-                    description="You're all caught up! We'll notify you when something new happens"
+                    description="You are all caught up."
                 />
             ) : (
                 <div className="space-y-2">
@@ -116,30 +88,24 @@ export default function NotificationsPage() {
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
-                                        {!notification.read && (
+                                        {!notification.read ? (
                                             <div className="w-2 h-2 bg-brand-500 rounded-full flex-shrink-0" />
-                                        )}
-                                        <h3 className="font-semibold text-white">
-                                            {notification.title}
-                                        </h3>
+                                        ) : null}
+                                        <h3 className="font-semibold text-white">{notification.title}</h3>
                                     </div>
-                                    <p className="text-sm text-neutral-300 mb-2">
-                                        {notification.body}
-                                    </p>
-                                    <p className="text-xs text-neutral-500">
-                                        {new Date(notification.created_at).toLocaleString()}
-                                    </p>
+                                    <p className="text-sm text-neutral-300 mb-2">{notification.body}</p>
+                                    <p className="text-xs text-neutral-500">{new Date(notification.created_at).toLocaleString()}</p>
                                 </div>
 
                                 <div className="flex items-center gap-1">
-                                    {!notification.read && (
+                                    {!notification.read ? (
                                         <button
                                             onClick={() => handleMarkAsRead(notification.id)}
                                             className="px-3 py-1 text-xs bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 rounded transition-colors"
                                         >
                                             Mark read
                                         </button>
-                                    )}
+                                    ) : null}
                                     <button
                                         onClick={() => handleDeleteNotification(notification.id)}
                                         className="p-1.5 hover:bg-red-500/20 text-neutral-400 hover:text-red-400 rounded transition-colors"

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,6 +7,27 @@
 @layer base {
   :root {
     color-scheme: dark;
+    --app-bg: #0f0f1a;
+    --app-text: #f5f7ff;
+    --app-accent: #6366f1;
+    --app-accent-soft: rgba(99, 102, 241, 0.25);
+    --app-glass: rgba(22, 24, 38, 0.7);
+  }
+
+  html[data-app-theme='neon'] {
+    --app-bg: #090b13;
+    --app-text: #e7fffb;
+    --app-accent: #22d3ee;
+    --app-accent-soft: rgba(34, 211, 238, 0.27);
+    --app-glass: rgba(12, 23, 34, 0.72);
+  }
+
+  html[data-app-theme='minimal'] {
+    --app-bg: #111111;
+    --app-text: #f2f2f2;
+    --app-accent: #f5f5f5;
+    --app-accent-soft: rgba(255, 255, 255, 0.2);
+    --app-glass: rgba(22, 22, 22, 0.72);
   }
 
   * {
@@ -18,9 +41,12 @@
   }
 
   body {
-    @apply bg-surface-800 text-white font-sans;
+    @apply font-sans;
+    background: var(--app-bg);
+    color: var(--app-text);
     min-height: 100dvh;
     overscroll-behavior: none;
+    letter-spacing: 0.01em;
   }
 
   #root {
@@ -160,7 +186,8 @@
 
   /* Glassmorphism */
   .glass {
-    @apply bg-surface-700/80 backdrop-blur-md border border-surface-500/50;
+    @apply backdrop-blur-md border border-surface-500/50;
+    background: var(--app-glass);
   }
 
   /* Progress bar */
@@ -198,6 +225,24 @@
     box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
   }
 
+  .theme-player-dark {
+    --player-accent: rgba(129, 140, 248, 0.34);
+  }
+
+  .theme-player-neon {
+    --player-accent: rgba(34, 211, 238, 0.34);
+  }
+
+  .theme-player-minimal {
+    --player-accent: rgba(255, 255, 255, 0.26);
+  }
+
+  .rhythm-progress {
+    animation-name: rhythmPulse;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+  }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -212,5 +257,16 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+}
+
+@keyframes rhythmPulse {
+  0%, 100% {
+    filter: brightness(0.95);
+    box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+  50% {
+    filter: brightness(1.14);
+    box-shadow: 0 0 14px var(--player-accent, rgba(129, 140, 248, 0.34));
   }
 }

@@ -7,6 +7,7 @@ export const MiniPlayer: React.FC = () => {
     const isPlaying = useAdvancedPlayerStore((state) => state.isPlaying)
     const metrics = useAdvancedPlayerStore((state) => state.metrics)
     const dynamicPalette = useAdvancedPlayerStore((state) => state.dynamicPalette)
+    const isCompactMode = useAdvancedPlayerStore((state) => state.isCompactMode)
     const togglePlayPause = useAdvancedPlayerStore((state) => state.togglePlayPause)
     const next = useAdvancedPlayerStore((state) => state.next)
     const previous = useAdvancedPlayerStore((state) => state.previous)
@@ -23,17 +24,17 @@ export const MiniPlayer: React.FC = () => {
 
     return (
         <div
-            className="fixed left-0 right-0 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] md:bottom-0 z-[70] border-t border-white/15 backdrop-blur-xl"
+            className="fixed left-0 right-0 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] md:bottom-0 z-[70] border-t border-white/15 backdrop-blur-xl transition-all duration-300"
             style={{ backgroundImage: dynamicPalette.gradient }}
         >
             <div className="h-1 w-full bg-white/10">
                 <div className="h-full bg-white/80 transition-all" style={{ width: `${progress}%` }} />
             </div>
 
-            <div className="px-3 py-2.5 flex items-center gap-3">
+            <div className={`px-3 flex items-center gap-3 ${isCompactMode ? 'py-1.5' : 'py-2.5'}`}>
                 <button
                     onClick={() => toggleFullPlayer(true)}
-                    className="w-11 h-11 rounded-lg overflow-hidden bg-black/20 flex-shrink-0"
+                    className={`${isCompactMode ? 'w-9 h-9' : 'w-11 h-11'} rounded-lg overflow-hidden bg-black/20 flex-shrink-0 transition-all`}
                     aria-label="Open full player"
                 >
                     {currentSong.cover_url && !coverFailed ? (
@@ -62,21 +63,21 @@ export const MiniPlayer: React.FC = () => {
                 <div className="flex items-center gap-1.5">
                     <button
                         onClick={() => void previous()}
-                        className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white grid place-items-center"
+                        className={`${isCompactMode ? 'w-8 h-8' : 'w-9 h-9'} rounded-full bg-white/10 hover:bg-white/20 text-white grid place-items-center transition-all`}
                         aria-label="Previous"
                     >
                         <SkipBack className="w-4 h-4" />
                     </button>
                     <button
                         onClick={() => void togglePlayPause()}
-                        className="w-10 h-10 rounded-full bg-white text-black grid place-items-center"
+                        className={`${isCompactMode ? 'w-9 h-9' : 'w-10 h-10'} rounded-full bg-white text-black grid place-items-center transition-all`}
                         aria-label={isPlaying ? 'Pause' : 'Play'}
                     >
                         {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
                     </button>
                     <button
                         onClick={() => void next()}
-                        className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white grid place-items-center"
+                        className={`${isCompactMode ? 'w-8 h-8' : 'w-9 h-9'} rounded-full bg-white/10 hover:bg-white/20 text-white grid place-items-center transition-all`}
                         aria-label="Next"
                     >
                         <SkipForward className="w-4 h-4" />

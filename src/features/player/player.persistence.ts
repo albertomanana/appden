@@ -1,6 +1,7 @@
 import type {
     ContinueListeningSnapshot,
     PlaybackHistoryItem,
+    PlayerPreferences,
     PlayerSong,
     QueueState,
 } from '@features/player/player.types'
@@ -9,6 +10,7 @@ const STORAGE_KEYS = {
     queue: 'appden:player:queue',
     history: 'appden:player:history',
     snapshot: 'appden:player:snapshot',
+    preferences: 'appden:player:preferences',
 } as const
 
 const MAX_HISTORY = 200
@@ -41,6 +43,14 @@ export const playerPersistence = {
 
     clearSnapshot(): void {
         remove(STORAGE_KEYS.snapshot)
+    },
+
+    savePreferences(preferences: PlayerPreferences): void {
+        write(STORAGE_KEYS.preferences, preferences)
+    },
+
+    loadPreferences(): PlayerPreferences | null {
+        return read<PlayerPreferences>(STORAGE_KEYS.preferences)
     },
 
     async persistHistoryRemote(

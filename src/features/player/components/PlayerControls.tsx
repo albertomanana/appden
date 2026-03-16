@@ -4,13 +4,14 @@ import {
     Play,
     Repeat,
     Repeat1,
+    Sparkles,
     Shuffle,
     SkipBack,
     SkipForward,
     SlidersHorizontal,
     Volume2,
 } from 'lucide-react'
-import type { CrossfadeDuration, EqualizerPreset, RepeatMode } from '@features/player/player.types'
+import type { CrossfadeDuration, EqualizerPreset, PlayerTheme, RepeatMode } from '@features/player/player.types'
 
 interface PlayerControlsProps {
     isPlaying: boolean
@@ -19,6 +20,9 @@ interface PlayerControlsProps {
     volume: number
     crossfade: CrossfadeDuration
     equalizerPreset: EqualizerPreset
+    theme: PlayerTheme
+    isCompactMode: boolean
+    rhythmMode: boolean
     onPlayPause: () => void
     onNext: () => void
     onPrevious: () => void
@@ -27,6 +31,9 @@ interface PlayerControlsProps {
     onVolumeChange: (volume: number) => void
     onCrossfadeChange: (value: CrossfadeDuration) => void
     onEqualizerChange: (preset: EqualizerPreset) => void
+    onThemeChange: (theme: PlayerTheme) => void
+    onToggleCompactMode: () => void
+    onToggleRhythmMode: (enabled: boolean) => void
 }
 
 const EQ_PRESETS: EqualizerPreset[] = ['flat', 'rock', 'pop', 'bass-boost', 'voice']
@@ -39,6 +46,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     volume,
     crossfade,
     equalizerPreset,
+    theme,
+    isCompactMode,
+    rhythmMode,
     onPlayPause,
     onNext,
     onPrevious,
@@ -47,6 +57,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     onVolumeChange,
     onCrossfadeChange,
     onEqualizerChange,
+    onThemeChange,
+    onToggleCompactMode,
+    onToggleRhythmMode,
 }) => {
     return (
         <div className="space-y-4">
@@ -134,6 +147,46 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         ))}
                     </select>
                 </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <label className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5">
+                    <Sparkles className="w-4 h-4 text-white/80" />
+                    <select
+                        value={theme}
+                        onChange={(event) => onThemeChange(event.currentTarget.value as PlayerTheme)}
+                        className="w-full bg-transparent text-sm text-white outline-none"
+                        aria-label="Player theme"
+                    >
+                        <option value="dark" className="text-black">Theme dark</option>
+                        <option value="neon" className="text-black">Theme neon</option>
+                        <option value="minimal" className="text-black">Theme minimal</option>
+                    </select>
+                </label>
+
+                <button
+                    type="button"
+                    onClick={onToggleCompactMode}
+                    className={`rounded-xl px-3 py-2.5 text-sm border transition-colors ${
+                        isCompactMode
+                            ? 'bg-brand-500/25 border-brand-300/50 text-white'
+                            : 'bg-white/10 border-white/20 text-white/80'
+                    }`}
+                >
+                    {isCompactMode ? 'Modo expandido' : 'Modo compacto'}
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => onToggleRhythmMode(!rhythmMode)}
+                    className={`rounded-xl px-3 py-2.5 text-sm border transition-colors ${
+                        rhythmMode
+                            ? 'bg-brand-500/25 border-brand-300/50 text-white'
+                            : 'bg-white/10 border-white/20 text-white/80'
+                    }`}
+                >
+                    {rhythmMode ? 'Ritmo ON' : 'Ritmo OFF'}
+                </button>
             </div>
         </div>
     )

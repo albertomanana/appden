@@ -1,5 +1,5 @@
 import { supabase } from '@lib/supabase/client'
-import type { Playlist, PlaylistSong } from '@/types'
+import type { Playlist } from '@/types'
 import type { PlaylistFormData } from '@lib/validators'
 
 export const playlistsService = {

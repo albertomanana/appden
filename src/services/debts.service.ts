@@ -1,5 +1,5 @@
 import { supabase } from '@lib/supabase/client'
-import type { Debt, DebtPayment, DebtUserSummary } from '@/types'
+import type { Debt, DebtPayment } from '@/types'
 import type { DebtFormData, PaymentFormData } from '@lib/validators'
 
 export const debtsService = {
