@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Play, Pause, Heart, Trash2, Edit2, Music } from 'lucide-react'
 import { usePlayerStore } from '@app/store/player.store'
@@ -8,7 +8,7 @@ import { songsService } from '@services/songs.service'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { useToast } from '@components/ui/Toast'
-import { formatDuration, formatRelative, cn } from '@lib/utils'
+import { formatDuration, cn } from '@lib/utils'
 import { ROUTES } from '@lib/constants'
 import { ConfirmDialog } from '@components/ui/ConfirmDialog'
 import type { Song } from '@/types'
@@ -23,13 +23,19 @@ interface SongCardProps {
 export const SongCard: React.FC<SongCardProps> = ({ song, onPlay, showArtist = true, onEdit }) => {
     const { userId } = useAuth()
     const { groupId } = useActiveGroup()
-    const { currentSong, isPlaying } = usePlayerStore()
+    const currentSong = usePlayerStore((state) => state.currentSong)
+    const isPlaying = usePlayerStore((state) => state.isPlaying)
     const { success, error: toastError } = useToast()
     const queryClient = useQueryClient()
     const isCurrentSong = currentSong?.id === song.id
     const isThisPlaying = isCurrentSong && isPlaying
     const isOwner = userId === song.uploaded_by
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+    const [coverFailed, setCoverFailed] = useState(false)
+
+    useEffect(() => {
+        setCoverFailed(false)
+    }, [song.id, song.cover_url])
 
     const { mutate: toggleFavorite, isPending } = useMutation({
         mutationFn: async () => {
@@ -77,8 +83,13 @@ export const SongCard: React.FC<SongCardProps> = ({ song, onPlay, showArtist = t
                     className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-surface-600 group/play"
                     aria-label={isThisPlaying ? 'Pausar' : 'Reproducir'}
                 >
-                    {song.cover_url ? (
-                        <img src={song.cover_url} alt={song.title} className="w-full h-full object-cover" />
+                    {song.cover_url && !coverFailed ? (
+                        <img
+                            src={song.cover_url}
+                            alt={song.title}
+                            className="w-full h-full object-cover"
+                            onError={() => setCoverFailed(true)}
+                        />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">
                             <Music className="w-5 h-5 text-gray-500" />
