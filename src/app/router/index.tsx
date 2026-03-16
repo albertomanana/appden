@@ -21,6 +21,7 @@ const FilesPage = React.lazy(() => import('@pages/FilesPage'))
 const SharedPage = React.lazy(() => import('@pages/SharedPage'))
 const GroupsPage = React.lazy(() => import('@pages/groups/GroupsPage'))
 const GroupDetailPage = React.lazy(() => import('@pages/groups/GroupDetailPage'))
+const MemberProfilePage = React.lazy(() => import('@pages/groups/MemberProfilePage'))
 const NotificationsPage = React.lazy(() => import('@pages/NotificationsPage'))
 
 const PageLoader: React.FC = () => (
@@ -52,6 +53,7 @@ export const AppRouter: React.FC = () => (
                     <Route path="/profile/:id" element={<ArtistProfilePage />} />
                     <Route path="/groups" element={<GroupsPage />} />
                     <Route path="/groups/:groupId" element={<GroupDetailPage />} />
+                    <Route path="/groups/:groupId/members/:userId" element={<MemberProfilePage />} />
                     <Route path="/notifications" element={<NotificationsPage />} />
                     <Route path="/music" element={<MusicPage />} />
                     <Route path="/music/:songId" element={<SongDetailPage />} />
