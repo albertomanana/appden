@@ -124,6 +124,16 @@ the-appden/
    - Open http://localhost:5173
    - Register a new account to test
 
+## Team Workflow
+
+For multi-dev collaboration, read:
+
+- `CONTRIBUTING.md`
+- `docs/BRANCHING.md`
+- `docs/GITHUB_SETUP.md`
+- `docs/ONBOARDING.md`
+- `docs/PROJECT_STRUCTURE.md`
+
 ## 🗄️ Database Schema
 
 ### Main Tables

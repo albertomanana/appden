@@ -72,6 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } catch (err) {
                 const errorMsg = err instanceof Error ? err.message : 'Failed to load session'
                 console.error('[Auth] Session init failed, falling back to logged-out state:', errorMsg)
+                authService.clearStoredSession()
                 await initUser(null)
             }
         })()

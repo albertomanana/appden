@@ -5,7 +5,6 @@ import { sharedLinksService } from '@services/shared-links.service'
 import { songsService } from '@services/songs.service'
 import { playlistsService } from '@services/playlists.service'
 import { debtsService } from '@services/debts.service'
-import { filesService } from '@services/files.service'
 import { useAuth } from '@hooks/useAuth'
 import { Music, ListMusic, CreditCard, FolderOpen, AlertCircle } from 'lucide-react'
 import { formatMoney, formatDate } from '@lib/utils'
@@ -196,7 +195,7 @@ const SharedDebtPreview: React.FC<{ resourceId: string }> = ({ resourceId }) => 
     )
 }
 
-const SharedFilePreview: React.FC<{ resourceId: string }> = ({ resourceId }) => (
+const SharedFilePreview: React.FC<{ resourceId: string }> = () => (
     <div className="card p-6 max-w-sm w-full space-y-4 text-center">
         <div className="w-16 h-16 rounded-2xl bg-surface-600 border border-surface-500 flex items-center justify-center mx-auto">
             <FolderOpen className="w-8 h-8 text-gray-400" />

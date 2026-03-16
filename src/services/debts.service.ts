@@ -1,5 +1,6 @@
-import { supabase } from '@lib/supabase/client'
-import type { Debt, DebtPayment, DebtUserSummary } from '@/types'
+import { getStorageUrl, STORAGE_BUCKETS, supabase } from '@lib/supabase/client'
+import { generateStoragePath } from '@lib/utils'
+import type { Debt, DebtPayment } from '@/types'
 import type { DebtFormData, PaymentFormData } from '@lib/validators'
 
 export const debtsService = {
@@ -41,7 +42,25 @@ export const debtsService = {
             .single()
 
         if (error) throw error
-        return data as Debt
+
+        const debt = data as Debt
+        const payments = debt.payments ?? []
+
+        if (payments.length > 0) {
+            const withReceipt = await Promise.all(
+                payments.map(async (payment) => {
+                    if (!payment.receipt_url) return payment
+                    const signed = await getStorageUrl(STORAGE_BUCKETS.FILES, payment.receipt_url).catch(() => null)
+                    return {
+                        ...payment,
+                        receipt_url: signed ?? payment.receipt_url,
+                    }
+                })
+            )
+            debt.payments = withReceipt
+        }
+
+        return debt
     },
 
     /**
@@ -80,10 +99,25 @@ export const debtsService = {
         userId: string,
         form: PaymentFormData,
         totalOwed: number,
-        currentPaid: number
+        currentPaid: number,
+        receiptFile?: File | null
     ): Promise<DebtPayment> {
         const newPaid = Math.min(currentPaid + form.amount, totalOwed)
         const newStatus = newPaid >= totalOwed ? 'paid' : newPaid > 0 ? 'partial' : 'pending'
+
+        let receiptPath: string | null = null
+        let receiptMimeType: string | null = null
+
+        if (receiptFile) {
+            const path = generateStoragePath('debt-receipts', userId, receiptFile.name)
+            const { error: uploadError } = await supabase.storage
+                .from(STORAGE_BUCKETS.FILES)
+                .upload(path, receiptFile, { upsert: false, cacheControl: '3600' })
+            if (!uploadError) {
+                receiptPath = path
+                receiptMimeType = receiptFile.type || null
+            }
+        }
 
         // Insert payment record
         const { data: payment, error: paymentError } = await supabase
@@ -93,6 +127,8 @@ export const debtsService = {
                 amount: form.amount,
                 note: form.note || null,
                 paid_by: userId,
+                receipt_url: receiptPath,
+                receipt_mime_type: receiptMimeType,
             })
             .select()
             .single()

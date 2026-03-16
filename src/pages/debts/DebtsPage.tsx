@@ -1,12 +1,16 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Plus, CreditCard } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { debtsService } from '@services/debts.service'
+import { groupsService } from '@services/groups.service'
 import { DebtCard } from '@components/debts/DebtCard'
 import { DebtForm } from '@components/debts/DebtForm'
 import { DebtSummary } from '@components/debts/DebtSummary'
+import { DebtSplitCalculator } from '@components/debts/DebtSplitCalculator'
+import { DebtInsightsPanel } from '@components/debts/DebtInsightsPanel'
+import { DebtGoalsAndBadgesPanel } from '@components/debts/DebtGoalsAndBadgesPanel'
 import { EmptyState } from '@components/ui/EmptyState'
 import { DebtCardSkeleton, ListSkeleton } from '@components/ui/LoadingSkeleton'
 
@@ -14,6 +18,7 @@ const DebtsPage: React.FC = () => {
     const { userId } = useAuth()
     const { groupId, hasGroup } = useActiveGroup()
     const [showForm, setShowForm] = useState(false)
+    const [showSplitCalculator, setShowSplitCalculator] = useState(false)
 
     const { data: debts, isLoading } = useQuery({
         queryKey: ['debts', groupId],
@@ -24,6 +29,12 @@ const DebtsPage: React.FC = () => {
     const { data: summary } = useQuery({
         queryKey: ['debts-summary', groupId],
         queryFn: () => debtsService.getGroupSummary(groupId!),
+        enabled: !!groupId,
+    })
+
+    const { data: members } = useQuery({
+        queryKey: ['members', groupId],
+        queryFn: () => groupsService.getGroupMembers(groupId!),
         enabled: !!groupId,
     })
 
@@ -43,6 +54,17 @@ const DebtsPage: React.FC = () => {
                 >
                     <Plus className="w-4 h-4" />
                     <span className="hidden sm:inline">Nueva</span>
+                </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => setShowSplitCalculator(true)}
+                    className="btn-secondary px-3 py-2 text-xs"
+                    disabled={!hasGroup}
+                >
+                    Calculadora reparto
                 </button>
             </div>
 
@@ -76,8 +98,17 @@ const DebtsPage: React.FC = () => {
                 </div>
             )}
 
+            {groupId && members ? (
+                <DebtInsightsPanel groupId={groupId} members={members} />
+            ) : null}
+
+            {groupId && members ? (
+                <DebtGoalsAndBadgesPanel groupId={groupId} members={members} />
+            ) : null}
+
             {/* Create debt modal */}
             {showForm && <DebtForm onClose={() => setShowForm(false)} />}
+            {showSplitCalculator && <DebtSplitCalculator onClose={() => setShowSplitCalculator(false)} />}
         </div>
     )
 }

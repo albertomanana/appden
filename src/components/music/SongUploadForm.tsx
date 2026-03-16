@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react'
+﻿import React, { useState, useRef, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { X, Upload, Music, Image } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { songsService } from '@services/songs.service'
 import { groupsService } from '@services/groups.service'
+import { lyricsService } from '@services/lyrics.service'
+import { groupActivityService } from '@services/group-activity.service'
 import { songSchema, validateAudioFile, validateImageFile, type SongFormData } from '@lib/validators'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
@@ -38,13 +40,11 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
 
     const artistValue = watch('artist_name')
 
-    // Load group members
     useEffect(() => {
-        if (groupId) {
-            groupsService.getGroupMembers(groupId)
-                .then(setMembers)
-                .catch(() => setMembers([]))
-        }
+        if (!groupId) return
+        groupsService.getGroupMembers(groupId)
+            .then(setMembers)
+            .catch(() => setMembers([]))
     }, [groupId])
 
     const { mutate: upload, isPending } = useMutation({
@@ -52,13 +52,37 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
             if (!audioFile || !userId || !groupId) throw new Error('Faltan datos')
             return songsService.uploadSong(userId, groupId, audioFile, coverFile, data)
         },
-        onSuccess: () => {
+        onSuccess: async (uploadedSong) => {
+            if (audioFile && userId && groupId) {
+                try {
+                    await lyricsService.autoTranscribeOnUpload({
+                        song: uploadedSong,
+                        audioFile,
+                        userId,
+                    })
+                    void queryClient.invalidateQueries({ queryKey: ['song-lyrics', uploadedSong.id] })
+                } catch {
+                    // ASR should not block upload flow.
+                }
+
+                void groupActivityService.create({
+                    groupId,
+                    actorId: userId,
+                    actionType: 'song_uploaded',
+                    songId: uploadedSong.id,
+                    payload: {
+                        title: uploadedSong.title,
+                        artistName: uploadedSong.artist_name,
+                    },
+                })
+            }
+
             void queryClient.invalidateQueries({ queryKey: ['songs', groupId] })
-            success('¡Canción subida!', 'Ya está disponible para el grupo.')
+            success('Cancion subida', 'Ya esta disponible para el grupo.')
             onClose()
         },
         onError: (err) => {
-            const msg = err instanceof Error ? err.message : 'Error al subir la canción'
+            const msg = err instanceof Error ? err.message : 'Error al subir la cancion'
             toastError('Error', msg)
         },
     })
@@ -67,7 +91,10 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
         const file = e.target.files?.[0]
         if (!file) return
         const err = validateAudioFile(file)
-        if (err) { setAudioError(err); return }
+        if (err) {
+            setAudioError(err)
+            return
+        }
         setAudioError(null)
         setAudioFile(file)
     }
@@ -76,7 +103,10 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
         const file = e.target.files?.[0]
         if (!file) return
         const err = validateImageFile(file)
-        if (err) { setCoverError(err); return }
+        if (err) {
+            setCoverError(err)
+            return
+        }
         setCoverError(null)
         setCoverFile(file)
     }
@@ -90,23 +120,22 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
             <div className="relative w-full sm:max-w-md card rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
-                {/* Header */}
                 <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-lg font-bold text-white">Subir canción</h2>
+                    <h2 className="text-lg font-bold text-white">Subir cancion</h2>
                     <button onClick={onClose} className="btn-ghost p-2 rounded-xl">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit((d) => upload(d))} className="space-y-4">
-                    {/* Audio file */}
                     <div>
                         <label className="label">Archivo de audio *</label>
                         <button
                             type="button"
                             onClick={() => audioInputRef.current?.click()}
-                            className={`w-full border-2 border-dashed rounded-xl p-4 flex items-center gap-3 transition-colors ${audioFile ? 'border-brand-500/50 bg-brand-500/5' : 'border-surface-400 hover:border-surface-300'
-                                }`}
+                            className={`w-full border-2 border-dashed rounded-xl p-4 flex items-center gap-3 transition-colors ${
+                                audioFile ? 'border-brand-500/50 bg-brand-500/5' : 'border-surface-400 hover:border-surface-300'
+                            }`}
                         >
                             <Music className="w-5 h-5 text-gray-400 flex-shrink-0" />
                             <div className="text-left flex-1 min-w-0">
@@ -118,24 +147,24 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
                                 ) : (
                                     <>
                                         <p className="text-sm text-gray-300">Seleccionar audio</p>
-                                        <p className="text-xs text-gray-500">MP3, WAV, FLAC, OGG — máx 50 MB</p>
+                                        <p className="text-xs text-gray-500">MP3, WAV, FLAC, OGG - max 50 MB</p>
                                     </>
                                 )}
                             </div>
                             <Upload className="w-4 h-4 text-gray-500 flex-shrink-0" />
                         </button>
                         <input ref={audioInputRef} type="file" accept="audio/*,.mp4,.mov" className="hidden" onChange={handleAudioChange} />
-                        {audioError && <p className="text-xs text-red-400 mt-1">{audioError}</p>}
+                        {audioError ? <p className="text-xs text-red-400 mt-1">{audioError}</p> : null}
                     </div>
 
-                    {/* Cover art */}
                     <div>
                         <label className="label">Portada (opcional)</label>
                         <button
                             type="button"
                             onClick={() => coverInputRef.current?.click()}
-                            className={`w-full border-2 border-dashed rounded-xl p-4 flex items-center gap-3 transition-colors ${coverFile ? 'border-brand-500/50 bg-brand-500/5' : 'border-surface-400 hover:border-surface-300'
-                                }`}
+                            className={`w-full border-2 border-dashed rounded-xl p-4 flex items-center gap-3 transition-colors ${
+                                coverFile ? 'border-brand-500/50 bg-brand-500/5' : 'border-surface-400 hover:border-surface-300'
+                            }`}
                         >
                             <Image className="w-5 h-5 text-gray-400 flex-shrink-0" />
                             <div className="text-left flex-1 min-w-0">
@@ -147,27 +176,25 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
                                 ) : (
                                     <>
                                         <p className="text-sm text-gray-300">Seleccionar imagen</p>
-                                        <p className="text-xs text-gray-500">JPEG, PNG, WebP — máx 10 MB</p>
+                                        <p className="text-xs text-gray-500">JPEG, PNG, WebP - max 10 MB</p>
                                     </>
                                 )}
                             </div>
                         </button>
                         <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
-                        {coverError && <p className="text-xs text-red-400 mt-1">{coverError}</p>}
+                        {coverError ? <p className="text-xs text-red-400 mt-1">{coverError}</p> : null}
                     </div>
 
-                    {/* Title */}
                     <div>
-                        <label className="label" htmlFor="title">Título *</label>
-                        <input id="title" type="text" placeholder="Nombre de la canción" className={`input ${errors.title ? 'border-red-500' : ''}`} {...register('title')} />
-                        {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title.message}</p>}
+                        <label className="label" htmlFor="title">Titulo *</label>
+                        <input id="title" type="text" placeholder="Nombre de la cancion" className={`input ${errors.title ? 'border-red-500' : ''}`} {...register('title')} />
+                        {errors.title ? <p className="text-xs text-red-400 mt-1">{errors.title.message}</p> : null}
                     </div>
 
-                    {/* Artist - with member selector */}
                     <div>
                         <div className="flex items-center justify-between mb-2">
                             <label className="label" htmlFor="artist_name">Artista *</label>
-                            {!useCustomArtist && (
+                            {!useCustomArtist ? (
                                 <button
                                     type="button"
                                     onClick={() => setUseCustomArtist(true)}
@@ -175,11 +202,10 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
                                 >
                                     + Otro
                                 </button>
-                            )}
+                            ) : null}
                         </div>
 
-                        {/* Member selector */}
-                        {!useCustomArtist && members.length > 0 && (
+                        {!useCustomArtist && members.length > 0 ? (
                             <div className="grid grid-cols-2 gap-2 mb-3">
                                 {members.map((member) => (
                                     <button
@@ -196,10 +222,9 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
                                     </button>
                                 ))}
                             </div>
-                        )}
+                        ) : null}
 
-                        {/* Custom artist input */}
-                        {useCustomArtist && (
+                        {useCustomArtist ? (
                             <div className="mb-3">
                                 <input
                                     id="artist_name"
@@ -208,20 +233,19 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
                                     className={`input ${errors.artist_name ? 'border-red-500' : ''}`}
                                     {...register('artist_name')}
                                 />
-                                {members.length > 0 && (
+                                {members.length > 0 ? (
                                     <button
                                         type="button"
                                         onClick={() => setUseCustomArtist(false)}
                                         className="text-xs text-brand-400 hover:text-brand-300 transition-colors mt-2"
                                     >
-                                        ← Seleccionar del grupo
+                                        Volver a seleccionar del grupo
                                     </button>
-                                )}
+                                ) : null}
                             </div>
-                        )}
+                        ) : null}
 
-                        {/* Default input if no custom mode */}
-                        {!useCustomArtist && !artistValue && (
+                        {!useCustomArtist && !artistValue ? (
                             <input
                                 id="artist_name"
                                 type="text"
@@ -229,18 +253,16 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
                                 className={`input ${errors.artist_name ? 'border-red-500' : ''}`}
                                 {...register('artist_name')}
                             />
-                        )}
+                        ) : null}
 
-                        {errors.artist_name && <p className="text-xs text-red-400 mt-1">{errors.artist_name.message}</p>}
+                        {errors.artist_name ? <p className="text-xs text-red-400 mt-1">{errors.artist_name.message}</p> : null}
                     </div>
 
-                    {/* Album */}
                     <div>
-                        <label className="label" htmlFor="album_name">Álbum (opcional)</label>
-                        <input id="album_name" type="text" placeholder="Nombre del álbum" className="input" {...register('album_name')} />
+                        <label className="label" htmlFor="album_name">Album (opcional)</label>
+                        <input id="album_name" type="text" placeholder="Nombre del album" className="input" {...register('album_name')} />
                     </div>
 
-                    {/* Submit */}
                     <button
                         type="submit"
                         disabled={isPending || !audioFile}
@@ -254,7 +276,7 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
                         ) : (
                             <span className="flex items-center gap-2 justify-center">
                                 <Upload className="w-4 h-4" />
-                                Subir canción
+                                Subir cancion
                             </span>
                         )}
                     </button>

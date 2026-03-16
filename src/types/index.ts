@@ -7,6 +7,11 @@
 export type GroupRole = 'owner' | 'member'
 export type DebtStatus = 'pending' | 'partial' | 'paid'
 export type DebtCurrency = 'EUR' | 'USD' | 'GBP' | 'MXN'
+export type DebtSplitMode = 'equal' | 'percentage' | 'exact'
+export type DebtReminderFrequency = 'suave' | 'normal' | 'estricto'
+export type DebtInstallmentStatus = 'pending' | 'paid' | 'overdue'
+export type GroupGoalStatus = 'active' | 'completed' | 'archived'
+export type GroupGoalType = 'debt_reduction' | 'zero_overdue' | 'custom'
 export type FileCategory = 'image' | 'document'
 export type SharedLinkVisibility = 'private' | 'limited'
 export type SharedLinkResourceType = 'song' | 'playlist' | 'debt' | 'file'
@@ -64,6 +69,128 @@ export interface Song {
     // Joined
     uploader?: Profile
     is_favorite?: boolean
+}
+
+export type LyricsSource = 'manual' | 'auto'
+export type LyricsProposalStatus = 'pending' | 'approved' | 'rejected'
+export type TranslationLanguage = 'es' | 'en'
+export type SongReactionType = 'fire' | 'heart' | 'headphones'
+export type GroupActivityAction =
+    | 'song_uploaded'
+    | 'song_liked'
+    | 'song_reacted'
+    | 'song_commented'
+    | 'lyrics_updated'
+    | 'lyrics_proposed'
+    | 'lyrics_verified'
+
+export interface SongLyricLine {
+    id?: string
+    song_id: string
+    line_index: number
+    content: string
+    start_seconds: number | null
+    end_seconds: number | null
+}
+
+export interface SongLyrics {
+    id: string
+    song_id: string
+    raw_text: string
+    language: string
+    source: LyricsSource
+    is_auto_generated: boolean
+    confidence: number | null
+    is_verified?: boolean
+    verified_by?: string | null
+    verified_at?: string | null
+    updated_by: string
+    created_at: string
+    updated_at: string
+    lines?: SongLyricLine[]
+}
+
+export interface SongLyricsVersion {
+    id: string
+    song_id: string
+    version_number: number
+    raw_text: string
+    language: string
+    source: LyricsSource
+    is_auto_generated: boolean
+    confidence: number | null
+    created_by: string
+    created_at: string
+}
+
+export interface SongLyricsProposal {
+    id: string
+    song_id: string
+    proposed_by: string
+    proposed_raw_text: string
+    note: string | null
+    status: LyricsProposalStatus
+    reviewed_by: string | null
+    reviewed_at: string | null
+    created_at: string
+    proposer?: Profile
+}
+
+export interface SongLyricsTranslation {
+    id: string
+    song_id: string
+    language: TranslationLanguage
+    raw_text: string
+    source: 'machine' | 'manual'
+    updated_by: string
+    created_at: string
+    updated_at: string
+}
+
+export interface SongLike {
+    id: string
+    song_id: string
+    user_id: string
+    created_at: string
+}
+
+export interface SongComment {
+    id: string
+    song_id: string
+    user_id: string
+    body: string
+    parent_id: string | null
+    created_at: string
+    updated_at: string
+    profile?: Profile
+}
+
+export interface SongCommentLike {
+    id: string
+    comment_id: string
+    user_id: string
+    created_at: string
+}
+
+export interface SongReaction {
+    id: string
+    song_id: string
+    user_id: string
+    reaction: SongReactionType
+    created_at: string
+}
+
+export interface GroupActivity {
+    id: string
+    group_id: string
+    actor_id: string
+    action_type: GroupActivityAction
+    song_id: string | null
+    comment_id: string | null
+    payload: Record<string, unknown>
+    created_at: string
+    actor?: Profile
+    song?: Pick<Song, 'id' | 'title' | 'artist_name' | 'cover_url'>
 }
 
 // -- Favorite --
@@ -130,10 +257,104 @@ export interface DebtPayment {
     debt_id: string
     amount: number
     note: string | null
+    receipt_url?: string | null
+    receipt_mime_type?: string | null
     paid_by: string
     created_at: string
     // Joined
     payer?: Profile
+}
+
+export interface DebtReminder {
+    id: string
+    debt_id: string
+    group_id: string
+    debtor_id: string
+    created_by: string
+    frequency: DebtReminderFrequency
+    channels: {
+        push: boolean
+        email: boolean
+        whatsapp: boolean
+    }
+    next_run_at: string | null
+    last_sent_at: string | null
+    active: boolean
+    created_at: string
+    updated_at: string
+}
+
+export interface DebtInstallment {
+    id: string
+    debt_id: string
+    installment_number: number
+    amount: number
+    due_date: string
+    status: DebtInstallmentStatus
+    paid_at: string | null
+    created_at: string
+}
+
+export interface GroupSettlementTransfer {
+    from_user_id: string
+    to_user_id: string
+    amount: number
+    currency: DebtCurrency
+}
+
+export interface MonthlyDebtSummary {
+    month: string
+    total_created: number
+    total_paid: number
+    pending_amount: number
+    overdue_amount: number
+    active_debts: number
+}
+
+export interface GroupFinancialHealth {
+    score: number
+    status: 'excellent' | 'healthy' | 'warning' | 'critical'
+    indicators: {
+        overdueRatio: number
+        repaymentRatio: number
+        concentrationRatio: number
+    }
+}
+
+export interface GroupGoal {
+    id: string
+    group_id: string
+    created_by: string
+    title: string
+    target_type: GroupGoalType
+    target_value: number
+    current_value: number
+    deadline: string | null
+    status: GroupGoalStatus
+    created_at: string
+    updated_at: string
+}
+
+export interface UserBadge {
+    id: string
+    group_id: string
+    user_id: string
+    badge_key: string
+    badge_label: string
+    awarded_at: string
+    payload: Record<string, unknown>
+}
+
+export interface GroupMemberPermission {
+    id: string
+    group_id: string
+    user_id: string
+    can_manage_debts: boolean
+    can_manage_music: boolean
+    can_manage_files: boolean
+    can_manage_members: boolean
+    updated_by: string | null
+    updated_at: string
 }
 
 // -- File --

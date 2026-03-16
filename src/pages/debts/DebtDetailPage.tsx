@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle, PlusCircle, Trash2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle, PlusCircle } from 'lucide-react'
 import { debtsService } from '@services/debts.service'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { useToast } from '@components/ui/Toast'
 import { Avatar } from '@components/common/Avatar'
+import { DebtAutomationPanel } from '@components/debts/DebtAutomationPanel'
 import { ConfirmDialog } from '@components/ui/ConfirmDialog'
 import { formatMoney, formatDate, formatRelative, getDebtProgress } from '@lib/utils'
 import { DEBT_STATUS_LABELS } from '@lib/constants'
@@ -23,6 +24,7 @@ const DebtDetailPage: React.FC = () => {
     const queryClient = useQueryClient()
     const [showPaymentForm, setShowPaymentForm] = useState(false)
     const [showMarkPaid, setShowMarkPaid] = useState(false)
+    const [receiptFile, setReceiptFile] = useState<File | null>(null)
 
     const { data: debt, isLoading } = useQuery({
         queryKey: ['debt', debtId],
@@ -36,7 +38,7 @@ const DebtDetailPage: React.FC = () => {
 
     const { mutate: registerPayment, isPending: isPaymentPending } = useMutation({
         mutationFn: (data: PaymentFormData) => debtsService.registerPayment(
-            debtId!, userId!, data, debt!.amount, debt!.amount_paid
+            debtId!, userId!, data, debt!.amount, debt!.amount_paid, receiptFile
         ),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: ['debt', debtId] })
@@ -44,6 +46,7 @@ const DebtDetailPage: React.FC = () => {
             void queryClient.invalidateQueries({ queryKey: ['debts-summary', groupId] })
             success('Pago registrado', 'El progreso se ha actualizado.')
             setShowPaymentForm(false)
+            setReceiptFile(null)
             reset()
         },
         onError: (err) => toastError('Error', err instanceof Error ? err.message : 'Error'),
@@ -177,11 +180,23 @@ const DebtDetailPage: React.FC = () => {
                         <label className="label" htmlFor="pay-note">Nota (opcional)</label>
                         <input id="pay-note" type="text" className="input" placeholder="Ej: Bizum" {...register('note')} />
                     </div>
+                    <div>
+                        <label className="label" htmlFor="pay-receipt">Ticket o foto (opcional)</label>
+                        <input
+                            id="pay-receipt"
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="input"
+                            onChange={(event) => setReceiptFile(event.target.files?.[0] ?? null)}
+                        />
+                    </div>
                     <button type="submit" disabled={isPaymentPending} className="btn-primary w-full py-2.5">
                         {isPaymentPending ? 'Guardando...' : 'Confirmar pago'}
                     </button>
                 </form>
             )}
+
+            {!isPaid ? <DebtAutomationPanel debt={debt} userId={userId!} /> : null}
 
             {/* Payment history */}
             {debt.payments && debt.payments.length > 0 && (
@@ -194,6 +209,16 @@ const DebtDetailPage: React.FC = () => {
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm text-white font-medium">{formatMoney(p.amount, debt.currency)}</p>
                                     {p.note && <p className="text-xs text-gray-400">{p.note}</p>}
+                                    {p.receipt_url ? (
+                                        <a
+                                            href={p.receipt_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-xs text-brand-300 hover:text-brand-200"
+                                        >
+                                            Ver ticket
+                                        </a>
+                                    ) : null}
                                 </div>
                                 <span className="text-xs text-gray-500">{formatRelative(p.created_at)}</span>
                             </div>

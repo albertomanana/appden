@@ -12,7 +12,10 @@ export const groupsService = {
             .eq('user_id', userId)
 
         if (error) throw error
-        return (data?.map((d: { group: Group }) => d.group).filter(Boolean) ?? []) as Group[]
+        const rows = (data ?? []) as Array<{ group: Group | Group[] | null }>
+        return rows
+            .map((row) => (Array.isArray(row.group) ? row.group[0] : row.group))
+            .filter((group): group is Group => !!group)
     },
 
     /**

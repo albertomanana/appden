@@ -2,7 +2,16 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-export const AUTH_STORAGE_KEY = 'the-appden-auth'
+const projectRef = (() => {
+    try {
+        const url = new URL(supabaseUrl || 'https://placeholder.supabase.co')
+        return url.host.split('.')[0] || 'local'
+    } catch {
+        return 'local'
+    }
+})()
+export const LEGACY_AUTH_STORAGE_KEY = 'the-appden-auth'
+export const AUTH_STORAGE_KEY = `the-appden-auth:${projectRef}:v2`
 
 console.log('📦 Supabase URL configured:', !!supabaseUrl)
 console.log('📦 Supabase Key configured:', !!supabaseAnonKey)

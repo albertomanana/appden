@@ -1,5 +1,5 @@
 import { supabase } from '@lib/supabase/client'
-import type { Favorite, Song } from '@/types'
+import type { Song } from '@/types'
 
 export const favoritesService = {
     /**
@@ -13,7 +13,11 @@ export const favoritesService = {
             .order('created_at', { ascending: false })
 
         if (error) throw error
-        return (data?.map((f: { song: Song }) => ({ ...f.song, is_favorite: true })) ?? []) as Song[]
+        const rows = (data ?? []) as Array<{ song: Song | Song[] | null }>
+        return rows
+            .map((row) => (Array.isArray(row.song) ? row.song[0] : row.song))
+            .filter((song): song is Song => !!song)
+            .map((song) => ({ ...song, is_favorite: true }))
     },
 
     /**

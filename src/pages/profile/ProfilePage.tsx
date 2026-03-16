@@ -25,8 +25,6 @@ const ProfilePage: React.FC = () => {
     const isOwnProfile = targetId === userId
 
     const [editing, setEditing] = useState(false)
-    const [avatarFile, setAvatarFile] = useState<File | null>(null)
-    const [avatarError, setAvatarError] = useState<string | null>(null)
 
     const { data: profile, isLoading } = useQuery({
         queryKey: ['profile', targetId],
@@ -58,7 +56,6 @@ const ProfilePage: React.FC = () => {
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: ['profile', userId] })
             success('Avatar actualizado')
-            setAvatarFile(null)
         },
         onError: () => toastError('Error', 'No se pudo subir el avatar.'),
     })
@@ -67,9 +64,10 @@ const ProfilePage: React.FC = () => {
         const file = e.target.files?.[0]
         if (!file) return
         const err = validateAvatarFile(file)
-        if (err) { setAvatarError(err); return }
-        setAvatarError(null)
-        setAvatarFile(file)
+        if (err) {
+            toastError('Error', err)
+            return
+        }
         uploadAvatar(file)
     }
 

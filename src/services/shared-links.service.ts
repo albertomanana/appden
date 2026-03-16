@@ -1,6 +1,5 @@
 import { supabase } from '@lib/supabase/client'
 import type { SharedLink, SharedLinkResourceType, SharedLinkVisibility } from '@/types'
-import { nanoid } from 'nanoid' // Using crypto.randomUUID() instead to avoid dep
 
 /**
  * Generate a secure random token using the browser's crypto API.

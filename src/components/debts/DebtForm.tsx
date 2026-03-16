@@ -17,7 +17,7 @@ interface DebtFormProps {
 
 export const DebtForm: React.FC<DebtFormProps> = ({ onClose }) => {
     const { userId } = useAuth()
-    const { groupId, activeGroup } = useActiveGroup()
+    const { groupId } = useActiveGroup()
     const { success, error: toastError } = useToast()
     const queryClient = useQueryClient()
 

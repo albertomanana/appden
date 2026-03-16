@@ -2,8 +2,11 @@ import React from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from '@components/layout/Navigation'
 import { BottomNav } from '@components/layout/Navigation'
-import { SpotifyMusicPlayer } from '@components/music/SpotifyMusicPlayer'
 import { usePlayerStore } from '@app/store/player.store'
+import { useAuth } from '@hooks/useAuth'
+import { usePlayer } from '@features/player/hooks/usePlayer'
+import { MiniPlayer } from '@features/player/components/MiniPlayer'
+import { FullPlayer } from '@features/player/components/FullPlayer'
 
 /**
  * Main authenticated app layout.
@@ -11,6 +14,9 @@ import { usePlayerStore } from '@app/store/player.store'
  * - Mobile: full-width content, bottom nav, mini player above bottom nav
  */
 export const AppLayout: React.FC = () => {
+    const { userId } = useAuth()
+    usePlayer({ userId: userId ?? 'local-user' })
+
     const currentSong = usePlayerStore((s) => s.currentSong)
     const hasPlayer = !!currentSong
 
@@ -21,9 +27,8 @@ export const AppLayout: React.FC = () => {
 
             {/* Main content area */}
             <main
-                className={`flex-1 flex flex-col min-h-screen overflow-y-auto
-          pb-safe
-          ${hasPlayer ? 'pb-36 md:pb-16' : 'pb-16 md:pb-0'}
+                className={`flex-1 flex flex-col min-h-screen overflow-y-auto safe-bottom
+          ${hasPlayer ? 'pb-40 md:pb-28' : 'pb-24 md:pb-6'}
         `}
             >
                 <Outlet />
@@ -32,8 +37,9 @@ export const AppLayout: React.FC = () => {
             {/* Mobile bottom navigation */}
             <BottomNav />
 
-            {/* Global Spotify-style music player */}
-            <SpotifyMusicPlayer />
+            {/* Advanced player */}
+            <MiniPlayer />
+            <FullPlayer />
         </div>
     )
 }
