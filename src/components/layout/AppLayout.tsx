@@ -27,9 +27,8 @@ export const AppLayout: React.FC = () => {
 
             {/* Main content area */}
             <main
-                className={`flex-1 flex flex-col min-h-screen overflow-y-auto
-          pb-safe
-          ${hasPlayer ? 'pb-40 md:pb-24' : 'pb-16 md:pb-0'}
+                className={`flex-1 flex flex-col min-h-screen overflow-y-auto safe-bottom
+          ${hasPlayer ? 'pb-40 md:pb-28' : 'pb-24 md:pb-6'}
         `}
             >
                 <Outlet />

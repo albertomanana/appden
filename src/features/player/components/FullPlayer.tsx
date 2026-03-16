@@ -98,7 +98,12 @@ export const FullPlayer: React.FC = () => {
 
     return (
         <div
-            className={cn('fixed inset-0 z-[80] text-white transition-colors duration-300', themeClass)}
+            className={cn(
+                'fixed inset-0 z-[90] text-white transition-colors duration-500 ease-out',
+                'bg-appden-orbit',
+                themeClass,
+                'animate-player-fade-in'
+            )}
             style={{ backgroundImage: dynamicPalette.gradient }}
             onTouchStart={(event) => {
                 touchStartX.current = event.touches[0]?.clientX ?? null
@@ -119,8 +124,11 @@ export const FullPlayer: React.FC = () => {
                 touchStartX.current = null
             }}
         >
-            <div className="absolute inset-0" style={{ backgroundImage: dynamicPalette.blurOverlay }} />
-            <div className="relative h-full flex flex-col p-4 md:p-6">
+            <div
+                className="absolute inset-0 bg-black/70 backdrop-blur-2xl"
+                style={{ backgroundImage: dynamicPalette.blurOverlay }}
+            />
+            <div className="relative h-full flex flex-col p-4 md:p-6 safe-top safe-bottom">
                 <div className="flex items-center justify-between">
                     <button
                         onClick={() => toggleFullPlayer(false)}
@@ -139,15 +147,21 @@ export const FullPlayer: React.FC = () => {
                     </button>
                 </div>
 
-                <div className={cn('flex-1 flex gap-6 mt-4', isCompactMode ? 'flex-col' : 'flex-col md:flex-row')}>
-                    <div className="flex-1 flex flex-col min-h-0">
+                <div
+                    className={cn(
+                        'flex-1 flex gap-6 mt-4 overflow-y-auto no-scrollbar',
+                        isCompactMode ? 'flex-col' : 'flex-col md:flex-row'
+                    )}
+                >
+                    <div className="flex-1 flex flex-col min-h-0 space-y-5">
                         <button
                             type="button"
                             onClick={onCoverTap}
                             onDoubleClick={onCoverTap}
                             className={cn(
                                 'relative mx-auto w-full aspect-square rounded-3xl overflow-hidden shadow-2xl border border-white/10',
-                                'bg-black/25 backdrop-blur-xl',
+                                'bg-black/25 backdrop-blur-xl music-note-frame',
+                                'transition-transform duration-300 ease-out hover:scale-[1.02]',
                                 isCompactMode ? 'max-w-[220px]' : 'max-w-sm'
                             )}
                             aria-label="Cover art"
@@ -179,7 +193,7 @@ export const FullPlayer: React.FC = () => {
                         </div>
 
                         <ProgressBar
-                            className="mt-5"
+                            className="mt-5 rhythm-progress"
                             currentTime={metrics.currentTime}
                             duration={metrics.duration}
                             bufferedRatio={metrics.buffered}
@@ -189,7 +203,7 @@ export const FullPlayer: React.FC = () => {
                             tempoBpm={currentSong.tempo_bpm ?? 100}
                         />
 
-                        <div className="mt-5">
+                        <div className="mt-5 glass rounded-2xl p-3 md:p-4 skyline-border">
                             <PlayerControls
                                 isPlaying={isPlaying}
                                 repeatMode={repeatMode}

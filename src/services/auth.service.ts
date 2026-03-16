@@ -1,4 +1,5 @@
-import { supabase, AUTH_STORAGE_KEY } from '@lib/supabase/client'
+import { STORAGE_KEYS } from '@lib/constants'
+import { supabase, AUTH_STORAGE_KEY, LEGACY_AUTH_STORAGE_KEY } from '@lib/supabase/client'
 
 /**
  * Auth service - wraps Supabase auth methods.
@@ -6,19 +7,72 @@ import { supabase, AUTH_STORAGE_KEY } from '@lib/supabase/client'
  */
 
 export const authService = {
+    ensureAuthStorageCompatibility() {
+        if (typeof window === 'undefined') return
+
+        try {
+            if (LEGACY_AUTH_STORAGE_KEY !== AUTH_STORAGE_KEY) {
+                window.localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY)
+            }
+        } catch {
+            // Ignore storage errors.
+        }
+    },
+
     clearStoredSession() {
         if (typeof window === 'undefined') return
 
         try {
             window.localStorage.removeItem(AUTH_STORAGE_KEY)
+            window.localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY)
 
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
             const projectRef = supabaseUrl?.replace(/^https?:\/\//, '').split('.')[0]
             if (projectRef) {
                 window.localStorage.removeItem(`sb-${projectRef}-auth-token`)
             }
+
+            for (const key of Object.keys(window.localStorage)) {
+                if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                    window.localStorage.removeItem(key)
+                }
+            }
         } catch {
             // Ignore storage errors (private mode / blocked storage)
+        }
+    },
+
+    async hardResetClientState(): Promise<void> {
+        if (typeof window === 'undefined') return
+
+        this.clearStoredSession()
+
+        try {
+            window.localStorage.removeItem(STORAGE_KEYS.ACTIVE_GROUP)
+            window.localStorage.removeItem('appden:player:queue')
+            window.localStorage.removeItem('appden:player:history')
+            window.localStorage.removeItem('appden:player:snapshot')
+            window.localStorage.removeItem('appden:player:preferences')
+        } catch {
+            // Ignore storage cleanup errors.
+        }
+
+        if ('caches' in window) {
+            try {
+                const cacheKeys = await window.caches.keys()
+                await Promise.all(cacheKeys.map((cacheKey) => window.caches.delete(cacheKey)))
+            } catch {
+                // Ignore cache API issues.
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations()
+                await Promise.all(registrations.map((registration) => registration.unregister()))
+            } catch {
+                // Ignore service worker cleanup errors.
+            }
         }
     },
 
@@ -80,6 +134,8 @@ export const authService = {
      * Get current Supabase session (used at app boot).
      */
     async getSession() {
+        this.ensureAuthStorageCompatibility()
+
         try {
             const { data, error } = await supabase.auth.getSession()
             if (error) throw error
