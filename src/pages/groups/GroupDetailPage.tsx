@@ -4,6 +4,7 @@ import { ArrowLeft, AlertCircle, CopyIcon } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { groupsService } from '@services/groups.service'
 import { GroupMemberList } from '@components/groups/GroupMemberList'
+import { GroupPermissionsPanel } from '@components/groups/GroupPermissionsPanel'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { ConfirmDialog } from '@components/ui/ConfirmDialog'
 import { useNotifications } from '@hooks/useNotifications'
@@ -185,6 +186,17 @@ export default function GroupDetailPage() {
                     onRemoveMember={isOwner ? handleRemoveMember : undefined}
                 />
             </div>
+
+            {groupId && user ? (
+                <div className="mb-8">
+                    <GroupPermissionsPanel
+                        groupId={groupId}
+                        members={members}
+                        currentUserId={user.id}
+                        isOwner={isOwner || false}
+                    />
+                </div>
+            ) : null}
 
             {/* Danger Zone */}
             {isOwner && (

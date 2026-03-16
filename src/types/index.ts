@@ -7,6 +7,11 @@
 export type GroupRole = 'owner' | 'member'
 export type DebtStatus = 'pending' | 'partial' | 'paid'
 export type DebtCurrency = 'EUR' | 'USD' | 'GBP' | 'MXN'
+export type DebtSplitMode = 'equal' | 'percentage' | 'exact'
+export type DebtReminderFrequency = 'suave' | 'normal' | 'estricto'
+export type DebtInstallmentStatus = 'pending' | 'paid' | 'overdue'
+export type GroupGoalStatus = 'active' | 'completed' | 'archived'
+export type GroupGoalType = 'debt_reduction' | 'zero_overdue' | 'custom'
 export type FileCategory = 'image' | 'document'
 export type SharedLinkVisibility = 'private' | 'limited'
 export type SharedLinkResourceType = 'song' | 'playlist' | 'debt' | 'file'
@@ -252,10 +257,104 @@ export interface DebtPayment {
     debt_id: string
     amount: number
     note: string | null
+    receipt_url?: string | null
+    receipt_mime_type?: string | null
     paid_by: string
     created_at: string
     // Joined
     payer?: Profile
+}
+
+export interface DebtReminder {
+    id: string
+    debt_id: string
+    group_id: string
+    debtor_id: string
+    created_by: string
+    frequency: DebtReminderFrequency
+    channels: {
+        push: boolean
+        email: boolean
+        whatsapp: boolean
+    }
+    next_run_at: string | null
+    last_sent_at: string | null
+    active: boolean
+    created_at: string
+    updated_at: string
+}
+
+export interface DebtInstallment {
+    id: string
+    debt_id: string
+    installment_number: number
+    amount: number
+    due_date: string
+    status: DebtInstallmentStatus
+    paid_at: string | null
+    created_at: string
+}
+
+export interface GroupSettlementTransfer {
+    from_user_id: string
+    to_user_id: string
+    amount: number
+    currency: DebtCurrency
+}
+
+export interface MonthlyDebtSummary {
+    month: string
+    total_created: number
+    total_paid: number
+    pending_amount: number
+    overdue_amount: number
+    active_debts: number
+}
+
+export interface GroupFinancialHealth {
+    score: number
+    status: 'excellent' | 'healthy' | 'warning' | 'critical'
+    indicators: {
+        overdueRatio: number
+        repaymentRatio: number
+        concentrationRatio: number
+    }
+}
+
+export interface GroupGoal {
+    id: string
+    group_id: string
+    created_by: string
+    title: string
+    target_type: GroupGoalType
+    target_value: number
+    current_value: number
+    deadline: string | null
+    status: GroupGoalStatus
+    created_at: string
+    updated_at: string
+}
+
+export interface UserBadge {
+    id: string
+    group_id: string
+    user_id: string
+    badge_key: string
+    badge_label: string
+    awarded_at: string
+    payload: Record<string, unknown>
+}
+
+export interface GroupMemberPermission {
+    id: string
+    group_id: string
+    user_id: string
+    can_manage_debts: boolean
+    can_manage_music: boolean
+    can_manage_files: boolean
+    can_manage_members: boolean
+    updated_by: string | null
+    updated_at: string
 }
 
 // -- File --
