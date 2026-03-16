@@ -68,7 +68,24 @@ export interface Song {
     created_at: string
     // Joined
     uploader?: Profile
+    owners?: Array<{
+        user_id: string
+        role: 'owner' | 'contributor'
+        profile?: Profile
+    }>
     is_favorite?: boolean
+}
+
+export type GroupFriendRequestStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled'
+
+export interface GroupFriendRequest {
+    id: string
+    group_id: string
+    from_user_id: string
+    to_user_id: string
+    status: GroupFriendRequestStatus
+    created_at: string
+    responded_at: string | null
 }
 
 export type LyricsSource = 'manual' | 'auto'

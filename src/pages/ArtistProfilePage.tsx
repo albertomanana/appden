@@ -1,24 +1,20 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Music, CreditCard, Calendar } from 'lucide-react'
+import { ArrowLeft, Music } from 'lucide-react'
 import { profileService } from '@services/profile.service'
 import { songsService } from '@services/songs.service'
-import { debtsService } from '@services/debts.service'
 import { useAuth } from '@hooks/useAuth'
 import { usePlayerStore } from '@app/store/player.store'
 import { Avatar } from '@components/common/Avatar'
 import { SongCard } from '@components/music/SongCard'
-import { formatMoney, formatRelative } from '@lib/utils'
-import { DEBT_STATUS_LABELS } from '@lib/constants'
-import type { Debt } from '@/types'
 
 const ArtistProfilePage: React.FC = () => {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { userId } = useAuth()
     const setQueue = usePlayerStore((s) => s.setQueue)
-    const [selectedTab, setSelectedTab] = useState<'songs' | 'debts'>('songs')
+    const [selectedTab, setSelectedTab] = useState<'songs'>('songs')
 
     if (!id) {
         return <div className="p-4">Artist ID not provided</div>
@@ -35,23 +31,8 @@ const ArtistProfilePage: React.FC = () => {
         enabled: !!id && !!userId,
     })
 
-    const { data: debts = [] } = useQuery({
-        queryKey: ['debts-artist', id],
-        queryFn: () => debtsService.getDebts(''), // Get all debts and filter
-        enabled: !!id,
-    })
-
-    // Filter debts where artist is creditor or debtor
-    const artistDebts = debts.filter((d: Debt) => d.creditor_id === id || d.debtor_id === id)
-
     // Calculate stats
     const totalSongs = songs.length
-    const totalDebtsOwed = artistDebts
-        .filter((d: Debt) => d.debtor_id === id && d.status !== 'paid')
-        .reduce((sum, d: Debt) => sum + (d.amount - d.amount_paid), 0)
-    const totalDebtsCredited = artistDebts
-        .filter((d: Debt) => d.creditor_id === id && d.status !== 'paid')
-        .reduce((sum, d: Debt) => sum + (d.amount - d.amount_paid), 0)
 
     if (profileLoading) {
         return (
@@ -88,14 +69,6 @@ const ArtistProfilePage: React.FC = () => {
                                 <p className="text-xs text-gray-400 uppercase tracking-wider">Canciones</p>
                                 <p className="text-2xl font-bold text-white">{totalSongs}</p>
                             </div>
-                            <div>
-                                <p className="text-xs text-gray-400 uppercase tracking-wider">Te deben</p>
-                                <p className="text-2xl font-bold text-emerald-400">{formatMoney(totalDebtsCredited)}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-400 uppercase tracking-wider">Debes</p>
-                                <p className="text-2xl font-bold text-red-400">{formatMoney(totalDebtsOwed)}</p>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -112,17 +85,6 @@ const ArtistProfilePage: React.FC = () => {
                     >
                         <Music className="w-5 h-5 inline mr-2" />
                         Canciones ({totalSongs})
-                    </button>
-                    <button
-                        onClick={() => setSelectedTab('debts')}
-                        className={`px-4 py-3 border-b-2 font-semibold transition-colors ${
-                            selectedTab === 'debts'
-                                ? 'border-brand-500 text-white'
-                                : 'border-transparent text-gray-400 hover:text-white'
-                        }`}
-                    >
-                        <CreditCard className="w-5 h-5 inline mr-2" />
-                        Deudas ({artistDebts.length})
                     </button>
                 </div>
 
@@ -151,61 +113,6 @@ const ArtistProfilePage: React.FC = () => {
                     </div>
                 )}
 
-                {/* Debts Tab */}
-                {selectedTab === 'debts' && (
-                    <div className="space-y-3">
-                        {artistDebts.length === 0 ? (
-                            <div className="text-center py-12 text-gray-400">
-                                <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                <p>Sin deudas registradas</p>
-                            </div>
-                        ) : (
-                            artistDebts.map((debt: Debt) => {
-                                const isCreditor = debt.creditor_id === id
-                                return (
-                                    <div key={debt.id} className="card p-4 space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1">
-                                                <p className="text-sm font-semibold text-white">{debt.concept}</p>
-                                                <p className="text-xs text-gray-400">
-                                                    {isCreditor ? 'Te debe →' : '← Te debe'}{' '}
-                                                    {formatMoney(debt.amount, debt.currency)}
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p
-                                                    className={`text-lg font-bold ${
-                                                        isCreditor ? 'text-emerald-400' : 'text-red-400'
-                                                    }`}
-                                                >
-                                                    {formatMoney(debt.amount - debt.amount_paid, debt.currency)}
-                                                </p>
-                                                <p className={`text-xs  font-semibold ${
-                                                    debt.status === 'paid'
-                                                        ? 'text-emerald-400'
-                                                        : debt.status === 'partial'
-                                                            ? 'text-yellow-400'
-                                                            : 'text-gray-400'
-                                                }`}>
-                                                    {DEBT_STATUS_LABELS[debt.status]}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between text-xs text-gray-500">
-                                            <span className="flex items-center gap-1">
-                                                <Calendar className="w-3 h-3" />
-                                                {formatRelative(debt.created_at)}
-                                            </span>
-                                            {debt.amount_paid > 0 && (
-                                                <span>Pagado: {formatMoney(debt.amount_paid, debt.currency)}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                )
-                            })
-                        )}
-                    </div>
-                )}
             </div>
         </div>
     )

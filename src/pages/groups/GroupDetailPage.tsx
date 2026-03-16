@@ -180,6 +180,7 @@ export default function GroupDetailPage() {
                     Members ({members.length})
                 </h2>
                 <GroupMemberList
+                    groupId={groupId!}
                     members={members}
                     currentUserId={user?.id || ''}
                     isOwner={isOwner || false}

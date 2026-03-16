@@ -59,6 +59,7 @@ export const songsService = {
             .select(`
         *,
         uploader:profiles!songs_uploaded_by_fkey(id, display_name, avatar_url),
+        owners:song_owners(user_id, role, profile:profiles(id, display_name, avatar_url)),
         favorites!left(id, user_id)
       `)
             .eq('group_id', groupId)
@@ -117,17 +118,19 @@ export const songsService = {
     },
 
     /**
-     * Get all songs by a specific artist/user
+     * Get songs owned by a user within a group (co-ownership).
      */
-    async getSongsByArtist(artistId: string, userId: string): Promise<Song[]> {
+    async getSongsByOwner(groupId: string, ownerId: string, viewerUserId: string): Promise<Song[]> {
         const { data, error } = await supabase
             .from('songs')
             .select(`
         *,
         uploader:profiles!songs_uploaded_by_fkey(id, display_name, avatar_url),
+        owners:song_owners(user_id, role, profile:profiles(id, display_name, avatar_url)),
         favorites!left(id, user_id)
       `)
-            .eq('uploaded_by', artistId)
+            .eq('group_id', groupId)
+            .eq('owners.user_id', ownerId)
             .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -169,7 +172,66 @@ export const songsService = {
                     ...song,
                     audio_url: audioUrl,
                     cover_url: coverUrl,
-                    is_favorite: song.favorites?.some((f: any) => f.user_id === userId) ?? false,
+                    is_favorite: song.favorites?.some((f: any) => f.user_id === viewerUserId) ?? false,
+                }
+            })
+        )
+
+        return songsWithUrls as Song[]
+    },
+
+    /**
+     * Backward-compatible: songs uploaded by a user (not co-ownership-aware).
+     * Prefer `getSongsByOwner` when a `groupId` context exists.
+     */
+    async getSongsByArtist(artistId: string, viewerUserId: string): Promise<Song[]> {
+        const { data, error } = await supabase
+            .from('songs')
+            .select(`
+        *,
+        uploader:profiles!songs_uploaded_by_fkey(id, display_name, avatar_url),
+        owners:song_owners(user_id, role, profile:profiles(id, display_name, avatar_url)),
+        favorites!left(id, user_id)
+      `)
+            .eq('uploaded_by', artistId)
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        const songsWithUrls = await Promise.all(
+            (data ?? []).map(async (song: any) => {
+                let audioUrl = song.audio_url
+                let coverUrl = song.cover_url
+
+                if (audioUrl) {
+                    try {
+                        const path = normalizeStoragePath(audioUrl, STORAGE_BUCKETS.SONGS)
+                        if (path) {
+                            const signed = await getStorageUrl(STORAGE_BUCKETS.SONGS, path)
+                            if (signed) audioUrl = signed
+                        }
+                    } catch (err) {
+                        console.warn('[Songs] Failed to sign audio URL:', err)
+                    }
+                }
+
+                if (coverUrl) {
+                    try {
+                        const path = normalizeCoverPath(coverUrl)
+                        if (path) {
+                            const signed = await signCoverUrl(path)
+                            if (signed) coverUrl = signed
+                        }
+                    } catch (err) {
+                        console.warn('[Songs] Failed to sign cover URL:', err)
+                    }
+                }
+
+                return {
+                    ...song,
+                    audio_url: audioUrl,
+                    cover_url: coverUrl,
+                    is_favorite: song.favorites?.some((f: any) => f.user_id === viewerUserId) ?? false,
                 }
             })
         )
@@ -186,6 +248,7 @@ export const songsService = {
             .select(`
         *,
         uploader:profiles!songs_uploaded_by_fkey(id, display_name, avatar_url),
+        owners:song_owners(user_id, role, profile:profiles(id, display_name, avatar_url)),
         favorites!left(id, user_id)
       `)
             .eq('id', songId)
@@ -293,6 +356,18 @@ export const songsService = {
             .single()
 
         if (error) throw error
+
+        // Ensure uploader is also an owner (co-ownership support)
+        try {
+            await supabase.from('song_owners').insert({
+                song_id: data.id,
+                user_id: userId,
+                role: 'owner',
+                added_by: userId,
+            })
+        } catch (err) {
+            console.warn('[Songs] Failed to insert song_owners row:', err)
+        }
 
         // Generate signed URLs for response
         let responseAudioUrl = data.audio_url
