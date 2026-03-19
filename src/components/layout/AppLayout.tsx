@@ -1,7 +1,6 @@
-import React from 'react'
+﻿import React from 'react'
 import { Outlet } from 'react-router-dom'
-import { Sidebar } from '@components/layout/Navigation'
-import { BottomNav } from '@components/layout/Navigation'
+import { BottomNav, Sidebar } from '@components/layout/Navigation'
 import { usePlayerStore } from '@app/store/player.store'
 import { useAuth } from '@hooks/useAuth'
 import { usePlayer } from '@features/player/hooks/usePlayer'
@@ -21,14 +20,14 @@ export const AppLayout: React.FC = () => {
     const hasPlayer = !!currentSong
 
     return (
-        <div className="flex min-h-screen bg-surface-800">
+        <div className="flex min-h-screen bg-appden-orbit">
             {/* Desktop sidebar */}
             <Sidebar />
 
             {/* Main content area */}
             <main
                 className={`flex-1 flex flex-col min-h-screen overflow-y-auto safe-bottom
-          ${hasPlayer ? 'pb-40 md:pb-28' : 'pb-24 md:pb-6'}
+          ${hasPlayer ? 'pb-44 md:pb-28' : 'pb-24 md:pb-6'}
         `}
             >
                 <Outlet />
@@ -43,3 +42,4 @@ export const AppLayout: React.FC = () => {
         </div>
     )
 }
+

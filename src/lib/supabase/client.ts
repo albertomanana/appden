@@ -41,6 +41,7 @@ export const STORAGE_BUCKETS = {
     COVERS: 'covers',
     SONGS: 'songs',
     FILES: 'files',
+    REPORTS: 'reports',
 } as const
 
 /**

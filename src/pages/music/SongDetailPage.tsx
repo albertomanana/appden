@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Clock, Disc3, Music, Play, Sparkles, User } from 'lucide-react'
 import { songsService } from '@services/songs.service'
@@ -8,23 +8,31 @@ import { useActiveGroup } from '@hooks/useActiveGroup'
 import { usePlayerStore } from '@app/store/player.store'
 import { Avatar } from '@components/common/Avatar'
 import { LyricsPanel } from '@components/music/LyricsPanel'
-import { SongSocialPanel } from '@components/music/SongSocialPanel'
+import { SongSocialPanel } from '@features/social/components/SongSocialPanel'
 import { ShareButton } from '@components/share/ShareButton'
 import { extractDynamicPalette } from '@features/player/utils/colorExtraction'
-import { formatDuration, formatDate, formatBytes } from '@lib/utils'
+import { formatBytes, formatDate, formatDuration } from '@lib/utils'
 
 const SongDetailPage: React.FC = () => {
     const { songId } = useParams<{ songId: string }>()
+    const [searchParams] = useSearchParams()
     const navigate = useNavigate()
     const { userId } = useAuth()
     const { groupId } = useActiveGroup()
-    const setQueue = usePlayerStore((s) => s.setQueue)
+
+    const setQueue = usePlayerStore((state) => state.setQueue)
+    const setCurrentTime = usePlayerStore((state) => state.setCurrentTime)
+    const setPlaying = usePlayerStore((state) => state.setPlaying)
+    const currentSong = usePlayerStore((state) => state.currentSong)
+    const currentTime = usePlayerStore((state) => state.currentTime)
+
     const [activeTab, setActiveTab] = useState<'overview' | 'lyrics' | 'social'>('overview')
     const [coverFailed, setCoverFailed] = useState(false)
     const [dynamicBackground, setDynamicBackground] = useState({
         gradient: 'linear-gradient(135deg, rgba(22,24,38,0.96), rgba(10,10,14,0.98) 70%)',
         blurOverlay: 'radial-gradient(circle at 18% 12%, rgba(74,102,210,0.22), rgba(10,10,14,0) 62%)',
     })
+    const appliedTimestampRef = useRef<string | null>(null)
 
     const { data: song, isLoading } = useQuery({
         queryKey: ['song', songId],
@@ -38,11 +46,19 @@ const SongDetailPage: React.FC = () => {
         enabled: !!groupId && !!userId,
     })
 
+    const sharedTimestamp = useMemo(() => {
+        const raw = searchParams.get('t')
+        if (!raw) return null
+        const parsed = Number(raw)
+        if (!Number.isFinite(parsed) || parsed < 0) return null
+        return Math.floor(parsed)
+    }, [searchParams])
+
     const handlePlay = () => {
         if (!song) return
 
         if (groupSongs && groupSongs.length > 0) {
-            const idx = groupSongs.findIndex((s) => s.id === song.id)
+            const idx = groupSongs.findIndex((item) => item.id === song.id)
             setQueue(groupSongs, idx >= 0 ? idx : 0)
             return
         }
@@ -72,6 +88,27 @@ const SongDetailPage: React.FC = () => {
             cancelled = true
         }
     }, [song?.cover_url])
+
+    useEffect(() => {
+        if (!song || sharedTimestamp == null) return
+
+        const key = `${song.id}:${sharedTimestamp}`
+        if (appliedTimestampRef.current === key) return
+        appliedTimestampRef.current = key
+
+        if (currentSong?.id !== song.id) {
+            setQueue([song], 0)
+            const timer = window.setTimeout(() => {
+                setCurrentTime(sharedTimestamp)
+                setPlaying(true)
+            }, 220)
+
+            return () => window.clearTimeout(timer)
+        }
+
+        setCurrentTime(sharedTimestamp)
+        setPlaying(true)
+    }, [song, sharedTimestamp, currentSong?.id, setCurrentTime, setPlaying, setQueue])
 
     const tabButtons = useMemo(
         () => [
@@ -129,15 +166,16 @@ const SongDetailPage: React.FC = () => {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={handlePlay}
-                                    className="btn-primary px-4 py-2.5"
-                                    aria-label="Reproducir"
-                                >
+                                <button onClick={handlePlay} className="btn-primary px-4 py-2.5" aria-label="Reproducir">
                                     <Play className="w-4 h-4" />
                                     Reproducir
                                 </button>
-                                <ShareButton resourceType="song" resourceId={song.id} label={`${song.title} - ${song.artist_name}`} />
+                                <ShareButton
+                                    resourceType="song"
+                                    resourceId={song.id}
+                                    label={`${song.title} - ${song.artist_name}`}
+                                    timestampSeconds={currentSong?.id === song.id ? currentTime : null}
+                                />
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
@@ -211,7 +249,7 @@ const SongDetailPage: React.FC = () => {
                                     <Sparkles className="w-3.5 h-3.5" /> Consejo
                                 </p>
                                 <p className="text-sm text-gray-200 mt-2">
-                                    Activa la pestaña de letras para generar un borrador sincronizado y luego
+                                    Activa la pestana de letras para generar un borrador sincronizado y luego
                                     editarlo manualmente con timestamps.
                                 </p>
                             </div>

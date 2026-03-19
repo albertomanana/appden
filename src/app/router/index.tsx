@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@components/common/ProtectedRoute'
 import { AppLayout } from '@components/layout/AppLayout'
@@ -15,6 +15,8 @@ const SongDetailPage = React.lazy(() => import('@pages/music/SongDetailPage'))
 const PlaylistsPage = React.lazy(() => import('@pages/playlists/PlaylistsPage'))
 const PlaylistDetailPage = React.lazy(() => import('@pages/playlists/PlaylistDetailPage'))
 const FavoritesPage = React.lazy(() => import('@pages/FavoritesPage'))
+const ChangelogPage = React.lazy(() => import('@pages/changelog/ChangelogPage'))
+const ReportPage = React.lazy(() => import('@pages/report/ReportPage'))
 const DebtsPage = React.lazy(() => import('@pages/debts/DebtsPage'))
 const DebtDetailPage = React.lazy(() => import('@pages/debts/DebtDetailPage'))
 const FilesPage = React.lazy(() => import('@pages/FilesPage'))
@@ -60,6 +62,8 @@ export const AppRouter: React.FC = () => (
                     <Route path="/playlists" element={<PlaylistsPage />} />
                     <Route path="/playlists/:playlistId" element={<PlaylistDetailPage />} />
                     <Route path="/favorites" element={<FavoritesPage />} />
+                    <Route path="/changelog" element={<ChangelogPage />} />
+                    <Route path="/report" element={<ReportPage />} />
                     <Route path="/debts" element={<DebtsPage />} />
                     <Route path="/debts/:debtId" element={<DebtDetailPage />} />
                     <Route path="/files" element={<FilesPage />} />
@@ -71,3 +75,4 @@ export const AppRouter: React.FC = () => (
         </React.Suspense>
     </BrowserRouter>
 )
+

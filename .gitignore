@@ -19,9 +19,11 @@ pnpm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+.vercel/
 
 # Temporary
 tmp/
 temp/
 *.tmp
 tmpclaude-*
+*.bak

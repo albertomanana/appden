@@ -5,6 +5,7 @@ import { useAuth } from '@hooks/useAuth'
 import { groupsService } from '@services/groups.service'
 import { GroupMemberList } from '@components/groups/GroupMemberList'
 import { GroupPermissionsPanel } from '@components/groups/GroupPermissionsPanel'
+import { GroupInvitationsPanel } from '@components/groups/GroupInvitationsPanel'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { ConfirmDialog } from '@components/ui/ConfirmDialog'
 import { useNotifications } from '@hooks/useNotifications'
@@ -160,10 +161,10 @@ export default function GroupDetailPage() {
             {/* Invite Link */}
             <div className="mb-8 p-4 bg-neutral-800 rounded-lg border border-neutral-700">
                 <h2 className="text-sm font-semibold text-neutral-300 mb-3 uppercase tracking-wider">
-                    Invite Members
+                    Invite Link
                 </h2>
                 <p className="text-sm text-neutral-400 mb-3">
-                    Share this link with friends to allow them to join the group
+                    Envia este enlace junto con una invitacion desde el panel de abajo.
                 </p>
                 <button
                     onClick={copyInviteCode}
@@ -172,6 +173,14 @@ export default function GroupDetailPage() {
                     <CopyIcon size={18} />
                     Copy Invite Link
                 </button>
+            </div>
+
+            <div className="mb-8">
+                <GroupInvitationsPanel
+                    groupId={groupId!}
+                    members={members}
+                    isOwner={isOwner || false}
+                />
             </div>
 
             {/* Members Section */}

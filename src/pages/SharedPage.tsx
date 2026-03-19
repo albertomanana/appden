@@ -1,23 +1,20 @@
-import React from 'react'
-import { useParams, Link } from 'react-router-dom'
+﻿import React from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { sharedLinksService } from '@services/shared-links.service'
 import { songsService } from '@services/songs.service'
 import { playlistsService } from '@services/playlists.service'
 import { debtsService } from '@services/debts.service'
 import { useAuth } from '@hooks/useAuth'
-import { Music, ListMusic, CreditCard, FolderOpen, AlertCircle } from 'lucide-react'
-import { formatMoney, formatDate } from '@lib/utils'
+import { AlertCircle, Clock3, CreditCard, FolderOpen, ListMusic, Music } from 'lucide-react'
+import { formatDate, formatMoney } from '@lib/utils'
 import { ROUTES } from '@lib/constants'
 
-/**
- * Public shared resource page — accessible via /shared/:token.
- * Resolves the token, fetches the referenced resource, and renders a preview.
- * Requires login for 'private' visibility links.
- */
 const SharedPage: React.FC = () => {
     const { token } = useParams<{ token: string }>()
+    const [searchParams] = useSearchParams()
     const { isAuthenticated } = useAuth()
+    const sharedTimestamp = parseTimestampParam(searchParams.get('t'))
 
     const { data: link, isLoading: linkLoading } = useQuery({
         queryKey: ['shared-link', token],
@@ -41,7 +38,7 @@ const SharedPage: React.FC = () => {
                     <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-4">
                         <AlertCircle className="w-8 h-8 text-red-400" />
                     </div>
-                    <h1 className="text-xl font-bold text-white mb-2">Enlace no válido</h1>
+                    <h1 className="text-xl font-bold text-white mb-2">Enlace no valido</h1>
                     <p className="text-sm text-gray-400 mb-6">
                         Este enlace no existe, ha expirado o ha sido eliminado.
                     </p>
@@ -62,29 +59,18 @@ const SharedPage: React.FC = () => {
                     </div>
                     <h1 className="text-xl font-bold text-white mb-2">Acceso privado</h1>
                     <p className="text-sm text-gray-400 mb-6">
-                        Este recurso es privado. Inicia sesión para verlo.
+                        Este recurso es privado. Inicia sesion para verlo.
                     </p>
                     <Link to={ROUTES.LOGIN} className="btn-primary">
-                        Iniciar sesión
+                        Iniciar sesion
                     </Link>
                 </div>
             </div>
         )
     }
 
-    // Render resource-specific preview
-    const resourceMap: Record<string, React.FC<{ resourceId: string }>> = {
-        song: SharedSongPreview,
-        playlist: SharedPlaylistPreview,
-        debt: SharedDebtPreview,
-        file: SharedFilePreview,
-    }
-
-    const Preview = resourceMap[link.resource_type]
-
     return (
         <div className="min-h-screen bg-surface-800 flex flex-col">
-            {/* Top bar */}
             <header className="border-b border-surface-500 px-4 py-3 flex items-center justify-between bg-surface-900">
                 <span className="text-sm font-bold text-gradient">The Appden</span>
                 {isAuthenticated ? (
@@ -93,14 +79,20 @@ const SharedPage: React.FC = () => {
                     </Link>
                 ) : (
                     <Link to={ROUTES.LOGIN} className="btn-primary text-xs py-1.5 px-3">
-                        Iniciar sesión
+                        Iniciar sesion
                     </Link>
                 )}
             </header>
 
             <main className="flex-1 flex items-center justify-center p-6">
-                {Preview ? (
-                    <Preview resourceId={link.resource_id} />
+                {link.resource_type === 'song' ? (
+                    <SharedSongPreview resourceId={link.resource_id} sharedTimestamp={sharedTimestamp} />
+                ) : link.resource_type === 'playlist' ? (
+                    <SharedPlaylistPreview resourceId={link.resource_id} />
+                ) : link.resource_type === 'debt' ? (
+                    <SharedDebtPreview resourceId={link.resource_id} />
+                ) : link.resource_type === 'file' ? (
+                    <SharedFilePreview resourceId={link.resource_id} />
                 ) : (
                     <p className="text-gray-400">Tipo de recurso desconocido.</p>
                 )}
@@ -109,9 +101,10 @@ const SharedPage: React.FC = () => {
     )
 }
 
-// ── Resource Previews ────────────────────────────────────────
-
-const SharedSongPreview: React.FC<{ resourceId: string }> = ({ resourceId }) => {
+const SharedSongPreview: React.FC<{ resourceId: string; sharedTimestamp: number | null }> = ({
+    resourceId,
+    sharedTimestamp,
+}) => {
     const { userId } = useAuth()
     const { data: song, isLoading } = useQuery({
         queryKey: ['shared-song', resourceId],
@@ -120,7 +113,7 @@ const SharedSongPreview: React.FC<{ resourceId: string }> = ({ resourceId }) => 
     })
 
     if (isLoading) return <PreviewSkeleton />
-    if (!song) return <p className="text-gray-400">Canción no encontrada.</p>
+    if (!song) return <p className="text-gray-400">Cancion no encontrada.</p>
 
     return (
         <div className="card p-6 max-w-sm w-full space-y-4 text-center">
@@ -134,12 +127,24 @@ const SharedSongPreview: React.FC<{ resourceId: string }> = ({ resourceId }) => 
                 )}
             </div>
             <div>
-                <span className="badge badge-brand mb-3"><Music className="w-3 h-3" /> Canción</span>
+                <span className="badge badge-brand mb-3"><Music className="w-3 h-3" /> Cancion</span>
                 <h2 className="text-xl font-bold text-white">{song.title}</h2>
                 <p className="text-gray-400">{song.artist_name}</p>
                 {song.album_name && <p className="text-sm text-gray-500">{song.album_name}</p>}
             </div>
+            {sharedTimestamp != null ? (
+                <div className="inline-flex items-center justify-center gap-1 rounded-full border border-brand-400/40 bg-brand-500/15 px-3 py-1 text-xs text-brand-100 mx-auto">
+                    <Clock3 className="w-3.5 h-3.5" />
+                    Momento compartido: {formatSecondsAsTimestamp(sharedTimestamp)}
+                </div>
+            ) : null}
             <p className="text-xs text-gray-500">Compartida desde The Appden · {formatDate(song.created_at)}</p>
+            <Link
+                to={`${ROUTES.SONG(song.id)}${sharedTimestamp != null ? `?t=${sharedTimestamp}` : ''}`}
+                className="btn-primary inline-flex justify-center"
+            >
+                Abrir en la app
+            </Link>
         </div>
     )
 }
@@ -165,7 +170,7 @@ const SharedPlaylistPreview: React.FC<{ resourceId: string }> = ({ resourceId })
                 <span className="badge badge-brand mb-3"><ListMusic className="w-3 h-3" /> Playlist</span>
                 <h2 className="text-xl font-bold text-white">{playlist.name}</h2>
                 {playlist.description && <p className="text-gray-400">{playlist.description}</p>}
-                <p className="text-sm text-gray-500 mt-1">{songCount} {songCount === 1 ? 'canción' : 'canciones'}</p>
+                <p className="text-sm text-gray-500 mt-1">{songCount} {songCount === 1 ? 'cancion' : 'canciones'}</p>
             </div>
         </div>
     )
@@ -195,14 +200,14 @@ const SharedDebtPreview: React.FC<{ resourceId: string }> = ({ resourceId }) => 
     )
 }
 
-const SharedFilePreview: React.FC<{ resourceId: string }> = () => (
+const SharedFilePreview: React.FC<{ resourceId: string }> = ({ resourceId: _resourceId }) => (
     <div className="card p-6 max-w-sm w-full space-y-4 text-center">
         <div className="w-16 h-16 rounded-2xl bg-surface-600 border border-surface-500 flex items-center justify-center mx-auto">
             <FolderOpen className="w-8 h-8 text-gray-400" />
         </div>
         <div>
             <span className="badge badge-brand mb-3"><FolderOpen className="w-3 h-3" /> Archivo</span>
-            <p className="text-gray-400">Inicia sesión para descargar este archivo.</p>
+            <p className="text-gray-400">Inicia sesion para descargar este archivo.</p>
         </div>
         <Link to={ROUTES.FILES} className="btn-primary inline-flex">
             Ver archivos
@@ -220,4 +225,18 @@ const PreviewSkeleton: React.FC = () => (
     </div>
 )
 
+function parseTimestampParam(raw: string | null): number | null {
+    if (!raw) return null
+    const numeric = Number(raw)
+    if (!Number.isFinite(numeric) || numeric < 0) return null
+    return Math.floor(numeric)
+}
+
+function formatSecondsAsTimestamp(seconds: number): string {
+    const minutes = Math.floor(seconds / 60)
+    const remaining = seconds % 60
+    return `${String(minutes).padStart(2, '0')}:${String(remaining).padStart(2, '0')}`
+}
+
 export default SharedPage
+

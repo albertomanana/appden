@@ -88,6 +88,22 @@ export interface GroupFriendRequest {
     responded_at: string | null
 }
 
+export type GroupInvitationStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled'
+
+export interface GroupInvitation {
+    id: string
+    group_id: string
+    invited_by: string
+    invited_user_id: string
+    status: GroupInvitationStatus
+    message: string | null
+    created_at: string
+    responded_at: string | null
+    group?: Pick<Group, 'id' | 'name' | 'description' | 'avatar_url'>
+    inviter?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>
+    invited?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>
+}
+
 export type LyricsSource = 'manual' | 'auto'
 export type LyricsProposalStatus = 'pending' | 'approved' | 'rejected'
 export type TranslationLanguage = 'es' | 'en'
@@ -208,6 +224,35 @@ export interface GroupActivity {
     created_at: string
     actor?: Profile
     song?: Pick<Song, 'id' | 'title' | 'artist_name' | 'cover_url'>
+}
+
+export type ChangelogType = 'feature' | 'fix' | 'improvement'
+
+export interface ChangelogEntry {
+    id: string
+    group_id: string
+    version: string
+    title: string
+    description: string
+    type: ChangelogType
+    created_by: string | null
+    release_date: string
+    created_at: string
+}
+
+export type ReportType = 'bug' | 'improvement'
+export type ReportStatus = 'open' | 'in_review' | 'resolved' | 'closed'
+
+export interface Report {
+    id: string
+    group_id: string
+    user_id: string
+    type: ReportType
+    description: string
+    steps: string | null
+    image_url: string | null
+    status: ReportStatus
+    created_at: string
 }
 
 // -- Favorite --
