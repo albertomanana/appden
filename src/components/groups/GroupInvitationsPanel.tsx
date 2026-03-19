@@ -4,6 +4,7 @@ import { Search, Send, UserPlus, X } from 'lucide-react'
 import type { GroupMember, Profile } from '@/types'
 import { profileService } from '@services/profile.service'
 import { groupInvitationsService } from '@features/social/services/group-invitations.service'
+import { connectionsService } from '@features/social/services/connections.service'
 import { useAuth } from '@hooks/useAuth'
 import { Avatar } from '@components/common/Avatar'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
@@ -12,13 +13,13 @@ import { useNotifications } from '@hooks/useNotifications'
 interface GroupInvitationsPanelProps {
     groupId: string
     members: GroupMember[]
-    isOwner: boolean
+    canInvite: boolean
 }
 
 export const GroupInvitationsPanel: React.FC<GroupInvitationsPanelProps> = ({
     groupId,
     members,
-    isOwner,
+    canInvite,
 }) => {
     const { userId } = useAuth()
     const { addNotification } = useNotifications()
@@ -26,6 +27,7 @@ export const GroupInvitationsPanel: React.FC<GroupInvitationsPanelProps> = ({
 
     const [query, setQuery] = React.useState('')
     const [message, setMessage] = React.useState('')
+    const [onlyConnections, setOnlyConnections] = React.useState(true)
 
     const memberIds = React.useMemo(() => new Set(members.map((member) => member.user_id)), [members])
     const memberKey = React.useMemo(
@@ -36,23 +38,44 @@ export const GroupInvitationsPanel: React.FC<GroupInvitationsPanelProps> = ({
     const { data: invitations = [], isLoading } = useQuery({
         queryKey: ['group-invitations', groupId],
         queryFn: () => groupInvitationsService.listGroupInvitations(groupId),
-        enabled: isOwner,
+        enabled: canInvite,
         staleTime: 10_000,
     })
 
+    const { data: friendIds = new Set<string>() } = useQuery({
+        queryKey: ['connection-friend-ids', userId],
+        queryFn: async () => {
+            if (!userId) return new Set<string>()
+            return connectionsService.listFriendIds(userId)
+        },
+        enabled: canInvite && !!userId,
+    })
+    const friendKey = React.useMemo(() => Array.from(friendIds).sort().join(','), [friendIds])
+
     const { data: candidates = [], isLoading: searching } = useQuery({
-        queryKey: ['group-invite-candidates', groupId, query, memberKey],
+        queryKey: ['group-invite-candidates', groupId, query, memberKey, onlyConnections, friendKey],
         queryFn: async () => {
             const trimmed = query.trim()
             if (trimmed.length < 2) return []
 
             const profiles = await profileService.searchProfiles(trimmed)
-            return profiles
+            const filtered = profiles
                 .filter((profile) => profile.id !== userId)
                 .filter((profile) => !memberIds.has(profile.id))
+
+            const byConnection = onlyConnections
+                ? filtered.filter((profile) => friendIds.has(profile.id))
+                : filtered
+
+            return byConnection
+                .sort((a, b) => {
+                    const aFriend = friendIds.has(a.id) ? 1 : 0
+                    const bFriend = friendIds.has(b.id) ? 1 : 0
+                    return bFriend - aFriend
+                })
                 .slice(0, 8)
         },
-        enabled: isOwner && query.trim().length >= 2,
+        enabled: canInvite && query.trim().length >= 2,
     })
 
     const inviteMutation = useMutation({
@@ -90,11 +113,11 @@ export const GroupInvitationsPanel: React.FC<GroupInvitationsPanelProps> = ({
 
     const pendingInvitations = invitations.filter((item) => item.status === 'pending')
 
-    if (!isOwner) {
+    if (!canInvite) {
         return (
             <div className="card p-4">
                 <h3 className="text-base font-semibold text-white">Invitaciones</h3>
-                <p className="text-sm text-gray-400 mt-1">Solo el owner puede invitar nuevos miembros al grupo.</p>
+                <p className="text-sm text-gray-400 mt-1">Solo owner o admin pueden invitar nuevos miembros al grupo.</p>
             </div>
         )
     }
@@ -116,6 +139,14 @@ export const GroupInvitationsPanel: React.FC<GroupInvitationsPanelProps> = ({
                         className="input pl-10"
                     />
                 </div>
+                <label className="inline-flex items-center gap-2 text-xs text-gray-300">
+                    <input
+                        type="checkbox"
+                        checked={onlyConnections}
+                        onChange={(event) => setOnlyConnections(event.target.checked)}
+                    />
+                    Priorizar solo mis conexiones
+                </label>
                 <textarea
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
@@ -136,7 +167,10 @@ export const GroupInvitationsPanel: React.FC<GroupInvitationsPanelProps> = ({
                                 <Avatar src={profile.avatar_url} name={profile.display_name} size="sm" />
                                 <div>
                                     <p className="text-sm text-white font-medium">{profile.display_name}</p>
-                                    <p className="text-xs text-gray-400">@{profile.username ?? 'sin-username'}</p>
+                                    <p className="text-xs text-gray-400">
+                                        @{profile.username ?? 'sin-username'}
+                                        {friendIds.has(profile.id) ? ' • conexion' : ''}
+                                    </p>
                                 </div>
                             </div>
                             <button

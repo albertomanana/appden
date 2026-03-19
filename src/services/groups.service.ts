@@ -5,17 +5,34 @@ export const groupsService = {
     /**
      * Fetch all groups the current user belongs to.
      */
-    async getGroups(userId: string): Promise<Group[]> {
-        const { data, error } = await supabase
-            .from('group_members')
-            .select('group:groups(*)')
-            .eq('user_id', userId)
+    async getGroups(_userId: string): Promise<Group[]> {
+        const [memberResult, ownerResult] = await Promise.all([
+            supabase
+                .from('group_members')
+                .select('group:groups(*)')
+                .eq('user_id', _userId),
+            supabase
+                .from('groups')
+                .select('*')
+                .eq('created_by', _userId),
+        ])
 
-        if (error) throw error
-        const rows = (data ?? []) as Array<{ group: Group | Group[] | null }>
-        return rows
+        if (memberResult.error) throw memberResult.error
+        if (ownerResult.error) throw ownerResult.error
+
+        const fromMembership = ((memberResult.data ?? []) as Array<{ group: Group | Group[] | null }>)
             .map((row) => (Array.isArray(row.group) ? row.group[0] : row.group))
             .filter((group): group is Group => !!group)
+
+        const fromOwnership = (ownerResult.data ?? []) as Group[]
+        const mergedById = new Map<string, Group>()
+        for (const group of [...fromMembership, ...fromOwnership]) {
+            mergedById.set(group.id, group)
+        }
+
+        return Array.from(mergedById.values()).sort(
+            (a, b) => +new Date(b.created_at) - +new Date(a.created_at)
+        )
     },
 
     /**
@@ -67,7 +84,25 @@ export const groupsService = {
             .single()
 
         if (error) throw error
-        return data as Group
+
+        const group = data as Group
+
+        // Defensive upsert: trigger should create owner membership, but this
+        // keeps compatibility with databases where the trigger is not applied yet.
+        const { error: ownerMembershipError } = await supabase
+            .from('group_members')
+            .upsert(
+                {
+                    group_id: group.id,
+                    user_id: groupData.created_by,
+                    role: 'owner',
+                },
+                { onConflict: 'group_id,user_id' }
+            )
+
+        if (ownerMembershipError) throw ownerMembershipError
+
+        return group
     },
 
     /**
@@ -76,12 +111,29 @@ export const groupsService = {
     async addGroupMember(
         groupId: string,
         userId: string,
-        role: 'owner' | 'member' = 'member'
+        role: 'owner' | 'admin' | 'member' = 'member'
     ): Promise<GroupMember> {
         const { data, error } = await supabase
             .from('group_members')
             .insert({ group_id: groupId, user_id: userId, role })
             .select()
+            .single()
+
+        if (error) throw error
+        return data as GroupMember
+    },
+
+    async updateGroupMemberRole(
+        groupId: string,
+        userId: string,
+        role: 'owner' | 'admin' | 'member'
+    ): Promise<GroupMember> {
+        const { data, error } = await supabase
+            .from('group_members')
+            .update({ role })
+            .eq('group_id', groupId)
+            .eq('user_id', userId)
+            .select('*, profile:profiles(*)')
             .single()
 
         if (error) throw error
@@ -125,5 +177,17 @@ export const groupsService = {
 
         if (error) throw error
         return (count ?? 0) > 0
+    },
+
+    async getMyRole(groupId: string, userId: string): Promise<'owner' | 'admin' | 'member' | null> {
+        const { data, error } = await supabase
+            .from('group_members')
+            .select('role')
+            .eq('group_id', groupId)
+            .eq('user_id', userId)
+            .maybeSingle()
+
+        if (error) throw error
+        return (data?.role as 'owner' | 'admin' | 'member' | undefined) ?? null
     },
 }

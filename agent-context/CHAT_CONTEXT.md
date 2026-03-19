@@ -59,6 +59,22 @@ This file captures decisions and incidents from this collaboration thread so fut
 - SQL hotfix migration created: `008_fix_rls_groups_recursion.sql`
 - auth bootstrap hardened: group loading errors no longer clear user session in `AuthProvider`
 
+11. 2026-03-19 social/reports/changelog deep integration pass:
+- added migration `009_social_connections_reports_admin.sql`
+  - `group_role` expanded with `admin`
+  - `groups` auto-owner membership trigger
+  - manager (owner/admin) member/invitation policies
+  - new global social tables: `friend_requests`, `friendships`
+  - reports upgraded (`title`, `severity`, `reproduction_steps`, `updated_at`, global-auth visibility)
+  - admin scaffolding: `user_roles`, `is_app_admin`, `report_notifications` + insert trigger
+- new social page `/connections` with search + request/accept/reject + friends list
+- reports rebuilt on `/reports` + `/reports/:reportId`; `/report` now redirects
+- changelog switched to auto-generated git source:
+  - `scripts/generate-changelog-from-git.mjs`
+  - `.github/workflows/changelog-develop.yml`
+  - `public/changelog.generated.json`
+- removed noisy startup `console.log` lines from Supabase client/auth bootstrap path
+
 ## Locked decisions
 
 - storage cover bucket name is `covers`

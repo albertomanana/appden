@@ -40,6 +40,20 @@ Template:
 - current check:
   - installs dependencies (`npm ci`)
 
+## Changelog automation workflow
+
+- workflow:
+  - `.github/workflows/changelog-develop.yml`
+- trigger:
+  - push to `develop`
+  - manual `workflow_dispatch`
+- action:
+  - run `npm run changelog:generate`
+  - update `public/changelog.generated.json`
+  - auto-commit `chore(changelog): update from develop [skip ci]` only when file changes
+- required permission:
+  - `contents: write` (workflow-level)
+
 ## Suggested branch protections (as documented)
 
 Main:

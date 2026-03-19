@@ -115,8 +115,14 @@ Status legend:
 - Internal changelog module: `Implemented`
   - `src/features/changelog/*`, route `/changelog`, table `changelog_entries`
 - In-app reports module: `Implemented`
-  - `src/features/reports/*`, route `/report`, table `reports`
+  - `src/features/reports/*`, routes `/reports` + `/reports/:reportId` (`/report` redirect), table `reports`
 - Group invitations for non-members: `Implemented`
   - owner invites in `GroupDetailPage`, invitee accepts/rejects in `GroupsPage`, table `group_invitations`
 - Auth/bootstrap resilience hotfix: `Implemented`
   - no forced logout when group preload fails; SQL recursion fix in `008_fix_rls_groups_recursion.sql`
+- Global user connections (friend requests + friendships): `Implemented`
+  - `/connections`, tables `friend_requests` + `friendships`, social search/send/accept/reject flow
+- Reports v2 (global-auth visibility + admin readiness): `Implemented`
+  - routes `/reports` + `/reports/:reportId`, statuses, severity, title, `user_roles` + `report_notifications`
+- Automatic changelog from git commits: `Implemented`
+  - script `scripts/generate-changelog-from-git.mjs`, workflow `.github/workflows/changelog-develop.yml`, source `public/changelog.generated.json`

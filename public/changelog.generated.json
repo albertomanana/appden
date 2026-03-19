@@ -1,0 +1,161 @@
+{
+  "generated_at": "2026-03-19T22:17:23.916Z",
+  "source_branch": "develop",
+  "current_version": "1.5.3",
+  "entries": [
+    {
+      "id": "d37f14ed9924b4fb7f5cd7eea35267fdb5d9180f",
+      "version": "1.5.3",
+      "title": "v.1.5.3 Actualización de migraciones y agente corregir error de Auth (Falta corregir errores en social)",
+      "description": "v.1.5.3 Actualización de migraciones y agente corregir error de Auth (Falta corregir errores en social)",
+      "type": "update",
+      "release_date": "2026-03-19",
+      "created_at": "2026-03-19T13:39:50+01:00",
+      "commit_sha": "d37f14e",
+      "author": "albertomanana"
+    },
+    {
+      "id": "b5bbd4c193dd95e9730e402c55a095cdbc70da0f",
+      "version": "1.5.3",
+      "title": "v1.5.2 feat(social): add group invitations flow with RLS policies and UI integration",
+      "description": "v1.5.2 feat(social): add group invitations flow with RLS policies and UI integration",
+      "type": "update",
+      "release_date": "2026-03-19",
+      "created_at": "2026-03-19T12:45:57+01:00",
+      "commit_sha": "b5bbd4c",
+      "author": "albertomanana"
+    },
+    {
+      "id": "f2b4c9a6390ed7f99d4673218bc54d5d47fabed8",
+      "version": "1.5.3",
+      "title": "1.5.1 Beta Oficial (Social mejorado)",
+      "description": "1.5.1 Beta Oficial (Social mejorado)",
+      "type": "update",
+      "release_date": "2026-03-16",
+      "created_at": "2026-03-16T18:23:17+01:00",
+      "commit_sha": "f2b4c9a",
+      "author": "albertomanana"
+    },
+    {
+      "id": "16e87be9f544a9acb714b26a3bc24f06fa61ae98",
+      "version": "1.5.3",
+      "title": "v1.5 Beta Oficial",
+      "description": "v1.5 Beta Oficial",
+      "type": "update",
+      "release_date": "2026-03-16",
+      "created_at": "2026-03-16T17:45:36+01:00",
+      "commit_sha": "16e87be",
+      "author": "albertomanana"
+    },
+    {
+      "id": "282d5ab8376093257339a1a89e4a6c373aeab4c2",
+      "version": "1.5.3",
+      "title": "v1.4 Deudas (Buscar errores)",
+      "description": "v1.4 Deudas (Buscar errores)",
+      "type": "update",
+      "release_date": "2026-03-16",
+      "created_at": "2026-03-16T10:29:15+01:00",
+      "commit_sha": "282d5ab",
+      "author": "albertomanana"
+    },
+    {
+      "id": "759fd0111087b773a2121611850967526ca3dc1d",
+      "version": "1.5.3",
+      "title": "v.1.3 Letras, Social, UI/UX",
+      "description": "v.1.3 Letras, Social, UI/UX",
+      "type": "update",
+      "release_date": "2026-03-16",
+      "created_at": "2026-03-16T09:59:55+01:00",
+      "commit_sha": "759fd01",
+      "author": "albertomanana"
+    },
+    {
+      "id": "46d2d4f9bc640997589ba548881e23c10a93bf63",
+      "version": "1.5.3",
+      "title": "v.1.2 Ideas de producto",
+      "description": "v.1.2 Ideas de producto",
+      "type": "update",
+      "release_date": "2026-03-16",
+      "created_at": "2026-03-16T09:01:50+01:00",
+      "commit_sha": "46d2d4f",
+      "author": "albertomanana"
+    },
+    {
+      "id": "07c5b8fe162e6d7ab78bd810233c5ee16b7fb146",
+      "version": "1.5.3",
+      "title": "CREACIÓN DE TASKS Y WORKFLOW",
+      "description": "CREACIÓN DE TASKS Y WORKFLOW",
+      "type": "update",
+      "release_date": "2026-03-13",
+      "created_at": "2026-03-13T22:58:11+01:00",
+      "commit_sha": "07c5b8f",
+      "author": "albertomanana"
+    },
+    {
+      "id": "28abe7746eace6abcf3982aa4e35162e70d0ef75",
+      "version": "1.5.3",
+      "title": "v1.1.2 Errores del reproductor corregidos (botones, portadas, reproducción...) :)",
+      "description": "v1.1.2 Errores del reproductor corregidos (botones, portadas, reproducción...) :)",
+      "type": "update",
+      "release_date": "2026-03-13",
+      "created_at": "2026-03-13T14:53:46+01:00",
+      "commit_sha": "28abe77",
+      "author": "albertomanana"
+    },
+    {
+      "id": "2c6df600e0c677001614273cf952f61481d327be",
+      "version": "1.5.3",
+      "title": "v.1.1 Varios errores en el reproductor (Botones multimedia, portadas, reproducción...), perfiles con informacion creados",
+      "description": "v.1.1 Varios errores en el reproductor (Botones multimedia, portadas, reproducción...), perfiles con informacion creados",
+      "type": "update",
+      "release_date": "2026-03-10",
+      "created_at": "2026-03-10T20:46:20+01:00",
+      "commit_sha": "2c6df60",
+      "author": "albertomanana"
+    },
+    {
+      "id": "5b25196ff4c327fcb1c681275613713dbd4cb3dc",
+      "version": "1.5.3",
+      "title": "Fix storage path extraction and UI layout issues",
+      "description": "Fix storage path extraction and UI layout issues",
+      "type": "update",
+      "release_date": "2026-03-10",
+      "created_at": "2026-03-10T20:31:20+01:00",
+      "commit_sha": "5b25196",
+      "author": "albertomanana"
+    },
+    {
+      "id": "95e807827ca56ecbf23786d4fedd812974adbdaa",
+      "version": "1.5.3",
+      "title": "Fix SpotifyMusicPlayer with better audio synchronization",
+      "description": "Fix SpotifyMusicPlayer with better audio synchronization",
+      "type": "update",
+      "release_date": "2026-03-10",
+      "created_at": "2026-03-10T20:23:09+01:00",
+      "commit_sha": "95e8078",
+      "author": "albertomanana"
+    },
+    {
+      "id": "fd82ed8bdc59ae54352251556e3a8b92242746ca",
+      "version": "1.5.3",
+      "title": "Complete music playback fixes with Spotify-style player and artist profiles",
+      "description": "Complete music playback fixes with Spotify-style player and artist profiles",
+      "type": "update",
+      "release_date": "2026-03-10",
+      "created_at": "2026-03-10T20:16:25+01:00",
+      "commit_sha": "fd82ed8",
+      "author": "albertomanana"
+    },
+    {
+      "id": "4192e8337cdde3ca719ad74c5be8789239cfd899",
+      "version": "1.5.3",
+      "title": "V.1.0 The appden base",
+      "description": "V.1.0 The appden base",
+      "type": "update",
+      "release_date": "2026-03-09",
+      "created_at": "2026-03-10T00:50:24+01:00",
+      "commit_sha": "4192e83",
+      "author": "albertomanana"
+    }
+  ]
+}

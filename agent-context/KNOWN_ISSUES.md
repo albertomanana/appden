@@ -1,11 +1,12 @@
 # Known Issues and Risks
 
-## 1) Login can fail if migration 008 is not applied
+## 1) Login/social bootstrap can fail if migration 008/009 is missing
 
 Symptom:
 
 - auth/session appears established but group bootstrap triggers server error
 - Supabase can return `42P17 infinite recursion detected in policy for relation "groups"`
+- social/report actions can fail with relation/policy errors if migration `009_social_connections_reports_admin.sql` is not applied
 
 Impact:
 
@@ -14,6 +15,7 @@ Impact:
 Suggested fix:
 
 - apply `supabase/migrations/008_fix_rls_groups_recursion.sql`
+- apply `supabase/migrations/009_social_connections_reports_admin.sql`
 - verify `group_invitations` policies no longer depend on `groups` in a recursive way
 
 ## 2) Incognito-only behavior can still happen on stale clients
@@ -87,3 +89,19 @@ Suggested fix:
 
 - enforce UTF-8 with editorconfig and pre-commit checks
 - normalize affected files
+
+## 7) Auto changelog workflow requires write-capable develop branch
+
+Symptom:
+
+- changelog workflow runs but cannot push `public/changelog.generated.json`
+
+Likely causes:
+
+- branch protection on `develop` blocks GitHub Actions bot push
+- workflow permissions not set to `contents: write`
+
+Suggested fix:
+
+- keep `contents: write` in workflow
+- allow bot pushes to `develop` for changelog update commit, or route via PR automation

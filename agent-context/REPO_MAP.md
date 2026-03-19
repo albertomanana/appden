@@ -52,6 +52,7 @@ Core services:
 - `src/services/lyrics.service.ts`
 - `src/services/asr.service.ts`
 - `src/services/friends.service.ts`
+- `src/features/social/services/connections.service.ts`
 - `src/services/debts.service.ts`
 - `src/services/debt-pro.service.ts`
 - `src/services/files.service.ts`
@@ -77,6 +78,10 @@ Compatibility wrappers (redirect to feature modules):
   - `src/pages/changelog/ChangelogPage.tsx`
 - report:
   - `src/pages/report/ReportPage.tsx`
+  - `src/pages/reports/ReportsPage.tsx`
+  - `src/pages/reports/ReportDetailPage.tsx`
+- connections:
+  - `src/pages/connections/ConnectionsPage.tsx`
 - debts:
   - `src/pages/debts/DebtsPage.tsx`
   - `src/pages/debts/DebtDetailPage.tsx`
@@ -102,3 +107,8 @@ Compatibility wrappers (redirect to feature modules):
   - `supabase/migrations/006_changelog_reports_social_hardening.sql`
   - `supabase/migrations/007_group_invitations.sql`
   - `supabase/migrations/008_fix_rls_groups_recursion.sql`
+  - `supabase/migrations/009_social_connections_reports_admin.sql`
+- changelog automation:
+  - `scripts/generate-changelog-from-git.mjs`
+  - `.github/workflows/changelog-develop.yml`
+  - `public/changelog.generated.json`

@@ -1,14 +1,21 @@
-﻿export type ChangelogItemType = 'feature' | 'fix' | 'improvement'
+export type ChangelogItemType = 'feature' | 'fix' | 'improvement' | 'update'
 
 export interface ChangelogItem {
     id: string
-    group_id: string
     version: string
     title: string
     description: string
     type: ChangelogItemType
-    created_by: string | null
     release_date: string
     created_at: string
+    commit_sha?: string | null
+    author?: string | null
+}
+
+export interface GeneratedChangelogPayload {
+    generated_at: string
+    source_branch: string
+    current_version: string
+    entries: ChangelogItem[]
 }
 

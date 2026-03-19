@@ -23,8 +23,12 @@
     "advanced_player_store": "src/features/player/player.store.ts",
     "advanced_player_engine": "src/features/player/player.engine.ts",
     "social_feature": "src/features/social",
+    "connections_page": "src/pages/connections/ConnectionsPage.tsx",
     "changelog_feature": "src/features/changelog",
-    "reports_feature": "src/features/reports"
+    "changelog_generated_file": "public/changelog.generated.json",
+    "reports_feature": "src/features/reports",
+    "reports_pages": "src/pages/reports",
+    "changelog_workflow": ".github/workflows/changelog-develop.yml"
   },
   "supabase": {
     "migrations": [
@@ -35,7 +39,8 @@
       "005_social_friends_song_owners.sql",
       "006_changelog_reports_social_hardening.sql",
       "007_group_invitations.sql",
-      "008_fix_rls_groups_recursion.sql"
+      "008_fix_rls_groups_recursion.sql",
+      "009_social_connections_reports_admin.sql"
     ],
     "required_buckets": [
       "avatars",
@@ -48,7 +53,8 @@
       "Bucket not found",
       "42501 must be owner of table objects",
       "42883 operator does not exist: text = uuid",
-      "42P17 infinite recursion detected in policy for relation groups"
+      "42P17 infinite recursion detected in policy for relation groups",
+      "missing migration 009 causes friend_requests/reports policy errors"
     ]
   },
   "roadmap_status": {

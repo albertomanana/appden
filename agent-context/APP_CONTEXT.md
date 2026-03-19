@@ -83,7 +83,11 @@ Capabilities:
 - `@mention` suggestions
 - timestamp tokens in comments (`[mm:ss]`)
 - group activity feed
-- group invitations (owner invites non-members, invitee accepts/rejects)
+- group invitations (owner/admin invites non-members, invitee accepts/rejects)
+- global user connections:
+  - `friend_requests` + `friendships`
+  - search users, send/accept/reject/cancel
+  - reusable in group invite flow (`only connections` filter)
 
 Compatibility wrappers kept:
 
@@ -101,19 +105,28 @@ Capabilities:
 
 - route `/changelog`
 - current version + release notes timeline
-- item types: `feature`, `fix`, `improvement`
-- Supabase table source: `changelog_entries`
+- item types: `feature`, `fix`, `improvement`, `update`
+- primary source: generated git JSON (`public/changelog.generated.json`)
+- automation:
+  - `scripts/generate-changelog-from-git.mjs`
+  - `.github/workflows/changelog-develop.yml`
+- fallback source (legacy): `changelog_entries`
 
 ### 7) Reports
 
 - `src/features/reports/*`
-- `src/pages/report/ReportPage.tsx`
+- `src/pages/reports/ReportsPage.tsx`
+- `src/pages/reports/ReportDetailPage.tsx`
 
 Capabilities:
 
-- route `/report`
-- form fields: type, description, steps, optional image
-- validation + loading/success feedback
+- routes `/reports` and `/reports/:reportId` (`/report` redirects)
+- form fields: type, title, description, reproduction_steps, severity, optional image
+- public-in-app visibility for authenticated users
+- statuses: `open`, `in_review`, `resolved`, `closed`
+- admin-ready model:
+  - `user_roles` (`admin`)
+  - `report_notifications` + unread counter
 - Supabase table source: `reports`
 
 ## Route map
@@ -126,8 +139,9 @@ Main protected routes:
 - `/music`, `/music/:songId`
 - `/playlists`, `/playlists/:playlistId`
 - `/favorites`
+- `/connections`
 - `/changelog`
-- `/report`
+- `/reports`, `/reports/:reportId`
 - `/debts`, `/debts/:debtId`
 - `/groups`, `/groups/:groupId`
 - `/notifications`

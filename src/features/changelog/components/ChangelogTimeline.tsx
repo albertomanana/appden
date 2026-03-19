@@ -62,6 +62,8 @@ function labelFor(type: ChangelogItemType): string {
             return 'Fix'
         case 'improvement':
             return 'Improvement'
+        case 'update':
+            return 'Update'
         default:
             return 'Cambio'
     }
@@ -75,6 +77,8 @@ function badgeClass(type: ChangelogItemType): string {
             return 'badge badge-red inline-flex items-center gap-1'
         case 'improvement':
             return 'badge badge-brand inline-flex items-center gap-1'
+        case 'update':
+            return 'badge bg-surface-600 text-surface-100 border border-surface-400 inline-flex items-center gap-1'
         default:
             return 'badge'
     }
@@ -84,6 +88,7 @@ const iconByType: Record<ChangelogItemType, React.ReactNode> = {
     feature: <Rocket className="w-3 h-3" />,
     fix: <Wrench className="w-3 h-3" />,
     improvement: <Sparkles className="w-3 h-3" />,
+    update: <Sparkles className="w-3 h-3" />,
 }
 
 function iconFor(type: ChangelogItemType): React.ReactNode {

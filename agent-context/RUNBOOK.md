@@ -16,7 +16,7 @@ copy .env.example .env.local
 
 3. Fill `.env.local` with Supabase URL and anon key.
 
-4. Run SQL migrations in Supabase SQL Editor (001 -> 008).
+4. Run SQL migrations in Supabase SQL Editor (001 -> 009).
 
 5. Ensure storage buckets exist:
 - `avatars`
@@ -80,7 +80,38 @@ Before sharing app with friends:
 - song upload works (audio + cover)
 - cover and song URLs open (signed URL generated)
 - social/changelog/report routes work without relation errors
+- `/connections` flow works (send + accept + reject)
+- `/reports` list/detail works and creation is possible even without active group
 - RLS limits data to group members
+
+## Admin bootstrap (when your user exists)
+
+Run once in Supabase SQL Editor (as project owner):
+
+```sql
+insert into user_roles (user_id, role, created_by)
+values ('<TU_USER_ID_UUID>', 'admin', '<TU_USER_ID_UUID>')
+on conflict (user_id, role) do nothing;
+```
+
+Then re-login and confirm:
+
+- report badge appears in navigation for admin
+- admin can change report status in `/reports` and `/reports/:reportId`
+
+## Changelog automation
+
+Local generation:
+
+```bash
+npm run changelog:generate
+```
+
+CI generation:
+
+- workflow: `.github/workflows/changelog-develop.yml`
+- trigger: push to `develop`
+- output file consumed by app: `public/changelog.generated.json`
 
 ## Deploy (Vercel only)
 
@@ -102,6 +133,8 @@ Before sharing app with friends:
   - social tab (add/edit/delete comment)
 - share song link with timestamp (`?t=`)
 - open `/changelog`
-- submit `/report` with and without image
+- open `/connections` and complete one request cycle
+- submit `/reports` with and without image
+- open `/reports/:reportId` and change status (admin/creator)
 - create debt and payment
 - export CSV/JSON in debt insights

@@ -24,11 +24,17 @@ Recent additions tracked in this snapshot:
 
 - refactor to `src/features/social`
 - new feature modules: `src/features/changelog`, `src/features/reports`
-- new routes: `/changelog`, `/report`
+- new routes: `/changelog`, `/reports`
 - new migration: `006_changelog_reports_social_hardening.sql`
 - social group invitations flow: `007_group_invitations.sql`
 - RLS recursion/login hotfix: `008_fix_rls_groups_recursion.sql`
 - auth bootstrap hardening in `AuthProvider` (do not force logout on group fetch failure)
+- social + reports hardening migration: `009_social_connections_reports_admin.sql`
+- new routes: `/connections`, `/reports`, `/reports/:reportId` (`/report` kept as redirect)
+- automatic changelog pipeline from git commits on `develop`:
+  - script: `scripts/generate-changelog-from-git.mjs`
+  - workflow: `.github/workflows/changelog-develop.yml`
+  - generated source file: `public/changelog.generated.json`
 
 ## Recommended reading order
 

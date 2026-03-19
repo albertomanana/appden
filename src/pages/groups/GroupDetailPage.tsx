@@ -9,6 +9,7 @@ import { GroupInvitationsPanel } from '@components/groups/GroupInvitationsPanel'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { ConfirmDialog } from '@components/ui/ConfirmDialog'
 import { useNotifications } from '@hooks/useNotifications'
+import { useGroupStore } from '@app/store/group.store'
 import type { Group, GroupMember } from '@/types'
 
 export default function GroupDetailPage() {
@@ -16,6 +17,7 @@ export default function GroupDetailPage() {
     const navigate = useNavigate()
     const { user } = useAuth()
     const { addNotification } = useNotifications()
+    const setActiveGroup = useGroupStore((state) => state.setActiveGroup)
 
     const [group, setGroup] = React.useState<Group | null>(null)
     const [members, setMembers] = React.useState<GroupMember[]>([])
@@ -38,6 +40,7 @@ export default function GroupDetailPage() {
 
             const groupData = await groupsService.getGroup(groupId)
             setGroup(groupData)
+            setActiveGroup(groupData)
 
             const membersData = await groupsService.getGroupMembers(groupId)
             setMembers(membersData)
@@ -63,6 +66,25 @@ export default function GroupDetailPage() {
                 type: 'error',
                 title: 'Error',
                 message: err instanceof Error ? err.message : 'Failed to remove member',
+            })
+        }
+    }
+
+    async function handleUpdateRole(userId: string, role: 'owner' | 'admin' | 'member') {
+        try {
+            if (!groupId) return
+            await groupsService.updateGroupMemberRole(groupId, userId, role)
+            await loadGroupDetails()
+            addNotification({
+                type: 'success',
+                title: 'Rol actualizado',
+                message: 'Los permisos del miembro se actualizaron correctamente.',
+            })
+        } catch (err) {
+            addNotification({
+                type: 'error',
+                title: 'Error',
+                message: err instanceof Error ? err.message : 'No se pudo cambiar el rol',
             })
         }
     }
@@ -100,7 +122,9 @@ export default function GroupDetailPage() {
         })
     }
 
-    const isOwner = group && user && group.created_by === user.id
+    const isOwner = !!(group && user && group.created_by === user.id)
+    const myMembership = user ? members.find((member) => member.user_id === user.id) : null
+    const isManager = isOwner || myMembership?.role === 'admin'
 
     if (loading) {
         return (
@@ -179,7 +203,7 @@ export default function GroupDetailPage() {
                 <GroupInvitationsPanel
                     groupId={groupId!}
                     members={members}
-                    isOwner={isOwner || false}
+                    canInvite={isManager}
                 />
             </div>
 
@@ -192,8 +216,10 @@ export default function GroupDetailPage() {
                     groupId={groupId!}
                     members={members}
                     currentUserId={user?.id || ''}
-                    isOwner={isOwner || false}
-                    onRemoveMember={isOwner ? handleRemoveMember : undefined}
+                    isManager={isManager}
+                    canAssignRoles={isOwner}
+                    onUpdateRole={isOwner ? handleUpdateRole : undefined}
+                    onRemoveMember={isManager ? handleRemoveMember : undefined}
                 />
             </div>
 

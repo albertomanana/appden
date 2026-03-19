@@ -61,8 +61,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // If it fails, continue as logged-out to avoid blocking the app.
         void (async () => {
             try {
-                console.log('[Auth] Initializing auth session...')
-
                 const timeoutPromise: Promise<never> = new Promise((_resolve, reject) => {
                     setTimeout(() => {
                         reject(new Error('Supabase connection timeout. Check your .env.local credentials.'))
@@ -71,8 +69,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 const sessionPromise = authService.getSession()
                 const session = await Promise.race([sessionPromise, timeoutPromise])
-
-                console.log('[Auth] Session loaded:', session ? 'authenticated' : 'no session')
                 await initUser(session?.user?.id ?? null)
             } catch (err) {
                 const errorMsg = err instanceof Error ? err.message : 'Failed to load session'

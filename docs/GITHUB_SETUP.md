@@ -77,3 +77,18 @@ Create labels:
 ## 8) Onboarding rule
 
 No one pushes directly to `main`. All changes go through PR with template + review.
+
+## 9) Auto changelog on develop
+
+The repository now includes `.github/workflows/changelog-develop.yml`.
+
+Behavior:
+
+- Trigger: every push to `develop` (and manual `workflow_dispatch`)
+- Action: runs `npm run changelog:generate`
+- Output: updates `public/changelog.generated.json`
+- Commit bot: creates `chore(changelog): update from develop [skip ci]` only when file changes
+
+Required secrets:
+
+- none (uses default `GITHUB_TOKEN` with `contents: write` permission configured in workflow)

@@ -1,5 +1,6 @@
 import React from 'react'
 import { Plus, AlertCircle, Check, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@hooks/useAuth'
 import { groupsService } from '@services/groups.service'
 import { groupInvitationsService } from '@features/social/services/group-invitations.service'
@@ -8,11 +9,14 @@ import { GroupCard } from '@components/groups/GroupCard'
 import { EmptyState } from '@components/ui/EmptyState'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { useNotifications } from '@hooks/useNotifications'
+import { useGroupStore } from '@app/store/group.store'
 import type { Group, GroupInvitation } from '@/types'
 
 export default function GroupsPage() {
     const { user } = useAuth()
+    const navigate = useNavigate()
     const { addNotification } = useNotifications()
+    const setActiveGroup = useGroupStore((state) => state.setActiveGroup)
 
     const [groups, setGroups] = React.useState<Group[]>([])
     const [incomingInvites, setIncomingInvites] = React.useState<GroupInvitation[]>([])
@@ -78,12 +82,11 @@ export default function GroupsPage() {
                 created_by: user.id,
             })
 
-            // Add current user as owner
-            await groupsService.addGroupMember(newGroup.id, user.id, 'owner')
-
             setGroups([newGroup, ...groups])
             setGroupCounts({ ...groupCounts, [newGroup.id]: 1 })
             setShowForm(false)
+            setActiveGroup(newGroup)
+            navigate(`/groups/${newGroup.id}`)
 
             addNotification({
                 type: 'info',

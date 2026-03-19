@@ -22,6 +22,7 @@ Expected in `.env.local`:
 6. `supabase/migrations/006_changelog_reports_social_hardening.sql`
 7. `supabase/migrations/007_group_invitations.sql`
 8. `supabase/migrations/008_fix_rls_groups_recursion.sql`
+9. `supabase/migrations/009_social_connections_reports_admin.sql`
 
 ## Storage buckets
 
@@ -36,6 +37,12 @@ Code expects these private buckets:
 New social invitation table:
 
 - `group_invitations` (owner invites non-members; invitee can accept/reject)
+- `friend_requests` and `friendships` (global user connections)
+
+Admin/report extensions:
+
+- `user_roles` (global `admin` role)
+- `report_notifications` (admin unread queue on report creation trigger)
 
 References:
 
@@ -44,6 +51,7 @@ References:
 - `supabase/migrations/006_changelog_reports_social_hardening.sql`
 - `supabase/migrations/007_group_invitations.sql`
 - `supabase/migrations/008_fix_rls_groups_recursion.sql`
+- `supabase/migrations/009_social_connections_reports_admin.sql`
 
 ## Critical historical incident
 
@@ -90,6 +98,14 @@ Fix pattern:
 - use `group_members` owner role checks for invite authorization
 - apply `008_fix_rls_groups_recursion.sql` if affected
 
+### Role model notes (after migration 009)
+
+- `group_role` now supports `owner`, `admin`, `member`
+- `groups` insert auto-creates owner membership row via trigger
+- owner/admin can manage members and invitations (owner-only operations remain restricted where applicable)
+- reports are readable by all authenticated users in-app
+- report status management is creator-or-admin
+
 ## Signed URL behavior
 
 - app uses signed URLs for private buckets
@@ -118,11 +134,15 @@ Implication:
 
 ## Pre-launch DB checklist
 
-- all 8 migrations executed in target project
+- all 9 migrations executed in target project
 - all 5 storage buckets exist with correct names (`reports` optional but recommended)
 - storage policies allow authenticated read/upload where expected
 - user can:
   - upload song + cover
   - fetch signed URLs for song and cover
   - login and load groups without recursion errors
-  - use social/changelog/report routes without relation errors
+  - use `/connections` to send/accept requests
+  - open `/reports` and `/reports/:id`, create reports without mandatory group
+  - see admin unread report counter once `user_roles` contains at least one admin
+  - open `/changelog` with auto-generated commit feed
+  - use social/changelog/reports routes without relation errors

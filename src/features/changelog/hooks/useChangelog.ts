@@ -1,23 +1,17 @@
-﻿import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { changelogService } from '@features/changelog/services/changelog.service'
 
-export function useChangelog(groupId: string | null) {
+export function useChangelog() {
     const query = useQuery({
-        queryKey: ['changelog', groupId],
-        queryFn: () => changelogService.list(groupId!),
-        enabled: !!groupId,
+        queryKey: ['changelog', 'auto-generated'],
+        queryFn: () => changelogService.list(),
     })
 
-    const currentVersion = useMemo(
-        () => changelogService.getCurrentVersion(query.data ?? []),
-        [query.data]
-    )
-
     return {
-        entries: query.data ?? [],
+        entries: query.data?.entries ?? [],
         isLoading: query.isLoading,
-        currentVersion,
+        currentVersion: query.data?.currentVersion ?? '1.0.0',
+        source: query.data?.source ?? 'fallback',
     }
 }
 
