@@ -16,7 +16,7 @@ copy .env.example .env.local
 
 3. Fill `.env.local` with Supabase URL and anon key.
 
-4. Run SQL migrations in Supabase SQL Editor (001 -> 006).
+4. Run SQL migrations in Supabase SQL Editor (001 -> 008).
 
 5. Ensure storage buckets exist:
 - `avatars`
@@ -76,6 +76,7 @@ Code paths:
 Before sharing app with friends:
 
 - registration and login work in normal browser tab
+- migration `008_fix_rls_groups_recursion.sql` applied (prevents RLS recursion on groups)
 - song upload works (audio + cover)
 - cover and song URLs open (signed URL generated)
 - social/changelog/report routes work without relation errors

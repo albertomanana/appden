@@ -116,3 +116,7 @@ Status legend:
   - `src/features/changelog/*`, route `/changelog`, table `changelog_entries`
 - In-app reports module: `Implemented`
   - `src/features/reports/*`, route `/report`, table `reports`
+- Group invitations for non-members: `Implemented`
+  - owner invites in `GroupDetailPage`, invitee accepts/rejects in `GroupsPage`, table `group_invitations`
+- Auth/bootstrap resilience hotfix: `Implemented`
+  - no forced logout when group preload fails; SQL recursion fix in `008_fix_rls_groups_recursion.sql`

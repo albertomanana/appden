@@ -21,6 +21,7 @@ Expected in `.env.local`:
 5. `supabase/migrations/005_social_friends_song_owners.sql`
 6. `supabase/migrations/006_changelog_reports_social_hardening.sql`
 7. `supabase/migrations/007_group_invitations.sql`
+8. `supabase/migrations/008_fix_rls_groups_recursion.sql`
 
 ## Storage buckets
 
@@ -41,6 +42,8 @@ References:
 - `src/lib/supabase/client.ts` (`STORAGE_BUCKETS`)
 - `supabase-storage-setup.sql`
 - `supabase/migrations/006_changelog_reports_social_hardening.sql`
+- `supabase/migrations/007_group_invitations.sql`
+- `supabase/migrations/008_fix_rls_groups_recursion.sql`
 
 ## Critical historical incident
 
@@ -75,6 +78,18 @@ Fix pattern:
 - cast `auth.uid()` when compared against text columns:
   - `auth.uid()::text`
 
+### Error: `infinite recursion detected in policy for relation "groups"` (42P17)
+
+Meaning:
+
+- RLS policies created a dependency cycle between `groups` and `group_invitations`
+
+Fix pattern:
+
+- avoid querying `groups` inside `group_invitations` policies when `groups` policy already checks invitations
+- use `group_members` owner role checks for invite authorization
+- apply `008_fix_rls_groups_recursion.sql` if affected
+
 ## Signed URL behavior
 
 - app uses signed URLs for private buckets
@@ -103,10 +118,11 @@ Implication:
 
 ## Pre-launch DB checklist
 
-- all 6 migrations executed in target project
+- all 8 migrations executed in target project
 - all 5 storage buckets exist with correct names (`reports` optional but recommended)
 - storage policies allow authenticated read/upload where expected
 - user can:
   - upload song + cover
   - fetch signed URLs for song and cover
+  - login and load groups without recursion errors
   - use social/changelog/report routes without relation errors

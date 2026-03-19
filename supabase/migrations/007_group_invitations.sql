@@ -24,7 +24,7 @@ CREATE INDEX IF NOT EXISTS idx_group_invitations_group
 
 ALTER TABLE group_invitations ENABLE ROW LEVEL SECURITY;
 
--- Selected users and group owner can read invitation rows.
+-- Selected users and group owners can read invitation rows.
 DROP POLICY IF EXISTS "group_invitations_select_participants" ON group_invitations;
 CREATE POLICY "group_invitations_select_participants" ON group_invitations
     FOR SELECT
@@ -33,9 +33,10 @@ CREATE POLICY "group_invitations_select_participants" ON group_invitations
         OR group_invitations.invited_by = auth.uid()
         OR EXISTS (
             SELECT 1
-            FROM groups g
-            WHERE g.id = group_invitations.group_id
-              AND g.created_by = auth.uid()
+            FROM group_members gm
+            WHERE gm.group_id = group_invitations.group_id
+              AND gm.user_id = auth.uid()
+              AND gm.role = 'owner'
         )
     );
 
@@ -47,9 +48,10 @@ CREATE POLICY "group_invitations_insert_owner" ON group_invitations
         group_invitations.invited_by = auth.uid()
         AND EXISTS (
             SELECT 1
-            FROM groups g
-            WHERE g.id = group_invitations.group_id
-              AND g.created_by = auth.uid()
+            FROM group_members gm
+            WHERE gm.group_id = group_invitations.group_id
+              AND gm.user_id = auth.uid()
+              AND gm.role = 'owner'
         )
     );
 
@@ -74,9 +76,10 @@ CREATE POLICY "group_invitations_update_owner_or_inviter" ON group_invitations
         group_invitations.invited_by = auth.uid()
         OR EXISTS (
             SELECT 1
-            FROM groups g
-            WHERE g.id = group_invitations.group_id
-              AND g.created_by = auth.uid()
+            FROM group_members gm
+            WHERE gm.group_id = group_invitations.group_id
+              AND gm.user_id = auth.uid()
+              AND gm.role = 'owner'
         )
     )
     WITH CHECK (

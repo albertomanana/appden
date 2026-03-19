@@ -31,16 +31,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 profile,
             })
 
-            // Load groups
-            const groups = await groupsService.getMyGroups(userId)
-            setMyGroups(groups)
+            try {
+                // Load groups without dropping authenticated session on failure
+                const groups = await groupsService.getMyGroups(userId)
+                setMyGroups(groups)
 
-            // Select active group if not already set or if the saved one is no longer valid
-            if (groups.length > 0) {
-                const savedGroupValid = activeGroup && groups.some((g) => g.id === activeGroup.id)
-                if (!savedGroupValid) {
-                    setActiveGroup(groups[0])
+                // Select active group if not already set or if the saved one is no longer valid
+                if (groups.length > 0) {
+                    const savedGroupValid = activeGroup && groups.some((g) => g.id === activeGroup.id)
+                    if (!savedGroupValid) {
+                        setActiveGroup(groups[0])
+                    }
                 }
+            } catch (groupErr) {
+                console.error('[Auth] Failed to load groups, keeping session active:', groupErr)
+                setMyGroups([])
             }
         } catch (err) {
             console.error('Failed to initialize user session:', err)

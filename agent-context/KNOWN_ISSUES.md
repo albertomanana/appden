@@ -1,19 +1,20 @@
 # Known Issues and Risks
 
-## 1) ESLint not configured
+## 1) Login can fail if migration 008 is not applied
 
 Symptom:
 
-- `npm run lint` fails with "ESLint couldn't find a configuration file"
+- auth/session appears established but group bootstrap triggers server error
+- Supabase can return `42P17 infinite recursion detected in policy for relation "groups"`
 
 Impact:
 
-- no automated lint gate in local workflow
+- users may fail to enter the app or feel they need to login twice
 
 Suggested fix:
 
-- add project ESLint config (`.eslintrc.*` or `eslint.config.*`)
-- wire lint check in CI after stabilization
+- apply `supabase/migrations/008_fix_rls_groups_recursion.sql`
+- verify `group_invitations` policies no longer depend on `groups` in a recursive way
 
 ## 2) Incognito-only behavior can still happen on stale clients
 

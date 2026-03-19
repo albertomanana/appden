@@ -53,6 +53,12 @@ This file captures decisions and incidents from this collaboration thread so fut
 - `GroupDetailPage` now includes search-based invitation panel
 - SQL migration `007_group_invitations.sql` added (RLS + policies)
 
+10. 2026-03-19 post-invite auth incident and fix:
+- login/bootstrap started failing with `42P17 infinite recursion detected in policy for relation "groups"`
+- root cause: policy dependency cycle between `groups` select policy and `group_invitations` policies
+- SQL hotfix migration created: `008_fix_rls_groups_recursion.sql`
+- auth bootstrap hardened: group loading errors no longer clear user session in `AuthProvider`
+
 ## Locked decisions
 
 - storage cover bucket name is `covers`

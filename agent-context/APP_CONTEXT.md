@@ -39,6 +39,8 @@ Core principles:
 - `src/services/auth.service.ts`
 - session storage key includes Supabase project ref:
   - `the-appden-auth:<projectRef>:v2`
+- v1.5.3 hardening:
+  - if group loading fails during bootstrap, keep authenticated session and fallback to empty groups (avoid forced re-login loops)
 
 ### 2) Music catalog + upload
 

@@ -101,3 +101,4 @@ Compatibility wrappers (redirect to feature modules):
   - `supabase/migrations/005_social_friends_song_owners.sql`
   - `supabase/migrations/006_changelog_reports_social_hardening.sql`
   - `supabase/migrations/007_group_invitations.sql`
+  - `supabase/migrations/008_fix_rls_groups_recursion.sql`

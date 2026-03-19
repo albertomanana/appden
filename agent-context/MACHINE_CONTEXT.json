@@ -3,6 +3,7 @@
     "name": "The Appden",
     "type": "Private PWA for friend groups",
     "snapshot_date": "2026-03-19",
+    "release": "v1.5.3",
     "stack": [
       "React 18",
       "TypeScript",
@@ -33,7 +34,8 @@
       "004_debts_pro_retention_admin.sql",
       "005_social_friends_song_owners.sql",
       "006_changelog_reports_social_hardening.sql",
-      "007_group_invitations.sql"
+      "007_group_invitations.sql",
+      "008_fix_rls_groups_recursion.sql"
     ],
     "required_buckets": [
       "avatars",
@@ -45,7 +47,8 @@
     "known_errors": [
       "Bucket not found",
       "42501 must be owner of table objects",
-      "42883 operator does not exist: text = uuid"
+      "42883 operator does not exist: text = uuid",
+      "42P17 infinite recursion detected in policy for relation groups"
     ]
   },
   "roadmap_status": {
