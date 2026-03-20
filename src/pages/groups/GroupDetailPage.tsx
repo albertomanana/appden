@@ -5,9 +5,11 @@ import { useAuth } from '@hooks/useAuth'
 import { groupsService } from '@services/groups.service'
 import { GroupMemberList } from '@components/groups/GroupMemberList'
 import { GroupPermissionsPanel } from '@components/groups/GroupPermissionsPanel'
+import { GroupInvitationsPanel } from '@components/groups/GroupInvitationsPanel'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { ConfirmDialog } from '@components/ui/ConfirmDialog'
 import { useNotifications } from '@hooks/useNotifications'
+import { useGroupStore } from '@app/store/group.store'
 import type { Group, GroupMember } from '@/types'
 
 export default function GroupDetailPage() {
@@ -15,6 +17,7 @@ export default function GroupDetailPage() {
     const navigate = useNavigate()
     const { user } = useAuth()
     const { addNotification } = useNotifications()
+    const setActiveGroup = useGroupStore((state) => state.setActiveGroup)
 
     const [group, setGroup] = React.useState<Group | null>(null)
     const [members, setMembers] = React.useState<GroupMember[]>([])
@@ -37,6 +40,7 @@ export default function GroupDetailPage() {
 
             const groupData = await groupsService.getGroup(groupId)
             setGroup(groupData)
+            setActiveGroup(groupData)
 
             const membersData = await groupsService.getGroupMembers(groupId)
             setMembers(membersData)
@@ -62,6 +66,25 @@ export default function GroupDetailPage() {
                 type: 'error',
                 title: 'Error',
                 message: err instanceof Error ? err.message : 'Failed to remove member',
+            })
+        }
+    }
+
+    async function handleUpdateRole(userId: string, role: 'owner' | 'admin' | 'member') {
+        try {
+            if (!groupId) return
+            await groupsService.updateGroupMemberRole(groupId, userId, role)
+            await loadGroupDetails()
+            addNotification({
+                type: 'success',
+                title: 'Rol actualizado',
+                message: 'Los permisos del miembro se actualizaron correctamente.',
+            })
+        } catch (err) {
+            addNotification({
+                type: 'error',
+                title: 'Error',
+                message: err instanceof Error ? err.message : 'No se pudo cambiar el rol',
             })
         }
     }
@@ -99,7 +122,9 @@ export default function GroupDetailPage() {
         })
     }
 
-    const isOwner = group && user && group.created_by === user.id
+    const isOwner = !!(group && user && group.created_by === user.id)
+    const myMembership = user ? members.find((member) => member.user_id === user.id) : null
+    const isManager = isOwner || myMembership?.role === 'admin'
 
     if (loading) {
         return (
@@ -160,10 +185,10 @@ export default function GroupDetailPage() {
             {/* Invite Link */}
             <div className="mb-8 p-4 bg-neutral-800 rounded-lg border border-neutral-700">
                 <h2 className="text-sm font-semibold text-neutral-300 mb-3 uppercase tracking-wider">
-                    Invite Members
+                    Invite Link
                 </h2>
                 <p className="text-sm text-neutral-400 mb-3">
-                    Share this link with friends to allow them to join the group
+                    Envia este enlace junto con una invitacion desde el panel de abajo.
                 </p>
                 <button
                     onClick={copyInviteCode}
@@ -172,6 +197,14 @@ export default function GroupDetailPage() {
                     <CopyIcon size={18} />
                     Copy Invite Link
                 </button>
+            </div>
+
+            <div className="mb-8">
+                <GroupInvitationsPanel
+                    groupId={groupId!}
+                    members={members}
+                    canInvite={isManager}
+                />
             </div>
 
             {/* Members Section */}
@@ -183,8 +216,10 @@ export default function GroupDetailPage() {
                     groupId={groupId!}
                     members={members}
                     currentUserId={user?.id || ''}
-                    isOwner={isOwner || false}
-                    onRemoveMember={isOwner ? handleRemoveMember : undefined}
+                    isManager={isManager}
+                    canAssignRoles={isOwner}
+                    onUpdateRole={isOwner ? handleUpdateRole : undefined}
+                    onRemoveMember={isManager ? handleRemoveMember : undefined}
                 />
             </div>
 

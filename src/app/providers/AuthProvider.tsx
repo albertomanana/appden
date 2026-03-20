@@ -31,16 +31,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 profile,
             })
 
-            // Load groups
-            const groups = await groupsService.getMyGroups(userId)
-            setMyGroups(groups)
+            try {
+                // Load groups without dropping authenticated session on failure
+                const groups = await groupsService.getMyGroups(userId)
+                setMyGroups(groups)
 
-            // Select active group if not already set or if the saved one is no longer valid
-            if (groups.length > 0) {
-                const savedGroupValid = activeGroup && groups.some((g) => g.id === activeGroup.id)
-                if (!savedGroupValid) {
-                    setActiveGroup(groups[0])
+                // Select active group if not already set or if the saved one is no longer valid
+                if (groups.length > 0) {
+                    const savedGroupValid = activeGroup && groups.some((g) => g.id === activeGroup.id)
+                    if (!savedGroupValid) {
+                        setActiveGroup(groups[0])
+                    }
                 }
+            } catch (groupErr) {
+                console.error('[Auth] Failed to load groups, keeping session active:', groupErr)
+                setMyGroups([])
             }
         } catch (err) {
             console.error('Failed to initialize user session:', err)
@@ -56,8 +61,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // If it fails, continue as logged-out to avoid blocking the app.
         void (async () => {
             try {
-                console.log('[Auth] Initializing auth session...')
-
                 const timeoutPromise: Promise<never> = new Promise((_resolve, reject) => {
                     setTimeout(() => {
                         reject(new Error('Supabase connection timeout. Check your .env.local credentials.'))
@@ -66,8 +69,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 const sessionPromise = authService.getSession()
                 const session = await Promise.race([sessionPromise, timeoutPromise])
-
-                console.log('[Auth] Session loaded:', session ? 'authenticated' : 'no session')
                 await initUser(session?.user?.id ?? null)
             } catch (err) {
                 const errorMsg = err instanceof Error ? err.message : 'Failed to load session'

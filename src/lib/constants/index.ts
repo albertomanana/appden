@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // APP CONSTANTS
 // ============================================================
 
@@ -43,9 +43,9 @@ export const ALLOWED_DOCUMENT_TYPES = [
 
 // Currencies
 export const CURRENCIES = [
-    { label: '€ EUR', value: 'EUR' },
+    { label: 'â‚¬ EUR', value: 'EUR' },
     { label: '$ USD', value: 'USD' },
-    { label: '£ GBP', value: 'GBP' },
+    { label: 'Â£ GBP', value: 'GBP' },
     { label: '$ MXN', value: 'MXN' },
 ] as const
 
@@ -75,14 +75,20 @@ export const ROUTES = {
     PROFILE_ID: (id: string) => `/profile/${id}`,
     GROUPS: '/groups',
     GROUP: (id: string) => `/groups/${id}`,
+    CONNECTIONS: '/connections',
     NOTIFICATIONS: '/notifications',
     MUSIC: '/music',
     SONG: (id: string) => `/music/${id}`,
     PLAYLISTS: '/playlists',
     PLAYLIST: (id: string) => `/playlists/${id}`,
     FAVORITES: '/favorites',
+    CHANGELOG: '/changelog',
+    REPORT: '/report',
+    REPORTS: '/reports',
+    REPORT_DETAIL: (id: string) => `/reports/${id}`,
     DEBTS: '/debts',
     DEBT: (id: string) => `/debts/${id}`,
     FILES: '/files',
     SHARED: (token: string) => `/shared/${token}`,
 } as const
+

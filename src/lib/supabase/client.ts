@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+﻿import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -13,8 +13,6 @@ const projectRef = (() => {
 export const LEGACY_AUTH_STORAGE_KEY = 'the-appden-auth'
 export const AUTH_STORAGE_KEY = `the-appden-auth:${projectRef}:v2`
 
-console.log('📦 Supabase URL configured:', !!supabaseUrl)
-console.log('📦 Supabase Key configured:', !!supabaseAnonKey)
 
 // Create client even if missing - we'll handle the error in AuthProvider
 export const supabase = createClient(
@@ -35,12 +33,13 @@ export const supabase = createClient(
     }
 )
 
-// Storage bucket names — keep in sync with Supabase dashboard
+// Storage bucket names â€” keep in sync with Supabase dashboard
 export const STORAGE_BUCKETS = {
     AVATARS: 'avatars',
     COVERS: 'covers',
     SONGS: 'songs',
     FILES: 'files',
+    REPORTS: 'reports',
 } as const
 
 /**

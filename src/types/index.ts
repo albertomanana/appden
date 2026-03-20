@@ -4,7 +4,7 @@
 
 // -- Enums --
 
-export type GroupRole = 'owner' | 'member'
+export type GroupRole = 'owner' | 'admin' | 'member'
 export type DebtStatus = 'pending' | 'partial' | 'paid'
 export type DebtCurrency = 'EUR' | 'USD' | 'GBP' | 'MXN'
 export type DebtSplitMode = 'equal' | 'percentage' | 'exact'
@@ -86,6 +86,45 @@ export interface GroupFriendRequest {
     status: GroupFriendRequestStatus
     created_at: string
     responded_at: string | null
+}
+
+export type FriendRequestStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled'
+
+export interface FriendRequest {
+    id: string
+    from_user_id: string
+    to_user_id: string
+    status: FriendRequestStatus
+    message: string | null
+    created_at: string
+    responded_at: string | null
+    from_profile?: Pick<Profile, 'id' | 'display_name' | 'username' | 'avatar_url'>
+    to_profile?: Pick<Profile, 'id' | 'display_name' | 'username' | 'avatar_url'>
+}
+
+export interface Friendship {
+    id: string
+    user_a: string
+    user_b: string
+    created_from_request: string | null
+    created_at: string
+    friend_profile?: Pick<Profile, 'id' | 'display_name' | 'username' | 'avatar_url'>
+}
+
+export type GroupInvitationStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled'
+
+export interface GroupInvitation {
+    id: string
+    group_id: string
+    invited_by: string
+    invited_user_id: string
+    status: GroupInvitationStatus
+    message: string | null
+    created_at: string
+    responded_at: string | null
+    group?: Pick<Group, 'id' | 'name' | 'description' | 'avatar_url'>
+    inviter?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>
+    invited?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>
 }
 
 export type LyricsSource = 'manual' | 'auto'
@@ -208,6 +247,40 @@ export interface GroupActivity {
     created_at: string
     actor?: Profile
     song?: Pick<Song, 'id' | 'title' | 'artist_name' | 'cover_url'>
+}
+
+export type ChangelogType = 'feature' | 'fix' | 'improvement'
+
+export interface ChangelogEntry {
+    id: string
+    group_id: string
+    version: string
+    title: string
+    description: string
+    type: ChangelogType
+    created_by: string | null
+    release_date: string
+    created_at: string
+}
+
+export type ReportType = 'bug' | 'error' | 'improvement'
+export type ReportStatus = 'open' | 'in_review' | 'resolved' | 'closed'
+export type ReportSeverity = 'low' | 'medium' | 'high' | 'critical'
+
+export interface Report {
+    id: string
+    group_id: string | null
+    user_id: string
+    type: ReportType
+    title: string
+    description: string
+    reproduction_steps: string | null
+    steps: string | null
+    severity: ReportSeverity | null
+    image_url: string | null
+    status: ReportStatus
+    created_at: string
+    updated_at: string
 }
 
 // -- Favorite --

@@ -1,0 +1,45 @@
+name: Changelog From Develop
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-changelog:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'chore(changelog): update from develop')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate changelog JSON
+        run: npm run changelog:generate
+        env:
+          CHANGELOG_BRANCH: develop
+          CHANGELOG_LIMIT: 120
+
+      - name: Commit and push changelog if changed
+        run: |
+          if git diff --quiet -- public/changelog.generated.json; then
+            echo "No changelog changes detected."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/changelog.generated.json
+          git commit -m "chore(changelog): update from develop [skip ci]"
+          git push
+

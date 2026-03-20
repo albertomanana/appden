@@ -1,19 +1,25 @@
 import React from 'react'
-import { Plus, AlertCircle } from 'lucide-react'
+import { Plus, AlertCircle, Check, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@hooks/useAuth'
 import { groupsService } from '@services/groups.service'
+import { groupInvitationsService } from '@features/social/services/group-invitations.service'
 import { GroupForm, type GroupFormData } from '@components/groups/GroupForm'
 import { GroupCard } from '@components/groups/GroupCard'
 import { EmptyState } from '@components/ui/EmptyState'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { useNotifications } from '@hooks/useNotifications'
-import type { Group } from '@/types'
+import { useGroupStore } from '@app/store/group.store'
+import type { Group, GroupInvitation } from '@/types'
 
 export default function GroupsPage() {
     const { user } = useAuth()
+    const navigate = useNavigate()
     const { addNotification } = useNotifications()
+    const setActiveGroup = useGroupStore((state) => state.setActiveGroup)
 
     const [groups, setGroups] = React.useState<Group[]>([])
+    const [incomingInvites, setIncomingInvites] = React.useState<GroupInvitation[]>([])
     const [groupCounts, setGroupCounts] = React.useState<Record<string, number>>({})
     const [loading, setLoading] = React.useState(true)
     const [error, setError] = React.useState<string | null>(null)
@@ -22,6 +28,7 @@ export default function GroupsPage() {
 
     React.useEffect(() => {
         loadGroups()
+        loadIncomingInvites()
     }, [user?.id])
 
     async function loadGroups() {
@@ -51,6 +58,19 @@ export default function GroupsPage() {
         }
     }
 
+    async function loadIncomingInvites() {
+        try {
+            if (!user?.id) {
+                setIncomingInvites([])
+                return
+            }
+            const data = await groupInvitationsService.listIncoming(user.id)
+            setIncomingInvites(data)
+        } catch {
+            setIncomingInvites([])
+        }
+    }
+
     async function handleCreateGroup(data: GroupFormData) {
         try {
             setIsSubmitting(true)
@@ -62,12 +82,11 @@ export default function GroupsPage() {
                 created_by: user.id,
             })
 
-            // Add current user as owner
-            await groupsService.addGroupMember(newGroup.id, user.id, 'owner')
-
             setGroups([newGroup, ...groups])
             setGroupCounts({ ...groupCounts, [newGroup.id]: 1 })
             setShowForm(false)
+            setActiveGroup(newGroup)
+            navigate(`/groups/${newGroup.id}`)
 
             addNotification({
                 type: 'info',
@@ -82,6 +101,26 @@ export default function GroupsPage() {
             })
         } finally {
             setIsSubmitting(false)
+        }
+    }
+
+    async function handleRespondInvitation(invitationId: string, accept: boolean) {
+        try {
+            await groupInvitationsService.respond(invitationId, accept)
+            await Promise.all([loadGroups(), loadIncomingInvites()])
+            addNotification({
+                type: 'success',
+                title: accept ? 'Invitacion aceptada' : 'Invitacion rechazada',
+                message: accept
+                    ? 'Ya tienes acceso al grupo.'
+                    : 'La invitacion fue rechazada.',
+            })
+        } catch (err) {
+            addNotification({
+                type: 'error',
+                title: 'Error',
+                message: err instanceof Error ? err.message : 'No se pudo responder a la invitacion',
+            })
         }
     }
 
@@ -130,6 +169,45 @@ export default function GroupsPage() {
                     </div>
                 </div>
             )}
+
+            {incomingInvites.length > 0 ? (
+                <div className="mb-6 p-4 bg-neutral-800 rounded-lg border border-neutral-700">
+                    <h2 className="text-lg font-semibold text-white mb-3">Invitaciones pendientes</h2>
+                    <div className="space-y-2">
+                        {incomingInvites.map((invite) => (
+                            <div
+                                key={invite.id}
+                                className="rounded-lg border border-neutral-700 bg-neutral-900/50 p-3 flex items-center justify-between gap-2"
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-sm text-white font-medium truncate">
+                                        {invite.group?.name ?? 'Grupo'}
+                                    </p>
+                                    <p className="text-xs text-neutral-400 truncate">
+                                        Invitado por {invite.inviter?.display_name ?? 'usuario'}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => void handleRespondInvitation(invite.id, true)}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 text-xs"
+                                    >
+                                        <Check size={14} />
+                                        Aceptar
+                                    </button>
+                                    <button
+                                        onClick={() => void handleRespondInvitation(invite.id, false)}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/20 text-xs"
+                                    >
+                                        <X size={14} />
+                                        Rechazar
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
 
             {/* Groups List */}
             {groups.length === 0 ? (

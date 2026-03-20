@@ -1,10 +1,11 @@
 import { supabase } from '@lib/supabase/client'
+import { connectionsService } from '@features/social/services/connections.service'
 
 export type GroupFriendRequestStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled'
 
 export interface GroupFriendRequest {
     id: string
-    group_id: string
+    group_id: string | null
     from_user_id: string
     to_user_id: string
     status: GroupFriendRequestStatus
@@ -12,74 +13,70 @@ export interface GroupFriendRequest {
     responded_at: string | null
 }
 
-export const friendsService = {
-    async sendRequest(groupId: string, toUserId: string): Promise<GroupFriendRequest> {
-        const { data, error } = await supabase
-            .from('group_friend_requests')
-            .insert({ group_id: groupId, to_user_id: toUserId })
-            .select()
-            .single()
+async function requireCurrentUserId(): Promise<string> {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) throw error
+    const userId = data.user?.id
+    if (!userId) throw new Error('Not authenticated')
+    return userId
+}
 
-        if (error) throw error
-        return data as GroupFriendRequest
+export const friendsService = {
+    async sendRequest(_groupId: string, toUserId: string): Promise<GroupFriendRequest> {
+        const fromUserId = await requireCurrentUserId()
+        const request = await connectionsService.sendRequest(fromUserId, toUserId)
+        return {
+            ...request,
+            group_id: null,
+        }
     },
 
     async cancelRequest(requestId: string): Promise<GroupFriendRequest> {
-        const { data, error } = await supabase
-            .from('group_friend_requests')
-            .update({ status: 'cancelled', responded_at: new Date().toISOString() })
-            .eq('id', requestId)
-            .select()
-            .single()
-
-        if (error) throw error
-        return data as GroupFriendRequest
+        const request = await connectionsService.cancel(requestId)
+        return {
+            ...request,
+            group_id: null,
+        }
     },
 
     async acceptRequest(requestId: string): Promise<GroupFriendRequest> {
-        const { data, error } = await supabase
-            .from('group_friend_requests')
-            .update({ status: 'accepted', responded_at: new Date().toISOString() })
-            .eq('id', requestId)
-            .select()
-            .single()
-
-        if (error) throw error
-        return data as GroupFriendRequest
+        const request = await connectionsService.respond(requestId, true)
+        return {
+            ...request,
+            group_id: null,
+        }
     },
 
     async rejectRequest(requestId: string): Promise<GroupFriendRequest> {
-        const { data, error } = await supabase
-            .from('group_friend_requests')
-            .update({ status: 'rejected', responded_at: new Date().toISOString() })
-            .eq('id', requestId)
-            .select()
-            .single()
-
-        if (error) throw error
-        return data as GroupFriendRequest
+        const request = await connectionsService.respond(requestId, false)
+        return {
+            ...request,
+            group_id: null,
+        }
     },
 
-    async getRequestsForGroup(groupId: string): Promise<GroupFriendRequest[]> {
+    async getRequestsForGroup(_groupId: string): Promise<GroupFriendRequest[]> {
+        const userId = await requireCurrentUserId()
         const { data, error } = await supabase
-            .from('group_friend_requests')
+            .from('friend_requests')
             .select('*')
-            .eq('group_id', groupId)
+            .or(`from_user_id.eq.${userId},to_user_id.eq.${userId}`)
             .order('created_at', { ascending: false })
 
         if (error) throw error
-        return (data ?? []) as GroupFriendRequest[]
+
+        return ((data ?? []) as GroupFriendRequest[]).map((row) => ({
+            ...row,
+            group_id: null,
+        }))
     },
 
     /**
-     * Returns the most relevant relationship between viewer and other user in a group.
-     * - `accepted`: they are friends in that group
-     * - `pending_incoming`: other user must accept
-     * - `pending_outgoing`: waiting for other user
-     * - `none`: no request found
+     * Returns the most relevant relationship between viewer and other user.
+     * groupId is kept for backwards compatibility and currently ignored.
      */
     async getFriendStatus(
-        groupId: string,
+        _groupId: string,
         viewerUserId: string,
         otherUserId: string
     ): Promise<
@@ -88,24 +85,43 @@ export const friendsService = {
         | { kind: 'pending_outgoing'; request: GroupFriendRequest }
         | { kind: 'none' }
     > {
-        const { data, error } = await supabase
-            .from('group_friend_requests')
-            .select('*')
-            .eq('group_id', groupId)
-            .or(
-                `and(from_user_id.eq.${viewerUserId},to_user_id.eq.${otherUserId}),and(from_user_id.eq.${otherUserId},to_user_id.eq.${viewerUserId})`
-            )
-            .order('created_at', { ascending: false })
-            .limit(1)
+        const relation = await connectionsService.getRelationship(viewerUserId, otherUserId)
 
-        if (error) throw error
-        const row = (data ?? [])[0] as GroupFriendRequest | undefined
-        if (!row) return { kind: 'none' }
+        if (relation.kind === 'friend') {
+            return {
+                kind: 'accepted',
+                request: {
+                    id: relation.friendship.created_from_request ?? relation.friendship.id,
+                    group_id: null,
+                    from_user_id: relation.friendship.user_a,
+                    to_user_id: relation.friendship.user_b,
+                    status: 'accepted',
+                    created_at: relation.friendship.created_at,
+                    responded_at: relation.friendship.created_at,
+                },
+            }
+        }
 
-        if (row.status === 'accepted') return { kind: 'accepted', request: row }
-        if (row.status === 'pending' && row.to_user_id === viewerUserId) return { kind: 'pending_incoming', request: row }
-        if (row.status === 'pending' && row.from_user_id === viewerUserId) return { kind: 'pending_outgoing', request: row }
+        if (relation.kind === 'incoming') {
+            return {
+                kind: 'pending_incoming',
+                request: {
+                    ...relation.request,
+                    group_id: null,
+                },
+            }
+        }
+
+        if (relation.kind === 'outgoing') {
+            return {
+                kind: 'pending_outgoing',
+                request: {
+                    ...relation.request,
+                    group_id: null,
+                },
+            }
+        }
+
         return { kind: 'none' }
     },
 }
-
