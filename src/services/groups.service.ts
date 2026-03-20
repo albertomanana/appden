@@ -17,14 +17,15 @@ export const groupsService = {
                 .eq('created_by', _userId),
         ])
 
-        if (memberResult.error) throw memberResult.error
-        if (ownerResult.error) throw ownerResult.error
+        if (memberResult.error && ownerResult.error) {
+            throw ownerResult.error
+        }
 
-        const fromMembership = ((memberResult.data ?? []) as Array<{ group: Group | Group[] | null }>)
+        const fromMembership = (((memberResult.error ? [] : memberResult.data) ?? []) as Array<{ group: Group | Group[] | null }>)
             .map((row) => (Array.isArray(row.group) ? row.group[0] : row.group))
             .filter((group): group is Group => !!group)
 
-        const fromOwnership = (ownerResult.data ?? []) as Group[]
+        const fromOwnership = ((ownerResult.error ? [] : ownerResult.data) ?? []) as Group[]
         const mergedById = new Map<string, Group>()
         for (const group of [...fromMembership, ...fromOwnership]) {
             mergedById.set(group.id, group)
@@ -87,20 +88,36 @@ export const groupsService = {
 
         const group = data as Group
 
-        // Defensive upsert: trigger should create owner membership, but this
-        // keeps compatibility with databases where the trigger is not applied yet.
+        // Prefer plain insert to avoid requiring UPDATE RLS when the owner row
+        // was already created by a DB trigger in newer schemas.
         const { error: ownerMembershipError } = await supabase
             .from('group_members')
-            .upsert(
+            .insert(
                 {
                     group_id: group.id,
                     user_id: groupData.created_by,
                     role: 'owner',
-                },
-                { onConflict: 'group_id,user_id' }
+                }
             )
 
-        if (ownerMembershipError) throw ownerMembershipError
+        if (ownerMembershipError) {
+            if (isDuplicateError(ownerMembershipError)) {
+                return group
+            }
+
+            const { data: existingMembership } = await supabase
+                .from('group_members')
+                .select('id')
+                .eq('group_id', group.id)
+                .eq('user_id', groupData.created_by)
+                .maybeSingle()
+
+            if (existingMembership) {
+                return group
+            }
+
+            throw ownerMembershipError
+        }
 
         return group
     },
@@ -190,4 +207,11 @@ export const groupsService = {
         if (error) throw error
         return (data?.role as 'owner' | 'admin' | 'member' | undefined) ?? null
     },
+}
+
+function isDuplicateError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false
+    const anyError = error as { code?: string; message?: string; details?: string }
+    const raw = `${anyError.code ?? ''} ${anyError.message ?? ''} ${anyError.details ?? ''}`.toLowerCase()
+    return raw.includes('23505') || raw.includes('duplicate key') || raw.includes('already exists')
 }

@@ -66,14 +66,82 @@ export const reportsService = {
             .select('*, author:profiles!reports_user_id_fkey(id, display_name, username, avatar_url)')
             .single()
 
+        if (!error) {
+            return mapReportRow(data)
+        }
+
+        if (isMissingRelationError(error)) {
+            return writeFallback(payload)
+        }
+
+        if (isLegacyReportsSchemaError(error)) {
+            return this.createLegacy(input, imageUrl)
+        }
+
+        throw error
+    },
+
+    async createLegacy(input: CreateReportInput, imageUrl: string | null): Promise<ReportItem> {
+        if (!input.groupId) {
+            return writeFallback({
+                group_id: null,
+                user_id: input.userId,
+                type: normalizeLegacyReportType(input.type),
+                title: input.title.trim().slice(0, 140),
+                description: input.description.trim().slice(0, 3000),
+                reproduction_steps: input.reproductionSteps?.trim()
+                    ? input.reproductionSteps.trim().slice(0, 3000)
+                    : null,
+                steps: input.reproductionSteps?.trim()
+                    ? input.reproductionSteps.trim().slice(0, 3000)
+                    : null,
+                severity: input.severity ?? null,
+                image_url: imageUrl,
+                status: 'open',
+            })
+        }
+
+        const legacyPayload = {
+            group_id: input.groupId,
+            user_id: input.userId,
+            type: normalizeLegacyReportType(input.type),
+            description: input.description.trim().slice(0, 3000),
+            steps: input.reproductionSteps?.trim()
+                ? input.reproductionSteps.trim().slice(0, 3000)
+                : null,
+            image_url: imageUrl,
+            status: 'open' as const,
+        }
+
+        const { data, error } = await supabase
+            .from('reports')
+            .insert(legacyPayload)
+            .select('*, author:profiles!reports_user_id_fkey(id, display_name, username, avatar_url)')
+            .single()
+
         if (error) {
-            if (isMissingRelationError(error)) {
-                return writeFallback(payload)
+            if (isMissingRelationError(error) || isLegacyReportsSchemaError(error)) {
+                return writeFallback({
+                    group_id: input.groupId,
+                    user_id: input.userId,
+                    type: normalizeLegacyReportType(input.type),
+                    title: input.title.trim().slice(0, 140),
+                    description: input.description.trim().slice(0, 3000),
+                    reproduction_steps: input.reproductionSteps?.trim()
+                        ? input.reproductionSteps.trim().slice(0, 3000)
+                        : null,
+                    steps: input.reproductionSteps?.trim()
+                        ? input.reproductionSteps.trim().slice(0, 3000)
+                        : null,
+                    severity: input.severity ?? null,
+                    image_url: imageUrl,
+                    status: 'open',
+                })
             }
             throw error
         }
 
-        return data as ReportItem
+        return mapReportRow(data, input.title)
     },
 
     async list(filters: ListReportsFilters = {}): Promise<ReportItem[]> {
@@ -103,17 +171,51 @@ export const reportsService = {
 
         const { data, error } = await query
 
+        if (!error) {
+            return ((data ?? []) as unknown[]).map((row) => mapReportRow(row))
+        }
+
+        if (isLegacyReportsSchemaError(error)) {
+            return this.listLegacy(filters, fallback)
+        }
+
+        if (isMissingRelationError(error)) {
+            return filterFallbackReports(fallback, filters)
+        }
+
+        throw error
+    },
+
+    async listLegacy(filters: ListReportsFilters, fallback: ReportItem[]): Promise<ReportItem[]> {
+        let query = supabase
+            .from('reports')
+            .select('*, author:profiles!reports_user_id_fkey(id, display_name, username, avatar_url)')
+            .order('created_at', { ascending: false })
+            .limit(filters.limit ?? 50)
+
+        if (filters.groupId) {
+            query = query.eq('group_id', filters.groupId)
+        }
+
+        if (filters.status && filters.status !== 'all') {
+            query = query.eq('status', filters.status)
+        }
+
+        if (filters.type && filters.type !== 'all') {
+            query = query.eq('type', normalizeLegacyReportType(filters.type))
+        }
+
+        const { data, error } = await query
+
         if (error) {
-            if (isMissingRelationError(error)) {
-                return fallback
-                    .filter((row) => !filters.groupId || row.group_id === filters.groupId)
-                    .filter((row) => !filters.status || filters.status === 'all' || row.status === filters.status)
-                    .filter((row) => !filters.type || filters.type === 'all' || row.type === filters.type)
+            if (isMissingRelationError(error) || isLegacyReportsSchemaError(error)) {
+                return filterFallbackReports(fallback, filters)
             }
             throw error
         }
 
-        return (data ?? []) as ReportItem[]
+        const mapped = ((data ?? []) as unknown[]).map((row) => mapReportRow(row))
+        return filterFallbackReports(mapped, filters)
     },
 
     async getById(reportId: string): Promise<ReportItem | null> {
@@ -125,12 +227,12 @@ export const reportsService = {
             .eq('id', reportId)
             .maybeSingle()
 
-        if (error) {
-            if (isMissingRelationError(error)) return fallback
-            throw error
+        if (!error) {
+            return data ? mapReportRow(data) : fallback
         }
 
-        return (data as ReportItem | null) ?? fallback
+        if (isMissingRelationError(error) || isLegacyReportsSchemaError(error)) return fallback
+        throw error
     },
 
     async updateStatus(reportId: string, status: ReportStatus): Promise<ReportItem> {
@@ -141,8 +243,21 @@ export const reportsService = {
             .select('*, author:profiles!reports_user_id_fkey(id, display_name, username, avatar_url)')
             .single()
 
-        if (error) throw error
-        return data as ReportItem
+        if (!error) return mapReportRow(data)
+
+        if (isLegacyReportsSchemaError(error)) {
+            const { data: legacyData, error: legacyError } = await supabase
+                .from('reports')
+                .update({ status })
+                .eq('id', reportId)
+                .select('*, author:profiles!reports_user_id_fkey(id, display_name, username, avatar_url)')
+                .single()
+
+            if (legacyError) throw legacyError
+            return mapReportRow(legacyData)
+        }
+
+        throw error
     },
 
     async updateContent(
@@ -178,8 +293,33 @@ export const reportsService = {
             .select('*, author:profiles!reports_user_id_fkey(id, display_name, username, avatar_url)')
             .single()
 
-        if (error) throw error
-        return data as ReportItem
+        if (!error) return mapReportRow(data)
+
+        if (isLegacyReportsSchemaError(error)) {
+            const legacyPayload = {
+                ...(patch.description ? { description: patch.description.trim().slice(0, 3000) } : {}),
+                ...(patch.reproductionSteps !== undefined
+                    ? {
+                        steps: patch.reproductionSteps?.trim()
+                            ? patch.reproductionSteps.trim().slice(0, 3000)
+                            : null,
+                    }
+                    : {}),
+                ...(patch.type ? { type: normalizeLegacyReportType(patch.type) } : {}),
+            }
+
+            const { data: legacyData, error: legacyError } = await supabase
+                .from('reports')
+                .update(legacyPayload)
+                .eq('id', reportId)
+                .select('*, author:profiles!reports_user_id_fkey(id, display_name, username, avatar_url)')
+                .single()
+
+            if (legacyError) throw legacyError
+            return mapReportRow(legacyData, patch.title)
+        }
+
+        throw error
     },
 
     async getViewerAccess(userId: string): Promise<{ isAdmin: boolean }> {
@@ -309,3 +449,93 @@ function isMissingRelationError(error: unknown): boolean {
     return raw.includes('42p01') || raw.includes('pgrst205') || raw.includes('does not exist')
 }
 
+function isLegacyReportsSchemaError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false
+    const anyError = error as { code?: string; message?: string; details?: string; hint?: string }
+    const raw = `${anyError.code ?? ''} ${anyError.message ?? ''} ${anyError.details ?? ''} ${anyError.hint ?? ''}`.toLowerCase()
+    return (
+        raw.includes('42703') ||
+        raw.includes('pgrst204') ||
+        raw.includes('column') ||
+        raw.includes('reproduction_steps') ||
+        raw.includes('severity') ||
+        raw.includes('title') ||
+        raw.includes('updated_at') ||
+        raw.includes('not-null') ||
+        raw.includes('null value in column "group_id"')
+    )
+}
+
+function normalizeLegacyReportType(type: ReportType): 'bug' | 'improvement' {
+    if (type === 'improvement') return 'improvement'
+    return 'bug'
+}
+
+function mapReportRow(row: unknown, fallbackTitle?: string): ReportItem {
+    const item = (row ?? {}) as Record<string, unknown>
+    const createdAt = String(item.created_at ?? new Date().toISOString())
+
+    return {
+        id: String(item.id ?? crypto.randomUUID()),
+        group_id: item.group_id ? String(item.group_id) : null,
+        user_id: String(item.user_id ?? ''),
+        type: normalizeReadReportType(item.type),
+        title:
+            typeof item.title === 'string' && item.title.trim()
+                ? item.title
+                : fallbackTitle?.trim()
+                    ? fallbackTitle.trim()
+                    : String(item.description ?? 'Reporte').slice(0, 100),
+        description: String(item.description ?? ''),
+        reproduction_steps:
+            typeof item.reproduction_steps === 'string'
+                ? item.reproduction_steps
+                : typeof item.steps === 'string'
+                    ? item.steps
+                    : null,
+        steps: typeof item.steps === 'string' ? item.steps : null,
+        severity: normalizeSeverity(item.severity),
+        image_url: typeof item.image_url === 'string' ? item.image_url : null,
+        status: normalizeStatus(item.status),
+        created_at: createdAt,
+        updated_at: String(item.updated_at ?? createdAt),
+        author: item.author as ReportItem['author'],
+    }
+}
+
+function normalizeReadReportType(type: unknown): ReportType {
+    if (type === 'improvement') return 'improvement'
+    if (type === 'error') return 'error'
+    return 'bug'
+}
+
+function normalizeSeverity(value: unknown): ReportSeverity | null {
+    if (value === 'low' || value === 'medium' || value === 'high' || value === 'critical') {
+        return value
+    }
+    return null
+}
+
+function normalizeStatus(value: unknown): ReportStatus {
+    if (value === 'in_review' || value === 'resolved' || value === 'closed') {
+        return value
+    }
+    return 'open'
+}
+
+function filterFallbackReports(reports: ReportItem[], filters: ListReportsFilters): ReportItem[] {
+    const search = filters.search?.trim().toLowerCase() ?? ''
+
+    return reports
+        .filter((row) => !filters.groupId || row.group_id === filters.groupId)
+        .filter((row) => !filters.status || filters.status === 'all' || row.status === filters.status)
+        .filter((row) => !filters.type || filters.type === 'all' || row.type === filters.type)
+        .filter((row) => {
+            if (!search) return true
+            return (
+                row.title.toLowerCase().includes(search) ||
+                row.description.toLowerCase().includes(search)
+            )
+        })
+        .slice(0, filters.limit ?? 50)
+}

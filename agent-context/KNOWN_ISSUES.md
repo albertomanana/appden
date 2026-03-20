@@ -18,6 +18,11 @@ Suggested fix:
 - apply `supabase/migrations/009_social_connections_reports_admin.sql`
 - verify `group_invitations` policies no longer depend on `groups` in a recursive way
 
+Current mitigation in app code:
+
+- group creation is now more tolerant when the owner membership row already exists or `group_members` query is flaky
+- reports service now retries against legacy schema instead of hard failing immediately
+
 ## 2) Incognito-only behavior can still happen on stale clients
 
 Symptom:

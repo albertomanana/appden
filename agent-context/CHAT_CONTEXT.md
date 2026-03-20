@@ -75,6 +75,14 @@ This file captures decisions and incidents from this collaboration thread so fut
   - `public/changelog.generated.json`
 - removed noisy startup `console.log` lines from Supabase client/auth bootstrap path
 
+12. 2026-03-20 compatibility hardening for partially migrated environments:
+- `groups.service.createGroup()` no longer depends on `upsert` for owner membership
+- owner membership insert now tolerates duplicate/existing rows created by DB trigger
+- `groups.service.getGroups()` degrades gracefully if `group_members` query fails but owned groups are still readable
+- `reports.service` now detects legacy reports schema and retries with old payload/query shape
+- if legacy reports schema cannot support the new fields, service falls back without crashing the UI
+- validated locally with `npm run lint` and `npm run build`
+
 ## Locked decisions
 
 - storage cover bucket name is `covers`
