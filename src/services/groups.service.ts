@@ -5,35 +5,26 @@ export const groupsService = {
     /**
      * Fetch all groups the current user belongs to.
      */
-    async getGroups(_userId: string): Promise<Group[]> {
-        const [memberResult, ownerResult] = await Promise.all([
-            supabase
-                .from('group_members')
-                .select('group:groups(*)')
-                .eq('user_id', _userId),
-            supabase
-                .from('groups')
-                .select('*')
-                .eq('created_by', _userId),
-        ])
+    async getGroups(userId: string): Promise<Group[]> {
+        const { data, error } = await supabase
+            .from('groups')
+            .select('*')
+            .order('created_at', { ascending: false })
 
-        if (memberResult.error && ownerResult.error) {
-            throw ownerResult.error
+        if (!error) {
+            return (data ?? []) as Group[]
         }
 
-        const fromMembership = (((memberResult.error ? [] : memberResult.data) ?? []) as Array<{ group: Group | Group[] | null }>)
-            .map((row) => (Array.isArray(row.group) ? row.group[0] : row.group))
-            .filter((group): group is Group => !!group)
+        // Compatibility fallback for partially migrated environments:
+        // at minimum keep owned groups readable while the RLS hotfix is pending.
+        const { data: ownedData, error: ownedError } = await supabase
+            .from('groups')
+            .select('*')
+            .eq('created_by', userId)
+            .order('created_at', { ascending: false })
 
-        const fromOwnership = ((ownerResult.error ? [] : ownerResult.data) ?? []) as Group[]
-        const mergedById = new Map<string, Group>()
-        for (const group of [...fromMembership, ...fromOwnership]) {
-            mergedById.set(group.id, group)
-        }
-
-        return Array.from(mergedById.values()).sort(
-            (a, b) => +new Date(b.created_at) - +new Date(a.created_at)
-        )
+        if (ownedError) throw error
+        return (ownedData ?? []) as Group[]
     },
 
     /**
@@ -78,9 +69,29 @@ export const groupsService = {
         description: string | null
         created_by: string
     }): Promise<Group> {
+        const name = groupData.name.trim()
+        const description = groupData.description?.trim() ? groupData.description.trim() : null
+
+        const rpcResult = await supabase.rpc('create_group_with_owner', {
+            p_name: name,
+            p_description: description,
+        })
+
+        if (!rpcResult.error) {
+            const group = extractRpcGroup(rpcResult.data)
+            if (group) return group
+        } else if (!isMissingFunctionError(rpcResult.error)) {
+            throw rpcResult.error
+        }
+
+        // Legacy fallback while migration 010 is not yet applied.
         const { data, error } = await supabase
             .from('groups')
-            .insert(groupData)
+            .insert({
+                name,
+                description,
+                created_by: groupData.created_by,
+            })
             .select()
             .single()
 
@@ -214,4 +225,21 @@ function isDuplicateError(error: unknown): boolean {
     const anyError = error as { code?: string; message?: string; details?: string }
     const raw = `${anyError.code ?? ''} ${anyError.message ?? ''} ${anyError.details ?? ''}`.toLowerCase()
     return raw.includes('23505') || raw.includes('duplicate key') || raw.includes('already exists')
+}
+
+function isMissingFunctionError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false
+    const anyError = error as { code?: string; message?: string; details?: string; hint?: string }
+    const raw = `${anyError.code ?? ''} ${anyError.message ?? ''} ${anyError.details ?? ''} ${anyError.hint ?? ''}`.toLowerCase()
+    return raw.includes('42883') || raw.includes('pgrst202') || raw.includes('function') && raw.includes('does not exist')
+}
+
+function extractRpcGroup(data: unknown): Group | null {
+    if (Array.isArray(data)) {
+        return (data[0] ?? null) as Group | null
+    }
+    if (data && typeof data === 'object') {
+        return data as Group
+    }
+    return null
 }

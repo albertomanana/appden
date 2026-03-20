@@ -28,7 +28,7 @@ export default function GroupDetailPage() {
 
     React.useEffect(() => {
         if (groupId) {
-            loadGroupDetails()
+            void loadGroupDetails()
         }
     }, [groupId])
 
@@ -38,11 +38,12 @@ export default function GroupDetailPage() {
             setError(null)
             if (!groupId) return
 
-            const groupData = await groupsService.getGroup(groupId)
+            const [groupData, membersData] = await Promise.all([
+                groupsService.getGroup(groupId),
+                groupsService.getGroupMembers(groupId),
+            ])
             setGroup(groupData)
             setActiveGroup(groupData)
-
-            const membersData = await groupsService.getGroupMembers(groupId)
             setMembers(membersData)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load group')
@@ -55,7 +56,7 @@ export default function GroupDetailPage() {
         try {
             if (!groupId) return
             await groupsService.removeGroupMember(groupId, userId)
-            setMembers(members.filter((m) => m.user_id !== userId))
+            setMembers((current) => current.filter((member) => member.user_id !== userId))
             addNotification({
                 type: 'success',
                 title: 'Member Removed',

@@ -2,8 +2,8 @@
   "project": {
     "name": "The Appden",
     "type": "Private PWA for friend groups",
-    "snapshot_date": "2026-03-19",
-    "release": "v1.5.3",
+    "snapshot_date": "2026-03-20",
+    "release": "v1.5.5",
     "stack": [
       "React 18",
       "TypeScript",
@@ -40,7 +40,8 @@
       "006_changelog_reports_social_hardening.sql",
       "007_group_invitations.sql",
       "008_fix_rls_groups_recursion.sql",
-      "009_social_connections_reports_admin.sql"
+      "009_social_connections_reports_admin.sql",
+      "010_groups_rls_rpc_hardening.sql"
     ],
     "required_buckets": [
       "avatars",
@@ -54,7 +55,8 @@
       "42501 must be owner of table objects",
       "42883 operator does not exist: text = uuid",
       "42P17 infinite recursion detected in policy for relation groups",
-      "missing migration 009 causes friend_requests/reports policy errors"
+      "missing migration 009 causes friend_requests/reports policy errors",
+      "missing migration 010 causes groups/group_members recursion and non-atomic group creation"
     ]
   },
   "roadmap_status": {

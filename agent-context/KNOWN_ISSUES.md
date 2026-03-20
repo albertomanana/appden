@@ -1,12 +1,13 @@
 # Known Issues and Risks
 
-## 1) Login/social bootstrap can fail if migration 008/009 is missing
+## 1) Login/social bootstrap can fail if migration 010 is not applied
 
 Symptom:
 
 - auth/session appears established but group bootstrap triggers server error
 - Supabase can return `42P17 infinite recursion detected in policy for relation "groups"`
-- social/report actions can fail with relation/policy errors if migration `009_social_connections_reports_admin.sql` is not applied
+- group creation can fail or only work partially if the app still uses legacy two-step insert logic
+- social/report actions can fail with relation/policy errors if migrations `009_social_connections_reports_admin.sql` / `010_groups_rls_rpc_hardening.sql` are not applied
 
 Impact:
 
@@ -16,12 +17,15 @@ Suggested fix:
 
 - apply `supabase/migrations/008_fix_rls_groups_recursion.sql`
 - apply `supabase/migrations/009_social_connections_reports_admin.sql`
-- verify `group_invitations` policies no longer depend on `groups` in a recursive way
+- apply `supabase/migrations/010_groups_rls_rpc_hardening.sql`
+- verify the app can call `create_group_with_owner(...)` successfully
 
 Current mitigation in app code:
 
 - group creation is now more tolerant when the owner membership row already exists or `group_members` query is flaky
+- `groups.service` now prefers the atomic RPC path and direct `groups` reads
 - reports service now retries against legacy schema instead of hard failing immediately
+- login page redirects again once auth state settles, reducing the "second login" symptom
 
 ## 2) Incognito-only behavior can still happen on stale clients
 
@@ -110,3 +114,15 @@ Suggested fix:
 
 - keep `contents: write` in workflow
 - allow bot pushes to `develop` for changelog update commit, or route via PR automation
+
+## 8) PWA icon issue is resolved in-repo but stale clients may cache the old manifest
+
+Symptom:
+
+- browser still requests missing `/icons/icon-192x192.png` even after deploy
+
+Suggested fix:
+
+- hard refresh the site
+- if needed, use the local session repair action to clear caches and service workers
+- verify new deploy serves `apple-touch-icon.png`, `masked-icon.svg`, and `/icons/*`

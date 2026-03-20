@@ -22,8 +22,8 @@ async function requireCurrentUserId(): Promise<string> {
 }
 
 export const friendsService = {
-    async sendRequest(_groupId: string, toUserId: string): Promise<GroupFriendRequest> {
-        const fromUserId = await requireCurrentUserId()
+    async sendRequest(_groupId: string, toUserId: string, viewerUserId?: string): Promise<GroupFriendRequest> {
+        const fromUserId = viewerUserId ?? await requireCurrentUserId()
         const request = await connectionsService.sendRequest(fromUserId, toUserId)
         return {
             ...request,

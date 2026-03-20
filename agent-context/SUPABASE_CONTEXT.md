@@ -1,6 +1,6 @@
 ﻿# Supabase Context
 
-Snapshot date: 2026-03-19
+Snapshot date: 2026-03-20
 
 ## Environment variables
 
@@ -23,6 +23,7 @@ Expected in `.env.local`:
 7. `supabase/migrations/007_group_invitations.sql`
 8. `supabase/migrations/008_fix_rls_groups_recursion.sql`
 9. `supabase/migrations/009_social_connections_reports_admin.sql`
+10. `supabase/migrations/010_groups_rls_rpc_hardening.sql`
 
 ## Storage buckets
 
@@ -52,6 +53,7 @@ References:
 - `supabase/migrations/007_group_invitations.sql`
 - `supabase/migrations/008_fix_rls_groups_recursion.sql`
 - `supabase/migrations/009_social_connections_reports_admin.sql`
+- `supabase/migrations/010_groups_rls_rpc_hardening.sql`
 
 ## Critical historical incident
 
@@ -90,18 +92,21 @@ Fix pattern:
 
 Meaning:
 
-- RLS policies created a dependency cycle between `groups` and `group_invitations`
+- RLS policies created a dependency cycle between `groups` and `group_members` / `group_invitations`
 
 Fix pattern:
 
-- avoid querying `groups` inside `group_invitations` policies when `groups` policy already checks invitations
-- use `group_members` owner role checks for invite authorization
-- apply `008_fix_rls_groups_recursion.sql` if affected
+- use SECURITY DEFINER helpers (`is_group_member`, `is_group_owner`, `is_group_manager`)
+- replace recursive policies on `groups` and `group_members`
+- create groups through `create_group_with_owner(...)` so owner membership is created atomically
+- apply `010_groups_rls_rpc_hardening.sql` as the definitive fix
 
-### Role model notes (after migration 009)
+### Role model notes (after migration 010)
 
 - `group_role` now supports `owner`, `admin`, `member`
 - `groups` insert auto-creates owner membership row via trigger
+- `create_group_with_owner(name, description)` is the preferred creation path from the app
+- `groups` and `group_members` policies now rely on SECURITY DEFINER helpers instead of recursive subqueries
 - owner/admin can manage members and invitations (owner-only operations remain restricted where applicable)
 - reports are readable by all authenticated users in-app
 - report status management is creator-or-admin
@@ -134,13 +139,14 @@ Implication:
 
 ## Pre-launch DB checklist
 
-- all 9 migrations executed in target project
+- all 10 migrations executed in target project
 - all 5 storage buckets exist with correct names (`reports` optional but recommended)
 - storage policies allow authenticated read/upload where expected
 - user can:
   - upload song + cover
   - fetch signed URLs for song and cover
   - login and load groups without recursion errors
+  - create a group through the app without a second manual owner insert
   - use `/connections` to send/accept requests
   - open `/reports` and `/reports/:id`, create reports without mandatory group
   - see admin unread report counter once `user_roles` contains at least one admin

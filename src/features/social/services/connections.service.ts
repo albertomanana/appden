@@ -136,6 +136,19 @@ export const connectionsService = {
             return latest
         }
 
+        if (
+            latest &&
+            latest.from_user_id === fromUserId &&
+            (latest.status === 'cancelled' || latest.status === 'rejected')
+        ) {
+            const { error: deletePreviousError } = await supabase
+                .from('friend_requests')
+                .delete()
+                .eq('id', latest.id)
+
+            if (deletePreviousError) throw deletePreviousError
+        }
+
         const payload = {
             from_user_id: fromUserId,
             to_user_id: toUserId,
@@ -146,11 +159,23 @@ export const connectionsService = {
 
         const { data, error } = await supabase
             .from('friend_requests')
-            .upsert(payload, { onConflict: 'from_user_id,to_user_id' })
+            .insert(payload)
             .select('*, from_profile:profiles!friend_requests_from_user_id_fkey(id, display_name, username, avatar_url), to_profile:profiles!friend_requests_to_user_id_fkey(id, display_name, username, avatar_url)')
             .single()
 
-        if (error) throw error
+        if (error) {
+            if (isDuplicateError(error)) {
+                const refreshed = await this.getRequestsBetween(fromUserId, toUserId)
+                const current = refreshed[0]
+                if (current) {
+                    if (current.status === 'pending' && current.to_user_id === fromUserId) {
+                        return this.respond(current.id, true)
+                    }
+                    return current
+                }
+            }
+            throw error
+        }
         return normalizeFriendRequest(data as RawFriendRequest)
     },
 
@@ -211,3 +236,9 @@ export const connectionsService = {
     },
 }
 
+function isDuplicateError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false
+    const anyError = error as { code?: string; message?: string; details?: string }
+    const raw = `${anyError.code ?? ''} ${anyError.message ?? ''} ${anyError.details ?? ''}`.toLowerCase()
+    return raw.includes('23505') || raw.includes('duplicate key') || raw.includes('already exists')
+}

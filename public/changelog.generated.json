@@ -1,11 +1,44 @@
 {
-  "generated_at": "2026-03-19T22:17:23.916Z",
+  "generated_at": "2026-03-20T15:53:50.689Z",
   "source_branch": "develop",
-  "current_version": "1.5.3",
+  "current_version": "1.5.5",
   "entries": [
     {
+      "id": "7d44b3df0f673ec66b60be8b8fe855a3eac48e15",
+      "version": "1.5.5",
+      "title": "Merge pull request #8 from albertomanana/develop",
+      "description": "Merge pull request #8 from albertomanana/develop",
+      "type": "update",
+      "release_date": "2026-03-20",
+      "created_at": "2026-03-20T15:25:55+01:00",
+      "commit_sha": "7d44b3d",
+      "author": "Alberto de la Torre"
+    },
+    {
+      "id": "5d7aaaebcd3f9fbe56559ad47f245851325c0676",
+      "version": "1.5.5",
+      "title": "v.1.5.5 Prueba de merge a Main",
+      "description": "v.1.5.5 Prueba de merge a Main",
+      "type": "update",
+      "release_date": "2026-03-20",
+      "created_at": "2026-03-20T15:24:46+01:00",
+      "commit_sha": "5d7aaae",
+      "author": "albertomanana"
+    },
+    {
+      "id": "1973fca0891d1ef9a66369b9483a4476ae90e302",
+      "version": "1.5.5",
+      "title": "v.1.5.4 Corregido parte de los errores en interacción social (pendiente de arreglar Grupos y Reportes)",
+      "description": "v.1.5.4 Corregido parte de los errores en interacción social (pendiente de arreglar Grupos y Reportes)",
+      "type": "update",
+      "release_date": "2026-03-19",
+      "created_at": "2026-03-20T00:08:18+01:00",
+      "commit_sha": "1973fca",
+      "author": "albertomanana"
+    },
+    {
       "id": "d37f14ed9924b4fb7f5cd7eea35267fdb5d9180f",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "v.1.5.3 Actualización de migraciones y agente corregir error de Auth (Falta corregir errores en social)",
       "description": "v.1.5.3 Actualización de migraciones y agente corregir error de Auth (Falta corregir errores en social)",
       "type": "update",
@@ -16,7 +49,7 @@
     },
     {
       "id": "b5bbd4c193dd95e9730e402c55a095cdbc70da0f",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "v1.5.2 feat(social): add group invitations flow with RLS policies and UI integration",
       "description": "v1.5.2 feat(social): add group invitations flow with RLS policies and UI integration",
       "type": "update",
@@ -26,8 +59,19 @@
       "author": "albertomanana"
     },
     {
+      "id": "61fbd3577124f34e2e623bf6637511f2e7f71049",
+      "version": "1.5.5",
+      "title": "Merge pull request #7 from albertomanana/develop",
+      "description": "Merge pull request #7 from albertomanana/develop",
+      "type": "update",
+      "release_date": "2026-03-16",
+      "created_at": "2026-03-16T18:25:47+01:00",
+      "commit_sha": "61fbd35",
+      "author": "Alberto de la Torre"
+    },
+    {
       "id": "f2b4c9a6390ed7f99d4673218bc54d5d47fabed8",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "1.5.1 Beta Oficial (Social mejorado)",
       "description": "1.5.1 Beta Oficial (Social mejorado)",
       "type": "update",
@@ -37,8 +81,19 @@
       "author": "albertomanana"
     },
     {
+      "id": "81c5ae9f265a9f0e760bbdbc28a38a1b1c142bb4",
+      "version": "1.5.5",
+      "title": "Merge pull request #1 from albertomanana/develop",
+      "description": "Merge pull request #1 from albertomanana/develop",
+      "type": "update",
+      "release_date": "2026-03-16",
+      "created_at": "2026-03-16T17:48:57+01:00",
+      "commit_sha": "81c5ae9",
+      "author": "Alberto de la Torre"
+    },
+    {
       "id": "16e87be9f544a9acb714b26a3bc24f06fa61ae98",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "v1.5 Beta Oficial",
       "description": "v1.5 Beta Oficial",
       "type": "update",
@@ -49,7 +104,7 @@
     },
     {
       "id": "282d5ab8376093257339a1a89e4a6c373aeab4c2",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "v1.4 Deudas (Buscar errores)",
       "description": "v1.4 Deudas (Buscar errores)",
       "type": "update",
@@ -60,7 +115,7 @@
     },
     {
       "id": "759fd0111087b773a2121611850967526ca3dc1d",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "v.1.3 Letras, Social, UI/UX",
       "description": "v.1.3 Letras, Social, UI/UX",
       "type": "update",
@@ -71,7 +126,7 @@
     },
     {
       "id": "46d2d4f9bc640997589ba548881e23c10a93bf63",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "v.1.2 Ideas de producto",
       "description": "v.1.2 Ideas de producto",
       "type": "update",
@@ -82,7 +137,7 @@
     },
     {
       "id": "07c5b8fe162e6d7ab78bd810233c5ee16b7fb146",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "CREACIÓN DE TASKS Y WORKFLOW",
       "description": "CREACIÓN DE TASKS Y WORKFLOW",
       "type": "update",
@@ -93,7 +148,7 @@
     },
     {
       "id": "28abe7746eace6abcf3982aa4e35162e70d0ef75",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "v1.1.2 Errores del reproductor corregidos (botones, portadas, reproducción...) :)",
       "description": "v1.1.2 Errores del reproductor corregidos (botones, portadas, reproducción...) :)",
       "type": "update",
@@ -104,7 +159,7 @@
     },
     {
       "id": "2c6df600e0c677001614273cf952f61481d327be",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "v.1.1 Varios errores en el reproductor (Botones multimedia, portadas, reproducción...), perfiles con informacion creados",
       "description": "v.1.1 Varios errores en el reproductor (Botones multimedia, portadas, reproducción...), perfiles con informacion creados",
       "type": "update",
@@ -115,7 +170,7 @@
     },
     {
       "id": "5b25196ff4c327fcb1c681275613713dbd4cb3dc",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "Fix storage path extraction and UI layout issues",
       "description": "Fix storage path extraction and UI layout issues",
       "type": "update",
@@ -126,7 +181,7 @@
     },
     {
       "id": "95e807827ca56ecbf23786d4fedd812974adbdaa",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "Fix SpotifyMusicPlayer with better audio synchronization",
       "description": "Fix SpotifyMusicPlayer with better audio synchronization",
       "type": "update",
@@ -137,7 +192,7 @@
     },
     {
       "id": "fd82ed8bdc59ae54352251556e3a8b92242746ca",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "Complete music playback fixes with Spotify-style player and artist profiles",
       "description": "Complete music playback fixes with Spotify-style player and artist profiles",
       "type": "update",
@@ -148,7 +203,7 @@
     },
     {
       "id": "4192e8337cdde3ca719ad74c5be8789239cfd899",
-      "version": "1.5.3",
+      "version": "1.5.5",
       "title": "V.1.0 The appden base",
       "description": "V.1.0 The appden base",
       "type": "update",

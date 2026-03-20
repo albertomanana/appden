@@ -27,29 +27,36 @@ export default function GroupsPage() {
     const [isSubmitting, setIsSubmitting] = React.useState(false)
 
     React.useEffect(() => {
-        loadGroups()
-        loadIncomingInvites()
+        void loadGroups()
+        void loadIncomingInvites()
     }, [user?.id])
 
     async function loadGroups() {
         try {
             setLoading(true)
             setError(null)
-            if (!user?.id) return
+            if (!user?.id) {
+                setGroups([])
+                setGroupCounts({})
+                return
+            }
 
             const data = await groupsService.getGroups(user.id)
             setGroups(data)
 
-            // Load member count for each group
-            const counts: Record<string, number> = {}
-            for (const group of data) {
-                try {
-                    const members = await groupsService.getGroupMembers(group.id)
-                    counts[group.id] = members.length
-                } catch {
-                    counts[group.id] = 0
-                }
-            }
+            const counts = Object.fromEntries(
+                await Promise.all(
+                    data.map(async (group) => {
+                        try {
+                            const members = await groupsService.getGroupMembers(group.id)
+                            return [group.id, members.length] as const
+                        } catch {
+                            return [group.id, 0] as const
+                        }
+                    })
+                )
+            )
+
             setGroupCounts(counts)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load groups')
@@ -82,8 +89,8 @@ export default function GroupsPage() {
                 created_by: user.id,
             })
 
-            setGroups([newGroup, ...groups])
-            setGroupCounts({ ...groupCounts, [newGroup.id]: 1 })
+            setGroups((current) => [newGroup, ...current.filter((group) => group.id !== newGroup.id)])
+            setGroupCounts((current) => ({ ...current, [newGroup.id]: 1 }))
             setShowForm(false)
             setActiveGroup(newGroup)
             navigate(`/groups/${newGroup.id}`)

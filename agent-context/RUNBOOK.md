@@ -1,6 +1,6 @@
 ﻿# Runbook
 
-Snapshot date: 2026-03-19
+Snapshot date: 2026-03-20
 
 ## Local development
 
@@ -16,7 +16,7 @@ copy .env.example .env.local
 
 3. Fill `.env.local` with Supabase URL and anon key.
 
-4. Run SQL migrations in Supabase SQL Editor (001 -> 009).
+4. Run SQL migrations in Supabase SQL Editor (001 -> 010).
 
 5. Ensure storage buckets exist:
 - `avatars`
@@ -76,10 +76,11 @@ Code paths:
 Before sharing app with friends:
 
 - registration and login work in normal browser tab
-- migration `008_fix_rls_groups_recursion.sql` applied (prevents RLS recursion on groups)
+- migrations `008_fix_rls_groups_recursion.sql`, `009_social_connections_reports_admin.sql`, and `010_groups_rls_rpc_hardening.sql` applied
 - song upload works (audio + cover)
 - cover and song URLs open (signed URL generated)
 - social/changelog/report routes work without relation errors
+- group creation works through `create_group_with_owner(...)`
 - `/connections` flow works (send + accept + reject)
 - `/reports` list/detail works and creation is possible even without active group
 - RLS limits data to group members
@@ -112,6 +113,7 @@ CI generation:
 - workflow: `.github/workflows/changelog-develop.yml`
 - trigger: push to `develop`
 - output file consumed by app: `public/changelog.generated.json`
+- verified locally at snapshot date with `npm run changelog:generate`
 
 ## Deploy (Vercel only)
 
@@ -126,6 +128,7 @@ CI generation:
 
 - login/register
 - create group
+- reload after login and confirm groups bootstrap does not force a second login
 - upload song + cover
 - play/pause/next/previous in mini and full player
 - open song detail:
@@ -136,5 +139,6 @@ CI generation:
 - open `/connections` and complete one request cycle
 - submit `/reports` with and without image
 - open `/reports/:reportId` and change status (admin/creator)
+- verify browser no longer reports missing `/icons/icon-192x192.png`
 - create debt and payment
 - export CSV/JSON in debt insights

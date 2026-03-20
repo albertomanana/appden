@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+﻿import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
@@ -9,11 +9,11 @@ export default defineConfig({
         react(),
         VitePWA({
             registerType: 'autoUpdate',
-            includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+            includeAssets: ['icons/icon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
             manifest: {
                 name: 'The Appden',
                 short_name: 'Appden',
-                description: 'Tu espacio privado con amigos: música, deudas y más.',
+                description: 'Tu espacio privado con amigos: musica, deudas y mas.',
                 theme_color: '#0f0f0f',
                 background_color: '#0f0f0f',
                 display: 'standalone',
@@ -90,3 +90,5 @@ export default defineConfig({
         },
     },
 })
+
+

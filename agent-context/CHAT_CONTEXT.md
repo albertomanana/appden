@@ -83,6 +83,21 @@ This file captures decisions and incidents from this collaboration thread so fut
 - if legacy reports schema cannot support the new fields, service falls back without crashing the UI
 - validated locally with `npm run lint` and `npm run build`
 
+13. 2026-03-20 v1.5.5 hotfix pass for login/groups/PWA:
+- new migration `010_groups_rls_rpc_hardening.sql`
+  - adds `is_group_member`, redefines `is_group_owner` / `is_group_manager`
+  - replaces recursive `groups` and `group_members` policies
+  - adds atomic RPC `create_group_with_owner(name, description)`
+- `groups.service` now prefers direct `groups` reads and RPC-based creation
+- `group_invitations.service` accepts invites with plain insert + duplicate tolerance
+- `connections.service` stopped using `upsert` for friend requests and now re-creates requests safely after reject/cancel
+- `LoginPage` now redirects automatically once auth state becomes authenticated, avoiding the "login twice" feel after session bootstrap lag
+- real PWA icons were added under `public/icons/`, plus `apple-touch-icon.png` and `masked-icon.svg`
+- verified locally:
+  - `npm run lint`
+  - `npm run build`
+  - `npm run changelog:generate`
+
 ## Locked decisions
 
 - storage cover bucket name is `covers`

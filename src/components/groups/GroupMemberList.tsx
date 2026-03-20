@@ -61,7 +61,7 @@ export const GroupMemberList: React.FC<GroupMemberListProps> = ({
     }, [requests])
 
     const sendMutation = useMutation({
-        mutationFn: (toUserId: string) => friendsService.sendRequest(groupId, toUserId),
+        mutationFn: (toUserId: string) => friendsService.sendRequest(groupId, toUserId, viewerUserId ?? undefined),
         onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['friend-requests', groupId] }),
     })
 
@@ -242,4 +242,3 @@ export const GroupMemberList: React.FC<GroupMemberListProps> = ({
         </div>
     )
 }
-

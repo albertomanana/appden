@@ -1,7 +1,7 @@
 # The Appden Agent Context Pack
 
-Snapshot date: 2026-03-19
-Release: v1.5.3
+Snapshot date: 2026-03-20
+Release: v1.5.5
 
 This folder contains a reusable context pack so any developer or AI agent can work on The Appden from another IDE/model without losing project and conversation context.
 
@@ -30,11 +30,16 @@ Recent additions tracked in this snapshot:
 - RLS recursion/login hotfix: `008_fix_rls_groups_recursion.sql`
 - auth bootstrap hardening in `AuthProvider` (do not force logout on group fetch failure)
 - social + reports hardening migration: `009_social_connections_reports_admin.sql`
+- definitive groups RLS/RPC hotfix: `010_groups_rls_rpc_hardening.sql`
 - new routes: `/connections`, `/reports`, `/reports/:reportId` (`/report` kept as redirect)
 - automatic changelog pipeline from git commits on `develop`:
   - script: `scripts/generate-changelog-from-git.mjs`
   - workflow: `.github/workflows/changelog-develop.yml`
   - generated source file: `public/changelog.generated.json`
+- PWA asset hotfix:
+  - real icons created under `public/icons/`
+  - `public/apple-touch-icon.png`
+  - `public/masked-icon.svg`
 
 ## Recommended reading order
 

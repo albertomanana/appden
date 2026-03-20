@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -7,11 +7,13 @@ import { authService } from '@services/auth.service'
 import { loginSchema, type LoginFormData } from '@lib/validators'
 import { useToast } from '@components/ui/Toast'
 import { ROUTES } from '@lib/constants'
+import { useAuth } from '@hooks/useAuth'
 
 const LoginPage: React.FC = () => {
     const navigate = useNavigate()
     const location = useLocation()
     const { error: toastError } = useToast()
+    const { isAuthenticated, isInitialized } = useAuth()
     const [showPassword, setShowPassword] = useState(false)
     const [isRepairing, setIsRepairing] = useState(false)
 
@@ -22,6 +24,12 @@ const LoginPage: React.FC = () => {
     } = useForm<LoginFormData>({ resolver: zodResolver(loginSchema) })
 
     const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? ROUTES.DASHBOARD
+
+    useEffect(() => {
+        if (isInitialized && isAuthenticated) {
+            navigate(from, { replace: true })
+        }
+    }, [from, isAuthenticated, isInitialized, navigate])
 
     const onSubmit = async (data: LoginFormData) => {
         try {

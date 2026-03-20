@@ -91,18 +91,35 @@ export const groupInvitationsService = {
         if (accept) {
             const { error: addMemberError } = await supabase
                 .from('group_members')
-                .upsert(
-                    {
-                        group_id: invitation.group_id,
-                        user_id: invitation.invited_user_id,
-                        role: 'member',
-                    },
-                    { onConflict: 'group_id,user_id' }
-                )
+                .insert({
+                    group_id: invitation.group_id,
+                    user_id: invitation.invited_user_id,
+                    role: 'member',
+                })
 
-            if (addMemberError) throw addMemberError
+            if (addMemberError) {
+                if (isDuplicateError(addMemberError)) {
+                    return invitation
+                }
+
+                const { data: existingMembership } = await supabase
+                    .from('group_members')
+                    .select('id')
+                    .eq('group_id', invitation.group_id)
+                    .eq('user_id', invitation.invited_user_id)
+                    .maybeSingle()
+
+                if (!existingMembership) throw addMemberError
+            }
         }
 
         return invitation
     },
+}
+
+function isDuplicateError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false
+    const anyError = error as { code?: string; message?: string; details?: string }
+    const raw = `${anyError.code ?? ''} ${anyError.message ?? ''} ${anyError.details ?? ''}`.toLowerCase()
+    return raw.includes('23505') || raw.includes('duplicate key') || raw.includes('already exists')
 }
