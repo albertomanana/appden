@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Play, Pause, Heart, Trash2, Edit2, Music } from 'lucide-react'
-import { usePlayerStore } from '@app/store/player.store'
+import { Edit2, Heart, Music, Pause, Play, Trash2 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { favoritesService } from '@services/favorites.service'
-import { songsService } from '@services/songs.service'
+import { usePlayerStore } from '@app/store/player.store'
+import { ConfirmDialog } from '@components/ui/ConfirmDialog'
+import { useToast } from '@components/ui/Toast'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
-import { useToast } from '@components/ui/Toast'
-import { formatDuration, cn } from '@lib/utils'
 import { ROUTES } from '@lib/constants'
-import { ConfirmDialog } from '@components/ui/ConfirmDialog'
+import { cn, formatDuration } from '@lib/utils'
+import { favoritesService } from '@services/favorites.service'
+import { songsService } from '@services/songs.service'
 import type { Song } from '@/types'
 
 interface SongCardProps {
@@ -61,112 +61,93 @@ export const SongCard: React.FC<SongCardProps> = ({ song, onPlay, showArtist = t
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: ['songs', groupId] })
-            success('Canción', 'Canción eliminada correctamente')
+            success('Cancion', 'Cancion eliminada correctamente')
             setShowDeleteDialog(false)
         },
         onError: () => {
-            toastError('Error', 'No se pudo eliminar la canción')
+            toastError('Error', 'No se pudo eliminar la cancion')
         },
     })
 
     return (
         <>
-            <div
+            <article
                 className={cn(
-                    'card-interactive flex items-center gap-3 p-3 group',
-                    isCurrentSong && 'border-brand-500/40 bg-brand-500/5'
+                    'card-interactive group relative overflow-hidden p-3',
+                    isCurrentSong && 'border-brand-400/25 bg-brand-400/8'
                 )}
             >
-                {/* Play button / Cover art */}
-                <button
-                    onClick={onPlay}
-                    className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-surface-600 group/play"
-                    aria-label={isThisPlaying ? 'Pausar' : 'Reproducir'}
-                >
-                    {song.cover_url && !coverFailed ? (
-                        <img
-                            src={song.cover_url}
-                            alt={song.title}
-                            className="w-full h-full object-cover"
-                            onError={() => setCoverFailed(true)}
-                        />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <Music className="w-5 h-5 text-gray-500" />
-                        </div>
-                    )}
-                    {/* Play overlay */}
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/play:opacity-100 transition-opacity">
-                        {isThisPlaying
-                            ? <Pause className="w-5 h-5 text-white" />
-                            : <Play className="w-5 h-5 text-white ml-0.5" />
-                        }
-                    </div>
-                    {/* Now playing indicator */}
-                    {isThisPlaying && (
-                        <div className="absolute bottom-1 right-1 w-2 h-2 bg-brand-400 rounded-full animate-pulse-slow" />
-                    )}
-                </button>
-
-                {/* Song info */}
-                <Link to={ROUTES.SONG(song.id)} className="flex-1 min-w-0">
-                    <p className={cn('text-sm font-semibold truncate', isCurrentSong ? 'text-brand-400' : 'text-white')}>
-                        {song.title}
-                    </p>
-                    {showArtist && <p className="text-xs text-gray-400 truncate">{song.artist_name}</p>}
-                </Link>
-
-                {/* Duration */}
-                <span className="text-xs text-gray-500 flex-shrink-0">
-                    {formatDuration(song.duration_seconds)}
-                </span>
-
-                {/* Action buttons */}
-                <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                    {/* Favorite button */}
+                <div className="flex items-center gap-3">
                     <button
-                        onClick={() => toggleFavorite()}
-                        disabled={isPending}
-                        aria-label={song.is_favorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}
-                        className={cn(
-                            'p-1.5 rounded-lg transition-all duration-200',
-                            song.is_favorite
-                                ? 'text-pink-400 hover:text-pink-300'
-                                : 'text-gray-600 hover:text-gray-400'
-                        )}
+                        onClick={onPlay}
+                        className="group/play relative h-16 w-16 shrink-0 overflow-hidden rounded-[1.35rem] bg-surface-700"
+                        aria-label={isThisPlaying ? 'Pausar' : 'Reproducir'}
                     >
-                        <Heart className={cn('w-4 h-4', song.is_favorite && 'fill-current')} />
+                        {song.cover_url && !coverFailed ? (
+                            <img src={song.cover_url} alt={song.title} className="h-full w-full object-cover" onError={() => setCoverFailed(true)} />
+                        ) : (
+                            <div className="grid h-full w-full place-items-center text-gray-500">
+                                <Music className="h-5 w-5" />
+                            </div>
+                        )}
+                        <div className="absolute inset-0 grid place-items-center bg-black/45 opacity-0 transition-opacity group-hover/play:opacity-100">
+                            {isThisPlaying ? <Pause className="h-5 w-5 text-white" /> : <Play className="ml-0.5 h-5 w-5 text-white" />}
+                        </div>
+                        {isThisPlaying ? <div className="absolute bottom-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-brand-300 shadow-[0_0_12px_rgba(133,173,255,0.55)]" /> : null}
                     </button>
 
-                    {/* Edit button (only for owner) */}
-                    {isOwner && onEdit && (
-                        <button
-                            onClick={onEdit}
-                            className="p-1.5 rounded-lg text-gray-600 hover:text-blue-400 transition-colors"
-                            aria-label="Editar"
-                        >
-                            <Edit2 className="w-4 h-4" />
-                        </button>
-                    )}
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                            <Link to={ROUTES.SONG(song.id)} className="min-w-0">
+                                <p className={cn('truncate text-base font-semibold', isCurrentSong ? 'text-brand-200' : 'text-white')}>
+                                    {song.title}
+                                </p>
+                            </Link>
+                            {song.is_favorite ? <span className="badge-brand !px-2 !py-0.5">Fav</span> : null}
+                        </div>
 
-                    {/* Delete button (only for owner) */}
-                    {isOwner && (
+                        {showArtist ? (
+                            <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-gray-500">{song.artist_name}</p>
+                        ) : null}
+
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <span className="hero-meta-pill !px-3 !py-1">{formatDuration(song.duration_seconds)}</span>
+                            {isCurrentSong ? <span className="hero-meta-pill !px-3 !py-1">Now playing</span> : null}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                         <button
-                            onClick={() => setShowDeleteDialog(true)}
-                            className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 transition-colors"
-                            aria-label="Eliminar"
+                            onClick={() => toggleFavorite()}
+                            disabled={isPending}
+                            aria-label={song.is_favorite ? 'Quitar de favoritos' : 'Anadir a favoritos'}
+                            className={cn(
+                                'btn-icon !h-10 !w-10 !rounded-full',
+                                song.is_favorite ? 'text-pink-300' : 'text-gray-400'
+                            )}
                         >
-                            <Trash2 className="w-4 h-4" />
+                            <Heart className={cn('h-4 w-4', song.is_favorite && 'fill-current')} />
                         </button>
-                    )}
+
+                        {isOwner && onEdit ? (
+                            <button onClick={onEdit} className="btn-icon !h-10 !w-10 !rounded-full" aria-label="Editar">
+                                <Edit2 className="h-4 w-4" />
+                            </button>
+                        ) : null}
+
+                        {isOwner ? (
+                            <button onClick={() => setShowDeleteDialog(true)} className="btn-icon !h-10 !w-10 !rounded-full text-red-200" aria-label="Eliminar">
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        ) : null}
+                    </div>
                 </div>
-            </div>
+            </article>
 
-            {/* Delete confirmation dialog */}
             <ConfirmDialog
                 isOpen={showDeleteDialog}
-                title="Eliminar canción"
-                description={`¿Estás seguro de que quieres eliminar "${song.title}"? Esta acción no se puede deshacer.`}
+                title="Eliminar cancion"
+                description={`Estas seguro de que quieres eliminar "${song.title}"? Esta accion no se puede deshacer.`}
                 variant="danger"
                 isLoading={isDeleting}
                 confirmLabel="Eliminar"

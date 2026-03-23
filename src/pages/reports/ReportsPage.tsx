@@ -1,10 +1,11 @@
-import React from 'react'
+﻿import React from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Flag, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Flag } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { useToast } from '@components/ui/Toast'
+import { PageHeader } from '@components/ui/PageHeader'
 import { ReportForm } from '@features/reports/components/ReportForm'
 import { ReportsList } from '@features/reports/components/ReportsList'
 import {
@@ -62,38 +63,35 @@ export default function ReportsPage() {
     if (!userId) return null
 
     return (
-        <div className="p-4 md:p-6 space-y-5 animate-fade-in">
-            <section className="card p-4 md:p-5">
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <h1 className="section-title inline-flex items-center gap-2">
-                            <Flag className="w-5 h-5 text-brand-300" />
-                            Reportes
-                        </h1>
-                        <p className="text-sm text-muted mt-1">
-                            Visibles para usuarios autenticados. {groupId ? `Grupo activo: ${activeGroup?.name}.` : 'Sin grupo activo (scope global).'}
-                        </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                        {isAdmin ? (
-                            <>
-                                <span className="badge bg-amber-500/20 text-amber-200 border border-amber-400/40">
-                                    Admin • {unreadAdminCount} por revisar
-                                </span>
-                                <button
-                                    className="btn-ghost px-3 py-1.5 text-xs"
-                                    onClick={() => markAdminReadMutation.mutate()}
-                                    disabled={markAdminReadMutation.isPending || unreadAdminCount === 0}
-                                >
-                                    Marcar leidas
-                                </button>
-                            </>
-                        ) : (
-                            <span className="badge badge-brand">Usuario</span>
-                        )}
-                    </div>
-                </div>
-            </section>
+        <div className="page-shell animate-fade-in">
+            <PageHeader
+                kicker="Product Feedback"
+                title="Reports"
+                description={`Visibles para usuarios autenticados. ${groupId ? `Grupo activo: ${activeGroup?.name}.` : 'Sin grupo activo, alcance global.'}`}
+                meta={
+                    <>
+                        <span className="hero-meta-pill">{reports.length} resultados</span>
+                        <span className="hero-meta-pill">{isAdmin ? `${unreadAdminCount} por revisar` : 'Vista autenticada'}</span>
+                    </>
+                }
+                actions={
+                    isAdmin ? (
+                        <button
+                            className="btn-secondary"
+                            onClick={() => markAdminReadMutation.mutate()}
+                            disabled={markAdminReadMutation.isPending || unreadAdminCount === 0}
+                        >
+                            <ShieldCheck className="w-4 h-4" />
+                            Marcar leidas
+                        </button>
+                    ) : (
+                        <span className="hero-meta-pill">
+                            <Flag className="w-3.5 h-3.5 text-brand-300" />
+                            Usuario autenticado
+                        </span>
+                    )
+                }
+            />
 
             <ReportForm
                 isSubmitting={createReportMutation.isPending}
@@ -118,10 +116,13 @@ export default function ReportsPage() {
                 }}
             />
 
-            <section className="card p-4 space-y-3">
-                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <h2 className="text-base font-semibold text-white">Listado de reportes</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full md:w-auto">
+            <section className="card p-5 space-y-4">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                    <div>
+                        <p className="page-kicker">Issue Board</p>
+                        <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Listado de reportes</h2>
+                    </div>
+                    <div className="grid w-full gap-2 sm:grid-cols-3 xl:w-auto xl:min-w-[620px]">
                         <input
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
@@ -165,11 +166,8 @@ export default function ReportsPage() {
                 />
             </section>
 
-            <section className="text-right">
-                <button
-                    className="btn-ghost px-3 py-2 text-xs"
-                    onClick={() => navigate('/notifications')}
-                >
+            <section className="flex justify-end">
+                <button className="btn-ghost" onClick={() => navigate('/notifications')}>
                     Ver centro de notificaciones
                 </button>
             </section>

@@ -1,9 +1,10 @@
-import React from 'react'
+﻿import React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Search, UserCheck2, UserPlus2, Users, X } from 'lucide-react'
 import { Avatar } from '@components/common/Avatar'
 import { EmptyState } from '@components/ui/EmptyState'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
+import { PageHeader } from '@components/ui/PageHeader'
 import { useAuth } from '@hooks/useAuth'
 import { useToast } from '@components/ui/Toast'
 import { connectionsService } from '@features/social/services/connections.service'
@@ -106,33 +107,44 @@ export default function ConnectionsPage() {
     if (!userId) return null
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
-            <section className="card p-4">
-                <h1 className="text-2xl font-bold text-white">Conexiones</h1>
-                <p className="text-sm text-gray-400 mt-1">
-                    Busca personas, envia solicitudes y conecta para invitar rapido a grupos.
-                </p>
-            </section>
+        <div className="page-shell animate-fade-in">
+            <PageHeader
+                kicker="People Layer"
+                title="Conexiones"
+                description="Busca usuarios, envia solicitudes y crea una red social privada que alimente la invitacion a grupos y la colaboracion real dentro de la app."
+                meta={
+                    <>
+                        <span className="hero-meta-pill">{friends.length} conexiones</span>
+                        <span className="hero-meta-pill">{incoming.length} pendientes</span>
+                    </>
+                }
+            />
 
-            <section className="card p-4 space-y-3">
-                <h2 className="text-sm font-semibold text-gray-200">Buscar usuarios</h2>
-                <div className="relative">
-                    <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                        className="input pl-10"
-                        value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Nombre o username"
+            <section className="card p-5 space-y-4">
+                <div>
+                    <p className="page-kicker">Search Directory</p>
+                    <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Buscar personas</h2>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-[1fr,0.9fr]">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                        <input
+                            className="input pl-11"
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            placeholder="Nombre o username"
+                        />
+                    </div>
+                    <textarea
+                        className="input min-h-[112px] resize-none"
+                        rows={3}
+                        maxLength={280}
+                        value={message}
+                        onChange={(event) => setMessage(event.target.value)}
+                        placeholder="Mensaje opcional para acompanar la solicitud"
                     />
                 </div>
-                <textarea
-                    className="input resize-none"
-                    rows={2}
-                    maxLength={280}
-                    value={message}
-                    onChange={(event) => setMessage(event.target.value)}
-                    placeholder="Mensaje opcional para la solicitud"
-                />
 
                 {loadingSearch ? (
                     <LoadingSkeleton count={2} />
@@ -148,55 +160,56 @@ export default function ConnectionsPage() {
                             return (
                                 <div
                                     key={profile.id}
-                                    className="rounded-xl border border-surface-500 bg-surface-700/40 p-3 flex items-center justify-between gap-3"
+                                    className="rounded-[1.5rem] border border-white/8 bg-black/15 p-3 sm:flex sm:items-center sm:justify-between"
                                 >
-                                    <div className="flex items-center gap-2 min-w-0">
+                                    <div className="flex min-w-0 items-center gap-3">
                                         <Avatar src={profile.avatar_url} name={profile.display_name} size="sm" />
                                         <div className="min-w-0">
-                                            <p className="text-sm text-white font-medium truncate">{profile.display_name}</p>
-                                            <p className="text-xs text-gray-400 truncate">@{profile.username ?? 'sin-username'}</p>
+                                            <p className="truncate text-sm font-semibold text-white">{profile.display_name}</p>
+                                            <p className="truncate text-xs uppercase tracking-[0.18em] text-gray-500">@{profile.username ?? 'sin-username'}</p>
                                         </div>
                                     </div>
 
-                                    {isFriend ? (
-                                        <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 text-xs">
-                                            <UserCheck2 className="w-3.5 h-3.5" />
-                                            Conexion
-                                        </div>
-                                    ) : incomingRequest ? (
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                className="p-2 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20"
-                                                onClick={() => acceptMutation.mutate(incomingRequest.id)}
-                                                title="Aceptar"
-                                            >
-                                                <Check className="w-4 h-4" />
+                                    <div className="mt-3 sm:mt-0">
+                                        {isFriend ? (
+                                            <div className="badge bg-emerald-400/14 text-emerald-200 border border-emerald-300/20">
+                                                <UserCheck2 className="w-3.5 h-3.5" />
+                                                Conexion activa
+                                            </div>
+                                        ) : incomingRequest ? (
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    className="btn-secondary !min-h-[2.5rem] bg-emerald-400/12 text-emerald-200"
+                                                    onClick={() => acceptMutation.mutate(incomingRequest.id)}
+                                                    title="Aceptar"
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                    Aceptar
+                                                </button>
+                                                <button
+                                                    className="btn-secondary !min-h-[2.5rem] bg-red-400/12 text-red-200"
+                                                    onClick={() => rejectMutation.mutate(incomingRequest.id)}
+                                                    title="Rechazar"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                    Rechazar
+                                                </button>
+                                            </div>
+                                        ) : outgoingRequest ? (
+                                            <button className="btn-secondary" onClick={() => cancelMutation.mutate(outgoingRequest.id)}>
+                                                Pendiente
                                             </button>
+                                        ) : (
                                             <button
-                                                className="p-2 rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/20"
-                                                onClick={() => rejectMutation.mutate(incomingRequest.id)}
-                                                title="Rechazar"
+                                                className="btn-primary"
+                                                onClick={() => sendMutation.mutate(profile.id)}
+                                                disabled={sendMutation.isPending}
                                             >
-                                                <X className="w-4 h-4" />
+                                                <UserPlus2 className="w-3.5 h-3.5" />
+                                                Conectar
                                             </button>
-                                        </div>
-                                    ) : outgoingRequest ? (
-                                        <button
-                                            className="btn-ghost px-3 py-2 text-xs"
-                                            onClick={() => cancelMutation.mutate(outgoingRequest.id)}
-                                        >
-                                            Pendiente
-                                        </button>
-                                    ) : (
-                                        <button
-                                            className="btn-primary px-3 py-2 text-xs"
-                                            onClick={() => sendMutation.mutate(profile.id)}
-                                            disabled={sendMutation.isPending}
-                                        >
-                                            <UserPlus2 className="w-3.5 h-3.5" />
-                                            Conectar
-                                        </button>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             )
                         })}
@@ -204,32 +217,29 @@ export default function ConnectionsPage() {
                 )}
             </section>
 
-            <section className="grid gap-4 md:grid-cols-2">
-                <div className="card p-4 space-y-2">
-                    <h3 className="text-sm font-semibold text-gray-200">Solicitudes recibidas</h3>
+            <section className="grid gap-4 xl:grid-cols-[0.9fr,0.9fr,1.2fr]">
+                <div className="card p-5 space-y-3">
+                    <div>
+                        <p className="page-kicker">Incoming</p>
+                        <h3 className="mt-2 text-2xl font-headline font-extrabold text-white">Solicitudes recibidas</h3>
+                    </div>
                     {loadingIncoming ? (
                         <LoadingSkeleton count={2} />
                     ) : incoming.length === 0 ? (
-                        <p className="text-xs text-gray-500">Sin solicitudes pendientes.</p>
+                        <p className="text-sm text-gray-500">Sin solicitudes pendientes.</p>
                     ) : (
                         incoming.map((request) => (
-                            <div key={request.id} className="rounded-lg border border-surface-500 bg-surface-700/40 p-3 flex items-center justify-between">
-                                <div className="min-w-0">
-                                    <p className="text-sm text-white truncate">{request.from_profile?.display_name ?? 'Usuario'}</p>
-                                    <p className="text-xs text-gray-400">@{request.from_profile?.username ?? 'sin-username'}</p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        className="p-2 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20"
-                                        onClick={() => acceptMutation.mutate(request.id)}
-                                    >
+                            <div key={request.id} className="rounded-[1.35rem] border border-white/8 bg-black/15 p-3">
+                                <p className="truncate text-sm font-semibold text-white">{request.from_profile?.display_name ?? 'Usuario'}</p>
+                                <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-gray-500">@{request.from_profile?.username ?? 'sin-username'}</p>
+                                <div className="mt-3 flex items-center gap-2">
+                                    <button className="btn-secondary !min-h-[2.4rem] bg-emerald-400/12 text-emerald-200" onClick={() => acceptMutation.mutate(request.id)}>
                                         <Check className="w-4 h-4" />
+                                        Aceptar
                                     </button>
-                                    <button
-                                        className="p-2 rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/20"
-                                        onClick={() => rejectMutation.mutate(request.id)}
-                                    >
+                                    <button className="btn-secondary !min-h-[2.4rem] bg-red-400/12 text-red-200" onClick={() => rejectMutation.mutate(request.id)}>
                                         <X className="w-4 h-4" />
+                                        Rechazar
                                     </button>
                                 </div>
                             </div>
@@ -237,71 +247,73 @@ export default function ConnectionsPage() {
                     )}
                 </div>
 
-                <div className="card p-4 space-y-2">
-                    <h3 className="text-sm font-semibold text-gray-200">Solicitudes enviadas</h3>
+                <div className="card p-5 space-y-3">
+                    <div>
+                        <p className="page-kicker">Outgoing</p>
+                        <h3 className="mt-2 text-2xl font-headline font-extrabold text-white">Solicitudes enviadas</h3>
+                    </div>
                     {loadingOutgoing ? (
                         <LoadingSkeleton count={2} />
                     ) : outgoing.length === 0 ? (
-                        <p className="text-xs text-gray-500">No tienes solicitudes enviadas.</p>
+                        <p className="text-sm text-gray-500">No tienes solicitudes enviadas.</p>
                     ) : (
                         outgoing.map((request) => (
-                            <div key={request.id} className="rounded-lg border border-surface-500 bg-surface-700/40 p-3 flex items-center justify-between">
-                                <div className="min-w-0">
-                                    <p className="text-sm text-white truncate">{request.to_profile?.display_name ?? 'Usuario'}</p>
-                                    <p className="text-xs text-gray-400">@{request.to_profile?.username ?? 'sin-username'}</p>
+                            <div key={request.id} className="rounded-[1.35rem] border border-white/8 bg-black/15 p-3">
+                                <p className="truncate text-sm font-semibold text-white">{request.to_profile?.display_name ?? 'Usuario'}</p>
+                                <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-gray-500">@{request.to_profile?.username ?? 'sin-username'}</p>
+                                <div className="mt-3">
+                                    <button className="btn-secondary" onClick={() => cancelMutation.mutate(request.id)}>
+                                        Cancelar
+                                    </button>
                                 </div>
-                                <button className="btn-ghost px-3 py-2 text-xs" onClick={() => cancelMutation.mutate(request.id)}>
-                                    Cancelar
-                                </button>
                             </div>
                         ))
                     )}
                 </div>
-            </section>
 
-            <section className="card p-4 space-y-2">
-                <h3 className="text-sm font-semibold text-gray-200 inline-flex items-center gap-2">
-                    <Users className="w-4 h-4 text-brand-300" />
-                    Tus conexiones
-                </h3>
-
-                {loadingFriends ? (
-                    <LoadingSkeleton count={3} />
-                ) : friends.length === 0 ? (
-                    <EmptyState
-                        icon={<Users className="w-7 h-7" />}
-                        title="Aun no tienes conexiones"
-                        description="Empieza enviando solicitudes para invitar mas rapido a tus grupos."
-                    />
-                ) : (
-                    <div className="space-y-2">
-                        {friends.map((friend) => (
-                            <div key={friend.id} className="rounded-lg border border-surface-500 bg-surface-700/40 p-3 flex items-center justify-between">
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <Avatar
-                                        src={friend.friend_profile?.avatar_url}
-                                        name={friend.friend_profile?.display_name}
-                                        size="sm"
-                                    />
-                                    <div className="min-w-0">
-                                        <p className="text-sm text-white truncate">{friend.friend_profile?.display_name ?? 'Usuario'}</p>
-                                        <p className="text-xs text-gray-400">@{friend.friend_profile?.username ?? 'sin-username'}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    className="btn-ghost px-3 py-2 text-xs"
-                                    onClick={() => {
-                                        const friendUserId = friend.friend_profile?.id
-                                        if (!friendUserId) return
-                                        removeMutation.mutate(friendUserId)
-                                    }}
-                                >
-                                    Quitar
-                                </button>
-                            </div>
-                        ))}
+                <div className="card p-5 space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-brand-300" />
+                        <div>
+                            <p className="page-kicker">Trusted Network</p>
+                            <h3 className="mt-2 text-2xl font-headline font-extrabold text-white">Tus conexiones</h3>
+                        </div>
                     </div>
-                )}
+
+                    {loadingFriends ? (
+                        <LoadingSkeleton count={3} />
+                    ) : friends.length === 0 ? (
+                        <EmptyState
+                            icon={<Users className="w-7 h-7" />}
+                            title="Aun no tienes conexiones"
+                            description="Empieza enviando solicitudes para invitar mas rapido a tus grupos."
+                        />
+                    ) : (
+                        <div className="space-y-2">
+                            {friends.map((friend) => (
+                                <div key={friend.id} className="rounded-[1.35rem] border border-white/8 bg-black/15 p-3 sm:flex sm:items-center sm:justify-between">
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <Avatar src={friend.friend_profile?.avatar_url} name={friend.friend_profile?.display_name} size="sm" />
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-white">{friend.friend_profile?.display_name ?? 'Usuario'}</p>
+                                            <p className="truncate text-xs uppercase tracking-[0.18em] text-gray-500">@{friend.friend_profile?.username ?? 'sin-username'}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        className="btn-secondary mt-3 sm:mt-0"
+                                        onClick={() => {
+                                            const friendUserId = friend.friend_profile?.id
+                                            if (!friendUserId) return
+                                            removeMutation.mutate(friendUserId)
+                                        }}
+                                    >
+                                        Quitar
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </section>
         </div>
     )

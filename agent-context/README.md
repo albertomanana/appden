@@ -1,7 +1,7 @@
 # The Appden Agent Context Pack
 
-Snapshot date: 2026-03-20
-Release: v1.5.5
+Snapshot date: 2026-03-23
+Release: v1.6.0
 
 This folder contains a reusable context pack so any developer or AI agent can work on The Appden from another IDE/model without losing project and conversation context.
 
@@ -40,6 +40,14 @@ Recent additions tracked in this snapshot:
   - real icons created under `public/icons/`
   - `public/apple-touch-icon.png`
   - `public/masked-icon.svg`
+- Stitch visual integration pass for v1.6:
+  - design source treated as visual system, not replacement app
+  - shell upgraded in `src/components/layout/AppLayout.tsx`
+  - dock navigation upgraded in `src/components/layout/Navigation.tsx`
+  - shared editorial header component added: `src/components/ui/PageHeader.tsx`
+  - visual primitives refreshed in `tailwind.config.js` and `src/styles/globals.css`
+  - animated feedback now uses `framer-motion`
+  - premium UI pass applied to dashboard, music, groups, connections, reports, changelog, debts and profile
 
 ## Recommended reading order
 

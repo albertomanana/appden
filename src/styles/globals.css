@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,500;0,700;0,800;0,900;1,900&family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,27 +7,49 @@
 @layer base {
   :root {
     color-scheme: dark;
-    --app-bg: #0f0f1a;
-    --app-text: #f5f7ff;
-    --app-accent: #6366f1;
-    --app-accent-soft: rgba(99, 102, 241, 0.25);
-    --app-glass: rgba(22, 24, 38, 0.7);
+    --app-bg: #0e0e0e;
+    --app-bg-lowest: #000000;
+    --app-bg-low: #131313;
+    --app-bg-high: #201f1f;
+    --app-text: #ffffff;
+    --app-muted: #adaaaa;
+    --app-accent: #85adff;
+    --app-accent-strong: #6e9fff;
+    --app-accent-soft: rgba(133, 173, 255, 0.24);
+    --app-secondary: #ac8aff;
+    --app-tertiary: #9bffce;
+    --app-danger: #ff716c;
+    --app-glass: rgba(26, 25, 25, 0.58);
+    --app-ghost-border: rgba(255, 255, 255, 0.1);
+    --app-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
   }
 
   html[data-app-theme='neon'] {
     --app-bg: #090b13;
-    --app-text: #e7fffb;
-    --app-accent: #22d3ee;
-    --app-accent-soft: rgba(34, 211, 238, 0.27);
-    --app-glass: rgba(12, 23, 34, 0.72);
+    --app-bg-lowest: #03050b;
+    --app-bg-low: #0d1420;
+    --app-bg-high: #111d2a;
+    --app-text: #ecfffd;
+    --app-muted: #8fb6c4;
+    --app-accent: #6ee8ff;
+    --app-accent-strong: #22d3ee;
+    --app-accent-soft: rgba(110, 232, 255, 0.24);
+    --app-secondary: #ac8aff;
+    --app-glass: rgba(10, 20, 33, 0.66);
   }
 
   html[data-app-theme='minimal'] {
     --app-bg: #111111;
+    --app-bg-lowest: #080808;
+    --app-bg-low: #161616;
+    --app-bg-high: #232323;
     --app-text: #f2f2f2;
+    --app-muted: #b3b3b3;
     --app-accent: #f5f5f5;
+    --app-accent-strong: #d9d9d9;
     --app-accent-soft: rgba(255, 255, 255, 0.2);
     --app-glass: rgba(22, 22, 22, 0.72);
+    --app-ghost-border: rgba(255, 255, 255, 0.08);
   }
 
   * {
@@ -47,6 +69,10 @@
     min-height: 100dvh;
     overscroll-behavior: none;
     letter-spacing: 0.01em;
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(133, 173, 255, 0.12), transparent 42%),
+      radial-gradient(circle at 100% 0%, rgba(172, 138, 255, 0.14), transparent 40%),
+      radial-gradient(circle at 50% 100%, rgba(155, 255, 206, 0.06), transparent 38%);
   }
 
   #root {
@@ -113,43 +139,72 @@
 
 @layer components {
   .card {
-    @apply bg-surface-700 border border-surface-500 rounded-2xl shadow-card;
+    @apply rounded-3xl shadow-card;
+    background: linear-gradient(180deg, rgba(26, 25, 25, 0.92) 0%, rgba(19, 19, 19, 0.94) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: var(--app-shadow);
   }
 
   .card-interactive {
-    @apply card transition-all duration-200 hover:border-surface-400 hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer;
+    @apply card transition-all duration-300 cursor-pointer;
+  }
+
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    border-color: rgba(133, 173, 255, 0.22);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.42), 0 0 24px rgba(133, 173, 255, 0.08);
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-surface-800 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 font-medium rounded-[1.35rem] transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 2.75rem;
   }
 
   .btn-primary {
-    @apply btn bg-brand-600 hover:bg-brand-500 text-white px-4 py-2.5 text-sm;
+    @apply btn px-4 py-2.5 text-sm text-black;
+    background-image: linear-gradient(135deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
+    box-shadow: 0 14px 36px rgba(133, 173, 255, 0.22);
   }
 
   .btn-secondary {
-    @apply btn bg-surface-600 hover:bg-surface-500 text-white border border-surface-400 px-4 py-2.5 text-sm;
+    @apply btn px-4 py-2.5 text-sm text-white backdrop-blur-xl;
+    background: rgba(38, 38, 38, 0.56);
+    border: 1px solid var(--app-ghost-border);
   }
 
   .btn-danger {
-    @apply btn bg-accent-red/20 hover:bg-accent-red/30 text-red-400 border border-red-500/30 px-4 py-2.5 text-sm;
+    @apply btn px-4 py-2.5 text-sm;
+    color: #ffd2cf;
+    background: rgba(255, 113, 108, 0.14);
+    border: 1px solid rgba(255, 113, 108, 0.22);
   }
 
   .btn-ghost {
-    @apply btn bg-transparent hover:bg-surface-600 text-gray-400 hover:text-white px-3 py-2 text-sm;
+    @apply btn px-3 py-2 text-sm text-gray-400 hover:text-white;
+    background: transparent;
   }
 
   .btn-icon {
-    @apply btn bg-surface-600 hover:bg-surface-500 border border-surface-400 p-2.5 rounded-xl;
+    @apply btn p-2.5 rounded-2xl text-white;
+    background: rgba(38, 38, 38, 0.56);
+    border: 1px solid var(--app-ghost-border);
   }
 
   .input {
-    @apply w-full bg-surface-600 border border-surface-400 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-200;
+    @apply w-full text-white placeholder-gray-500 rounded-[1.35rem] px-4 py-3 text-sm transition-all duration-200;
+    background: rgba(32, 31, 31, 0.94);
+    border: 1px solid transparent;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: rgba(133, 173, 255, 0.32);
+    box-shadow: 0 0 0 3px rgba(133, 173, 255, 0.08);
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-300 mb-1.5;
+    @apply block text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400 mb-2;
   }
 
   .badge {
@@ -173,7 +228,7 @@
   }
 
   .section-title {
-    @apply text-xl font-bold text-white;
+    @apply font-headline text-3xl md:text-4xl font-extrabold tracking-tight text-white;
   }
 
   .text-muted {
@@ -186,8 +241,9 @@
 
   /* Glassmorphism */
   .glass {
-    @apply backdrop-blur-md border border-surface-500/50;
+    @apply backdrop-blur-xl;
     background: var(--app-glass);
+    border: 1px solid var(--app-ghost-border);
   }
 
   /* Progress bar */
@@ -218,7 +274,8 @@
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-brand-400 to-accent-purple bg-clip-text text-transparent;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, var(--app-accent) 0%, var(--app-secondary) 100%);
   }
 
   .glow-brand {
@@ -240,10 +297,49 @@
   /* Decorative musical / city vibes */
   .bg-appden-orbit {
     background:
-      radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.14), transparent 55%),
-      radial-gradient(circle at 100% 0%, rgba(147, 51, 234, 0.18), transparent 55%),
-      radial-gradient(circle at 50% 110%, rgba(251, 191, 36, 0.08), transparent 55%),
+      radial-gradient(circle at 0% 0%, rgba(133, 173, 255, 0.12), transparent 48%),
+      radial-gradient(circle at 100% 0%, rgba(172, 138, 255, 0.16), transparent 48%),
+      radial-gradient(circle at 50% 110%, rgba(155, 255, 206, 0.06), transparent 44%),
       var(--app-bg);
+  }
+
+  .page-shell {
+    @apply w-full max-w-6xl mx-auto px-4 md:px-6 py-5 md:py-7 space-y-6;
+  }
+
+  .page-hero {
+    @apply relative overflow-hidden rounded-[2rem] px-5 py-6 md:px-7 md:py-7;
+    background:
+      radial-gradient(circle at top right, rgba(133, 173, 255, 0.16), transparent 34%),
+      linear-gradient(180deg, rgba(26, 25, 25, 0.95) 0%, rgba(14, 14, 14, 0.92) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: var(--app-shadow);
+  }
+
+  .page-kicker {
+    @apply font-label text-[10px] font-semibold uppercase tracking-[0.28em] text-brand-400;
+    text-shadow: 0 0 12px rgba(133, 173, 255, 0.32);
+  }
+
+  .page-title {
+    @apply font-headline text-4xl md:text-5xl font-extrabold tracking-tight text-white;
+  }
+
+  .hero-meta-pill {
+    @apply inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs text-gray-400;
+    background: rgba(19, 19, 19, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-dock {
+    @apply backdrop-blur-2xl;
+    background: rgba(12, 12, 12, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.48);
+  }
+
+  .ghost-border {
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .music-note-frame::before {

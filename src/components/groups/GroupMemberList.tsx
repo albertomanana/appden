@@ -1,11 +1,11 @@
-import React, { useMemo } from 'react'
+﻿import React, { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Crown, Trash2, UserPlus, Users, X } from 'lucide-react'
+import { Check, Crown, Shield, Trash2, UserPlus, Users, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import type { GroupMember } from '@/types'
 import { Avatar } from '@components/common/Avatar'
-import { friendsService, type GroupFriendRequest } from '@services/friends.service'
 import { useAuth } from '@hooks/useAuth'
+import { friendsService, type GroupFriendRequest } from '@services/friends.service'
+import type { GroupMember } from '@/types'
 
 interface GroupMemberListProps {
     groupId: string
@@ -81,11 +81,11 @@ export const GroupMemberList: React.FC<GroupMemberListProps> = ({
     })
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-3">
             {members.map((member) => (
                 <div
                     key={member.id}
-                    className="flex items-center justify-between p-3 bg-neutral-800 rounded-lg hover:bg-neutral-700/50 transition-colors cursor-pointer"
+                    className="rounded-[1.55rem] border border-white/8 bg-black/15 p-4 transition-colors hover:border-brand-300/18 hover:bg-white/[0.03]"
                     onClick={() => navigate(`/groups/${groupId}/members/${member.user_id}`)}
                     role="button"
                     tabIndex={0}
@@ -95,147 +95,146 @@ export const GroupMemberList: React.FC<GroupMemberListProps> = ({
                         }
                     }}
                 >
-                    <div className="flex items-center gap-3">
-                        <Avatar src={member.profile?.avatar_url} name={member.profile?.display_name} size="sm" />
-                        <div className="flex-1">
-                            <p className="font-medium text-white">{member.profile?.display_name}</p>
-                            <p className="text-xs text-neutral-400">
-                                {member.user_id === currentUserId && '(You)'}
-                                {member.role === 'owner' && ' • Owner'}
-                                {member.role === 'admin' && ' • Admin'}
-                            </p>
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex min-w-0 items-center gap-3">
+                            <Avatar src={member.profile?.avatar_url} name={member.profile?.display_name} size="sm" />
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-white">{member.profile?.display_name}</p>
+                                <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-gray-500">
+                                    {member.user_id === currentUserId ? 'You' : 'Member'}
+                                </p>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                        {viewerUserId && member.user_id !== viewerUserId ? (() => {
-                            const a = viewerUserId
-                            const b = member.user_id
-                            const key = a < b ? `${a}:${b}` : `${b}:${a}`
-                            const request = requestIndex.get(key)
+                        <div className="flex flex-wrap items-center gap-2">
+                            {member.role === 'owner' ? (
+                                <span className="badge bg-brand-400/14 text-brand-100 border border-brand-300/20">
+                                    <Crown className="w-3.5 h-3.5" />
+                                    Owner
+                                </span>
+                            ) : null}
 
-                            if (!request || request.status === 'cancelled' || request.status === 'rejected') {
-                                return (
-                                    <button
-                                        onClick={(event) => {
-                                            event.stopPropagation()
-                                            sendMutation.mutate(member.user_id)
-                                        }}
-                                        className="px-3 py-1.5 rounded-lg bg-brand-500/20 text-brand-300 hover:bg-brand-500/25 text-xs font-semibold transition-colors inline-flex items-center gap-1.5"
-                                        title="Agregar amigo"
-                                        disabled={sendMutation.isPending}
-                                    >
-                                        <UserPlus className="w-4 h-4" />
-                                        Agregar
-                                    </button>
-                                )
-                            }
+                            {member.role === 'admin' ? (
+                                <span className="badge bg-violet-400/14 text-violet-200 border border-violet-300/20">
+                                    <Shield className="w-3.5 h-3.5" />
+                                    Admin
+                                </span>
+                            ) : null}
 
-                            if (request.status === 'accepted') {
-                                return (
-                                    <div className="px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 text-xs font-semibold inline-flex items-center gap-1.5">
-                                        <Users className="w-4 h-4" />
-                                        Amigos
-                                    </div>
-                                )
-                            }
+                            {viewerUserId && member.user_id !== viewerUserId ? (() => {
+                                const a = viewerUserId
+                                const b = member.user_id
+                                const key = a < b ? `${a}:${b}` : `${b}:${a}`
+                                const request = requestIndex.get(key)
 
-                            if (request.status === 'pending' && request.to_user_id === viewerUserId) {
-                                return (
-                                    <div className="flex items-center gap-1">
+                                if (!request || request.status === 'cancelled' || request.status === 'rejected') {
+                                    return (
                                         <button
                                             onClick={(event) => {
                                                 event.stopPropagation()
-                                                acceptMutation.mutate(request.id)
+                                                sendMutation.mutate(member.user_id)
                                             }}
-                                            className="p-2 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 transition-colors"
-                                            title="Aceptar"
-                                            disabled={acceptMutation.isPending}
+                                            className="btn-secondary !min-h-[2.4rem]"
+                                            title="Agregar amigo"
+                                            disabled={sendMutation.isPending}
                                         >
-                                            <Check className="w-4 h-4" />
+                                            <UserPlus className="w-4 h-4" />
+                                            Agregar
                                         </button>
-                                        <button
-                                            onClick={(event) => {
-                                                event.stopPropagation()
-                                                rejectMutation.mutate(request.id)
-                                            }}
-                                            className="p-2 rounded-lg bg-red-500/10 text-red-300 hover:bg-red-500/15 transition-colors"
-                                            title="Rechazar"
-                                            disabled={rejectMutation.isPending}
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                )
-                            }
-
-                            if (request.status === 'pending' && request.from_user_id === viewerUserId) {
-                                return (
-                                    <button
-                                        onClick={(event) => {
-                                            event.stopPropagation()
-                                            cancelMutation.mutate(request.id)
-                                        }}
-                                        className="px-3 py-1.5 rounded-lg bg-white/10 text-white/80 hover:bg-white/15 text-xs font-semibold transition-colors inline-flex items-center gap-1.5"
-                                        title="Cancelar solicitud"
-                                        disabled={cancelMutation.isPending}
-                                    >
-                                        Pendiente
-                                    </button>
-                                )
-                            }
-
-                            return null
-                        })() : null}
-
-                        {member.role === 'owner' ? (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-brand-500/20 rounded text-xs text-brand-300">
-                                <Crown size={14} />
-                                Owner
-                            </div>
-                        ) : null}
-
-                        {member.role === 'admin' ? (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-indigo-500/20 rounded text-xs text-indigo-300">
-                                <Crown size={14} />
-                                Admin
-                            </div>
-                        ) : null}
-
-                        {canAssignRoles && member.user_id !== currentUserId ? (
-                            <select
-                                value={member.role}
-                                onChange={(event) => {
-                                    event.stopPropagation()
-                                    if (!onUpdateRole) return
-                                    void onUpdateRole(
-                                        member.user_id,
-                                        event.target.value as 'owner' | 'admin' | 'member'
                                     )
-                                }}
-                                className="px-2 py-1 rounded bg-surface-700 border border-surface-500 text-xs text-gray-200"
-                                onClick={(event) => event.stopPropagation()}
-                                aria-label="Cambiar rol"
-                            >
-                                <option value="member">Member</option>
-                                <option value="admin">Admin</option>
-                                <option value="owner">Owner</option>
-                            </select>
-                        ) : null}
+                                }
 
-                        {isManager && member.user_id !== currentUserId ? (
-                            <button
-                                onClick={(event) => {
-                                    event.stopPropagation()
-                                    void handleRemove(member.user_id)
-                                }}
-                                disabled={isLoading}
-                                className="p-2 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Remove member"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        ) : null}
+                                if (request.status === 'accepted') {
+                                    return (
+                                        <div className="badge bg-emerald-400/14 text-emerald-200 border border-emerald-300/20">
+                                            <Users className="w-3.5 h-3.5" />
+                                            Amigos
+                                        </div>
+                                    )
+                                }
+
+                                if (request.status === 'pending' && request.to_user_id === viewerUserId) {
+                                    return (
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={(event) => {
+                                                    event.stopPropagation()
+                                                    acceptMutation.mutate(request.id)
+                                                }}
+                                                className="btn-secondary !min-h-[2.4rem] bg-emerald-400/12 text-emerald-200"
+                                                title="Aceptar"
+                                                disabled={acceptMutation.isPending}
+                                            >
+                                                <Check className="w-4 h-4" />
+                                                Aceptar
+                                            </button>
+                                            <button
+                                                onClick={(event) => {
+                                                    event.stopPropagation()
+                                                    rejectMutation.mutate(request.id)
+                                                }}
+                                                className="btn-secondary !min-h-[2.4rem] bg-red-400/12 text-red-200"
+                                                title="Rechazar"
+                                                disabled={rejectMutation.isPending}
+                                            >
+                                                <X className="w-4 h-4" />
+                                                Rechazar
+                                            </button>
+                                        </div>
+                                    )
+                                }
+
+                                if (request.status === 'pending' && request.from_user_id === viewerUserId) {
+                                    return (
+                                        <button
+                                            onClick={(event) => {
+                                                event.stopPropagation()
+                                                cancelMutation.mutate(request.id)
+                                            }}
+                                            className="btn-secondary !min-h-[2.4rem]"
+                                            title="Cancelar solicitud"
+                                            disabled={cancelMutation.isPending}
+                                        >
+                                            Pendiente
+                                        </button>
+                                    )
+                                }
+
+                                return null
+                            })() : null}
+
+                            {canAssignRoles && member.user_id !== currentUserId ? (
+                                <select
+                                    value={member.role}
+                                    onChange={(event) => {
+                                        event.stopPropagation()
+                                        if (!onUpdateRole) return
+                                        void onUpdateRole(member.user_id, event.target.value as 'owner' | 'admin' | 'member')
+                                    }}
+                                    className="input !min-h-[2.45rem] !max-w-[132px] !px-3 !py-2 text-xs"
+                                    onClick={(event) => event.stopPropagation()}
+                                    aria-label="Cambiar rol"
+                                >
+                                    <option value="member">Member</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="owner">Owner</option>
+                                </select>
+                            ) : null}
+
+                            {isManager && member.user_id !== currentUserId ? (
+                                <button
+                                    onClick={(event) => {
+                                        event.stopPropagation()
+                                        void handleRemove(member.user_id)
+                                    }}
+                                    disabled={isLoading}
+                                    className="btn-icon !h-10 !w-10 !rounded-full text-red-200 disabled:opacity-50"
+                                    title="Remove member"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
             ))}

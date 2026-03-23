@@ -1,10 +1,10 @@
-import React from 'react'
+﻿import React from 'react'
 import { BadgeCheck, Clock3, ListChecks } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '@components/ui/EmptyState'
 import { ListSkeleton } from '@components/ui/LoadingSkeleton'
-import type { ReportItem, ReportStatus } from '@features/reports/types'
 import { ROUTES } from '@lib/constants'
+import type { ReportItem, ReportStatus } from '@features/reports/types'
 
 type ReportsListProps = {
     reports: ReportItem[]
@@ -20,7 +20,7 @@ export const ReportsList: React.FC<ReportsListProps> = ({
     onChangeStatus,
 }) => {
     if (isLoading) {
-        return <ListSkeleton count={3} item={<div className="card h-24" />} />
+        return <ListSkeleton count={3} item={<div className="card h-32" />} />
     }
 
     if (reports.length === 0) {
@@ -28,48 +28,49 @@ export const ReportsList: React.FC<ReportsListProps> = ({
             <EmptyState
                 icon={<ListChecks className="w-7 h-7" />}
                 title="No hay reportes todavia"
-                description="Cuando alguien envie un bug, error o mejora aparecera aqui."
+                description="Cuando alguien envie un bug, error o mejora aparecera aqui con estado y severidad."
             />
         )
     }
 
     return (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
             {reports.map((report) => (
-                <article key={report.id} className="card p-4">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
-                            <span className={badgeClass(report.type)}>
-                                {labelType(report.type)}
-                            </span>
-                            {report.severity ? (
-                                <span className={severityClass(report.severity)}>{labelSeverity(report.severity)}</span>
-                            ) : null}
+                <article key={report.id} className="card p-4 md:p-5">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className={badgeClass(report.type)}>{labelType(report.type)}</span>
+                                {report.severity ? <span className={severityClass(report.severity)}>{labelSeverity(report.severity)}</span> : null}
+                            </div>
+
+                            <Link to={ROUTES.REPORT_DETAIL(report.id)} className="group mt-4 block">
+                                <h3 className="text-xl font-headline font-extrabold tracking-tight text-white group-hover:text-brand-100">
+                                    {report.title}
+                                </h3>
+                                <p className="mt-2 truncate-2 text-sm leading-relaxed text-gray-300">{report.description}</p>
+                            </Link>
                         </div>
-                        <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                            <Clock3 className="w-3.5 h-3.5" />
-                            {new Date(report.created_at).toLocaleDateString('es-ES')}
-                        </span>
+
+                        <div className="shrink-0 text-xs uppercase tracking-[0.22em] text-gray-500">
+                            <span className="inline-flex items-center gap-2">
+                                <Clock3 className="w-3.5 h-3.5 text-brand-300" />
+                                {new Date(report.created_at).toLocaleDateString('es-ES')}
+                            </span>
+                        </div>
                     </div>
 
-                    <Link to={ROUTES.REPORT_DETAIL(report.id)} className="block group">
-                        <h3 className="text-sm font-semibold text-white group-hover:text-brand-300 transition-colors">
-                            {report.title}
-                        </h3>
-                        <p className="text-sm text-gray-200 mt-1 line-clamp-2">{report.description}</p>
-                    </Link>
-
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                        <div className="text-xs text-gray-400 inline-flex items-center gap-1">
-                            <BadgeCheck className="w-3.5 h-3.5" />
+                    <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="inline-flex items-center gap-2 text-sm text-gray-400">
+                            <BadgeCheck className="w-4 h-4 text-brand-300" />
                             Estado: {labelStatus(report.status)}
-                            {report.author?.display_name ? ` • ${report.author.display_name}` : ''}
+                            {report.author?.display_name ? ` · ${report.author.display_name}` : ''}
                         </div>
 
                         {canManageStatus && onChangeStatus ? (
                             <select
                                 value={report.status}
-                                className="px-2 py-1 rounded bg-surface-700 border border-surface-500 text-xs text-gray-200"
+                                className="input max-w-[220px] text-sm"
                                 onChange={(event) => onChangeStatus(report.id, event.target.value as ReportStatus)}
                                 aria-label="Cambiar estado"
                             >
@@ -104,7 +105,7 @@ function labelStatus(status: ReportStatus): string {
         case 'open':
             return 'open'
         case 'in_review':
-            return 'in_review'
+            return 'in review'
         case 'resolved':
             return 'resolved'
         case 'closed':
@@ -115,22 +116,22 @@ function labelStatus(status: ReportStatus): string {
 }
 
 function badgeClass(type: ReportItem['type']): string {
-    if (type === 'bug') return 'badge badge-red'
-    if (type === 'error') return 'badge bg-orange-500/20 text-orange-300 border border-orange-400/30'
-    return 'badge badge-brand'
+    if (type === 'bug') return 'badge bg-red-400/14 text-red-200 border border-red-300/20'
+    if (type === 'error') return 'badge bg-orange-400/14 text-orange-200 border border-orange-300/20'
+    return 'badge bg-brand-400/14 text-brand-100 border border-brand-300/20'
 }
 
 function severityClass(severity: NonNullable<ReportItem['severity']>): string {
     switch (severity) {
         case 'critical':
-            return 'badge bg-red-500/20 text-red-200 border border-red-400/40'
+            return 'badge bg-red-400/14 text-red-200 border border-red-300/20'
         case 'high':
-            return 'badge bg-orange-500/20 text-orange-200 border border-orange-400/40'
+            return 'badge bg-orange-400/14 text-orange-200 border border-orange-300/20'
         case 'medium':
-            return 'badge bg-amber-500/20 text-amber-200 border border-amber-400/40'
+            return 'badge bg-amber-400/14 text-amber-200 border border-amber-300/20'
         case 'low':
         default:
-            return 'badge bg-emerald-500/20 text-emerald-200 border border-emerald-400/40'
+            return 'badge bg-emerald-400/14 text-emerald-200 border border-emerald-300/20'
     }
 }
 
@@ -147,4 +148,3 @@ function labelSeverity(severity: NonNullable<ReportItem['severity']>): string {
             return 'Baja'
     }
 }
-

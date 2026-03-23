@@ -1,6 +1,6 @@
 ﻿# App Context
 
-Snapshot date: 2026-03-19
+Snapshot date: 2026-03-23
 
 ## Product
 
@@ -24,11 +24,12 @@ Core principles:
 ## Tech stack
 
 - Frontend: React 18 + TypeScript + Vite
-- Styling: TailwindCSS
+- Styling: TailwindCSS + shared design tokens in `src/styles/globals.css`
 - State: Zustand + React Query
 - Routing: React Router
 - Backend: Supabase (Auth, Postgres, Storage)
 - PWA: `vite-plugin-pwa`
+- Motion: `framer-motion`
 - Audio engine: Web Audio API via `src/features/player`
 
 ## Runtime modules
@@ -58,6 +59,9 @@ Core principles:
 - `src/features/player/*`
 - integrated globally in:
   - `src/components/layout/AppLayout.tsx` via `MiniPlayer` + `FullPlayer`
+- v1.6 visual integration:
+  - floating dock-style mini player
+  - shell-aware spacing for bottom navigation and safe areas
 
 ### 4) Lyrics
 
@@ -153,6 +157,26 @@ Public routes:
 - `/register`
 - `/reset-password`
 - `/shared/:token`
+
+## UI system snapshot (v1.6)
+
+The current visual layer is no longer a loose set of page-specific styles. It is now organized around a shared shell and premium dark design system inspired by the Stitch export.
+
+Key UI primitives:
+
+- `src/components/layout/AppLayout.tsx`: sticky glass top rail + player-aware shell
+- `src/components/layout/Navigation.tsx`: desktop glass sidebar + floating bottom dock
+- `src/components/ui/PageHeader.tsx`: editorial hero header reused by key product pages
+- `src/components/ui/Toast.tsx`: motion-powered toast system
+- `src/components/ui/ConfirmDialog.tsx`: motion-powered destructive confirmation modal
+- `src/styles/globals.css`: typography, cards, buttons, inputs, glass surfaces, hero utilities
+- `tailwind.config.js`: updated tokens for surface blacks, blue/violet accents, editorial fonts
+
+Important design decision:
+
+- the Stitch export was not imported as a parallel frontend
+- it was treated as a visual reference system
+- existing routes, services, auth, stores, queries and Supabase contracts remain the source of truth
 
 ## Current quality snapshot
 

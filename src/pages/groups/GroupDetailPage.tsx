@@ -1,6 +1,6 @@
-import React from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, AlertCircle, CopyIcon } from 'lucide-react'
+﻿import React from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { AlertCircle, ArrowLeft, CopyIcon, Shield } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { groupsService } from '@services/groups.service'
 import { GroupMemberList } from '@components/groups/GroupMemberList'
@@ -8,6 +8,7 @@ import { GroupPermissionsPanel } from '@components/groups/GroupPermissionsPanel'
 import { GroupInvitationsPanel } from '@components/groups/GroupInvitationsPanel'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { ConfirmDialog } from '@components/ui/ConfirmDialog'
+import { PageHeader } from '@components/ui/PageHeader'
 import { useNotifications } from '@hooks/useNotifications'
 import { useGroupStore } from '@app/store/group.store'
 import type { Group, GroupMember } from '@/types'
@@ -129,7 +130,7 @@ export default function GroupDetailPage() {
 
     if (loading) {
         return (
-            <div className="max-w-2xl mx-auto px-4 py-6">
+            <div className="page-shell">
                 <LoadingSkeleton />
                 <LoadingSkeleton />
             </div>
@@ -138,81 +139,88 @@ export default function GroupDetailPage() {
 
     if (!group) {
         return (
-            <div className="max-w-2xl mx-auto px-4 py-6">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-brand-400 hover:text-brand-300 mb-6"
-                >
-                    <ArrowLeft size={20} />
-                    Back
+            <div className="page-shell">
+                <button onClick={() => navigate(-1)} className="btn-ghost -ml-2 w-fit gap-2">
+                    <ArrowLeft className="w-4 h-4" />
+                    Volver
                 </button>
-                <div className="text-center py-12">
-                    <p className="text-neutral-400">Group not found</p>
-                </div>
+                <section className="card p-6 text-center">
+                    <p className="text-gray-300">No encontramos este grupo.</p>
+                </section>
             </div>
         )
     }
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-6">
-            {/* Header */}
-            <button
-                onClick={() => navigate(-1)}
-                className="flex items-center gap-2 text-brand-400 hover:text-brand-300 mb-6"
-            >
-                <ArrowLeft size={20} />
-                Back
+        <div className="page-shell animate-fade-in">
+            <button onClick={() => navigate(-1)} className="btn-ghost -ml-2 w-fit gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                Volver
             </button>
 
-            {/* Error */}
-            {error && (
-                <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg flex items-start gap-3">
-                    <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                        <p className="font-medium text-red-400">Error</p>
-                        <p className="text-sm text-red-300">{error}</p>
+            <PageHeader
+                kicker="Group Detail"
+                title={group.name}
+                description={group.description ?? 'Espacio privado para musica, actividad y colaboracion social dentro de The Appden.'}
+                meta={
+                    <>
+                        <span className="hero-meta-pill">{members.length} members</span>
+                        <span className="hero-meta-pill">{isOwner ? 'Owner' : isManager ? 'Admin' : 'Member'}</span>
+                    </>
+                }
+            />
+
+            {error ? (
+                <section className="card border border-red-400/20 bg-red-400/8 p-4">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
+                        <div>
+                            <p className="text-sm font-semibold text-red-200">Error cargando el grupo</p>
+                            <p className="mt-1 text-sm text-red-100/80">{error}</p>
+                        </div>
                     </div>
+                </section>
+            ) : null}
+
+            <div className="grid gap-4 xl:grid-cols-[1.15fr,0.85fr]">
+                <section className="card p-5">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <p className="page-kicker">Invite Access</p>
+                            <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Link compartido</h2>
+                            <p className="mt-2 text-sm text-gray-400">Copia este enlace y usa el panel de invitaciones para dar acceso formal.</p>
+                        </div>
+                        <button onClick={copyInviteCode} className="btn-secondary">
+                            <CopyIcon className="w-4 h-4" />
+                            Copiar link
+                        </button>
+                    </div>
+                </section>
+
+                <section className="card p-5">
+                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                        <Shield className="w-4 h-4 text-brand-300" />
+                        Owner y admins pueden invitar, gestionar miembros y ajustar permisos.
+                    </div>
+                </section>
+            </div>
+
+            <section className="card p-5">
+                <div className="mb-5">
+                    <p className="page-kicker">Invitations</p>
+                    <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Gestion de invitaciones</h2>
                 </div>
-            )}
+                <GroupInvitationsPanel groupId={groupId!} members={members} canInvite={isManager} />
+            </section>
 
-            {/* Group Info */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2">{group.name}</h1>
-                {group.description && (
-                    <p className="text-neutral-400">{group.description}</p>
-                )}
-            </div>
-
-            {/* Invite Link */}
-            <div className="mb-8 p-4 bg-neutral-800 rounded-lg border border-neutral-700">
-                <h2 className="text-sm font-semibold text-neutral-300 mb-3 uppercase tracking-wider">
-                    Invite Link
-                </h2>
-                <p className="text-sm text-neutral-400 mb-3">
-                    Envia este enlace junto con una invitacion desde el panel de abajo.
-                </p>
-                <button
-                    onClick={copyInviteCode}
-                    className="flex items-center gap-2 px-4 py-2.5 w-full bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg transition-colors mb-2"
-                >
-                    <CopyIcon size={18} />
-                    Copy Invite Link
-                </button>
-            </div>
-
-            <div className="mb-8">
-                <GroupInvitationsPanel
-                    groupId={groupId!}
-                    members={members}
-                    canInvite={isManager}
-                />
-            </div>
-
-            {/* Members Section */}
-            <div className="mb-8">
-                <h2 className="text-lg font-semibold text-white mb-4">
-                    Members ({members.length})
-                </h2>
+            <section className="card p-5">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                    <div>
+                        <p className="page-kicker">Member Roster</p>
+                        <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Miembros</h2>
+                    </div>
+                    <span className="hero-meta-pill">{members.length} activos</span>
+                </div>
                 <GroupMemberList
                     groupId={groupId!}
                     members={members}
@@ -222,35 +230,38 @@ export default function GroupDetailPage() {
                     onUpdateRole={isOwner ? handleUpdateRole : undefined}
                     onRemoveMember={isManager ? handleRemoveMember : undefined}
                 />
-            </div>
+            </section>
 
             {groupId && user ? (
-                <div className="mb-8">
+                <section className="card p-5">
+                    <div className="mb-5">
+                        <p className="page-kicker">Permissions Matrix</p>
+                        <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Permisos del grupo</h2>
+                    </div>
                     <GroupPermissionsPanel
                         groupId={groupId}
                         members={members}
                         currentUserId={user.id}
                         isOwner={isOwner || false}
                     />
-                </div>
+                </section>
             ) : null}
 
-            {/* Danger Zone */}
-            {isOwner && (
-                <div className="pt-8 border-t border-neutral-700">
-                    <h3 className="text-sm font-semibold text-red-400 mb-4 uppercase tracking-wider">
-                        Danger Zone
-                    </h3>
-                    <button
-                        onClick={() => setShowDeleteDialog(true)}
-                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 border border-red-500/50 rounded-lg font-medium transition-colors"
-                    >
-                        Delete Group
-                    </button>
-                </div>
-            )}
+            {isOwner ? (
+                <section className="card border border-red-400/20 bg-red-400/8 p-5">
+                    <p className="page-kicker !text-red-300">Danger Zone</p>
+                    <h3 className="mt-2 text-2xl font-headline font-extrabold text-white">Eliminar grupo</h3>
+                    <p className="mt-2 max-w-2xl text-sm text-red-100/80">
+                        Esta accion es destructiva y borra el contexto privado del grupo para todos sus miembros.
+                    </p>
+                    <div className="mt-4">
+                        <button onClick={() => setShowDeleteDialog(true)} className="btn-danger">
+                            Delete group
+                        </button>
+                    </div>
+                </section>
+            ) : null}
 
-            {/* Delete Dialog */}
             <ConfirmDialog
                 isOpen={showDeleteDialog}
                 title="Delete Group"

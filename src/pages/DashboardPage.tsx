@@ -1,10 +1,20 @@
-import React from 'react'
+﻿import React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Music, CreditCard, ListMusic, FolderOpen, Heart, TrendingUp, Users } from 'lucide-react'
+import {
+    CreditCard,
+    FolderOpen,
+    Heart,
+    ListMusic,
+    Music,
+    Sparkles,
+    TrendingUp,
+    Users,
+} from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { Avatar } from '@components/common/Avatar'
+import { PageHeader } from '@components/ui/PageHeader'
 import { ROUTES } from '@lib/constants'
 import { songsService } from '@services/songs.service'
 import { debtsService } from '@services/debts.service'
@@ -30,126 +40,184 @@ const DashboardPage: React.FC = () => {
     const myBalance = userId && debts ? (debts[userId] ?? { owed: 0, lent: 0 }) : null
 
     const quickLinks = [
-        { icon: Music, label: 'Música', to: ROUTES.MUSIC, color: 'from-brand-600 to-brand-800' },
-        { icon: ListMusic, label: 'Playlists', to: ROUTES.PLAYLISTS, color: 'from-accent-purple to-brand-800' },
-        { icon: Heart, label: 'Favoritos', to: ROUTES.FAVORITES, color: 'from-pink-600 to-accent-purple' },
-        { icon: CreditCard, label: 'Deudas', to: ROUTES.DEBTS, color: 'from-accent-amber to-orange-700' },
-        { icon: FolderOpen, label: 'Archivos', to: ROUTES.FILES, color: 'from-accent-cyan to-brand-700' },
+        {
+            icon: Music,
+            label: 'Musica',
+            subtitle: 'Library and uploads',
+            to: ROUTES.MUSIC,
+            color: 'from-brand-400 via-brand-500 to-brand-600',
+        },
+        {
+            icon: ListMusic,
+            label: 'Playlists',
+            subtitle: 'Curated sets',
+            to: ROUTES.PLAYLISTS,
+            color: 'from-violet-400 via-violet-500 to-indigo-500',
+        },
+        {
+            icon: Heart,
+            label: 'Favoritos',
+            subtitle: 'Saved songs',
+            to: ROUTES.FAVORITES,
+            color: 'from-pink-400 via-fuchsia-500 to-violet-500',
+        },
+        {
+            icon: CreditCard,
+            label: 'Deudas',
+            subtitle: 'Shared balance',
+            to: ROUTES.DEBTS,
+            color: 'from-amber-300 via-orange-400 to-orange-500',
+        },
+        {
+            icon: FolderOpen,
+            label: 'Archivos',
+            subtitle: 'Dropzone',
+            to: ROUTES.FILES,
+            color: 'from-cyan-300 via-sky-400 to-brand-500',
+        },
     ]
 
     return (
-        <div className="p-4 md:p-6 space-y-6 animate-fade-in">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">
-                        Hola, {profile?.display_name?.split(' ')[0] ?? 'amigo'} 👋
-                    </h1>
-                    {activeGroup && (
-                        <p className="text-sm text-gray-400 mt-0.5 flex items-center gap-1.5">
-                            <Users className="w-3.5 h-3.5" />
-                            {activeGroup.name}
-                        </p>
-                    )}
-                </div>
-                <Link to={ROUTES.PROFILE}>
-                    <Avatar src={profile?.avatar_url} name={profile?.display_name} size="md" />
-                </Link>
-            </div>
+        <div className="page-shell animate-fade-in">
+            <PageHeader
+                kicker="Private Sonic Room"
+                title={`Hola, ${profile?.display_name?.split(' ')[0] ?? 'friend'}`}
+                description="Tu base privada para musica compartida, grupos y seguimiento del dia a dia. Todo sigue cableado a la logica real del producto."
+                meta={
+                    <>
+                        <span className="hero-meta-pill">
+                            <Users className="w-3.5 h-3.5 text-brand-400" />
+                            {activeGroup?.name ?? 'Sin grupo activo'}
+                        </span>
+                        <span className="hero-meta-pill">
+                            <Sparkles className="w-3.5 h-3.5 text-brand-400" />
+                            {(recentSongs?.length ?? 0)} tracks recientes
+                        </span>
+                    </>
+                }
+                actions={
+                    <Link to={ROUTES.PROFILE} aria-label="Perfil" className="shrink-0">
+                        <Avatar src={profile?.avatar_url} name={profile?.display_name} size="lg" />
+                    </Link>
+                }
+            />
 
-            {/* No group warning */}
-            {!hasGroup && (
-                <div className="card p-5 border-amber-500/30 bg-amber-500/5">
-                    <p className="text-sm text-amber-300 font-medium">
-                        No perteneces a ningún grupo todavía.
+            {!hasGroup ? (
+                <section className="card p-5">
+                    <p className="page-kicker">Access Layer</p>
+                    <h2 className="mt-2 text-xl font-semibold text-white">Necesitas un grupo para desbloquear toda la app</h2>
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-400">
+                        Cuando tengas un grupo activo podras compartir musica, ver actividad social y trabajar con deudas y reportes dentro del mismo contexto.
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                        Pide al administrador que te invite a un grupo para acceder a todas las funciones.
-                    </p>
-                </div>
-            )}
+                    <div className="mt-4">
+                        <Link to={ROUTES.GROUPS} className="btn-primary">
+                            <Users className="w-4 h-4" />
+                            Ir a grupos
+                        </Link>
+                    </div>
+                </section>
+            ) : null}
 
-            {/* Quick links grid */}
-            <section>
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Accesos rápidos</h2>
-                <div className="grid grid-cols-3 gap-3 md:grid-cols-5">
-                    {quickLinks.map(({ icon: Icon, label, to, color }) => (
-                        <Link
-                            key={to}
-                            to={to}
-                            className="card-interactive flex flex-col items-center gap-2 p-4 text-center"
-                        >
-                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center`}>
-                                <Icon className="w-5 h-5 text-white" />
+            <section className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <p className="page-kicker">Navigation Grid</p>
+                        <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Accesos rapidos</h2>
+                    </div>
+                    <span className="hero-meta-pill">5 rutas clave</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+                    {quickLinks.map(({ icon: Icon, label, subtitle, to, color }) => (
+                        <Link key={to} to={to} className="card-interactive group p-4">
+                            <div className={`flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-gradient-to-br ${color} shadow-[0_18px_40px_rgba(0,0,0,0.25)]`}>
+                                <Icon className="h-5 w-5 text-white" />
                             </div>
-                            <span className="text-xs font-medium text-gray-300">{label}</span>
+                            <div className="mt-4 space-y-1">
+                                <p className="text-sm font-semibold text-white group-hover:text-brand-200">{label}</p>
+                                <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{subtitle}</p>
+                            </div>
                         </Link>
                     ))}
                 </div>
             </section>
 
-            {/* Balance summary */}
-            {myBalance && (myBalance.owed > 0 || myBalance.lent > 0) && (
-                <section>
-                    <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                        <TrendingUp className="w-3.5 h-3.5 inline mr-1" />
-                        Tu balance de deudas
-                    </h2>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="card p-4">
-                            <p className="text-xs text-gray-400 mb-1">Debes</p>
-                            <p className="text-xl font-bold text-red-400">
-                                {myBalance.owed.toFixed(2)} €
-                            </p>
+            <div className="grid gap-4 xl:grid-cols-[1.2fr,0.8fr]">
+                <section className="card p-5">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <p className="page-kicker">Fresh Additions</p>
+                            <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Actividad musical reciente</h2>
                         </div>
-                        <div className="card p-4">
-                            <p className="text-xs text-gray-400 mb-1">Te deben</p>
-                            <p className="text-xl font-bold text-emerald-400">
-                                {myBalance.lent.toFixed(2)} €
-                            </p>
-                        </div>
-                    </div>
-                    <Link to={ROUTES.DEBTS} className="text-xs text-brand-400 hover:text-brand-300 transition-colors mt-2 inline-block">
-                        Ver todas las deudas →
-                    </Link>
-                </section>
-            )}
-
-            {/* Recent music */}
-            {recentSongs && recentSongs.length > 0 && (
-                <section>
-                    <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Añadido recientemente</h2>
-                        <Link to={ROUTES.MUSIC} className="text-xs text-brand-400 hover:text-brand-300 transition-colors">
-                            Ver todo
+                        <Link to={ROUTES.MUSIC} className="btn-secondary">
+                            <Music className="w-4 h-4" />
+                            Abrir musica
                         </Link>
                     </div>
-                    <div className="space-y-2">
-                        {recentSongs.map((song) => (
-                            <Link
-                                key={song.id}
-                                to={ROUTES.SONG(song.id)}
-                                className="card-interactive flex items-center gap-3 p-3"
-                            >
-                                <div className="w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 bg-surface-600">
-                                    {song.cover_url ? (
-                                        <img src={song.cover_url} alt={song.title} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <Music className="w-5 h-5 text-gray-500" />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-white truncate">{song.title}</p>
-                                    <p className="text-xs text-gray-400 truncate">{song.artist_name}</p>
-                                </div>
-                                <p className="text-xs text-gray-500 flex-shrink-0">{formatRelative(song.created_at)}</p>
-                            </Link>
-                        ))}
-                    </div>
+
+                    {recentSongs && recentSongs.length > 0 ? (
+                        <div className="mt-5 space-y-3">
+                            {recentSongs.map((song) => (
+                                <Link
+                                    key={song.id}
+                                    to={ROUTES.SONG(song.id)}
+                                    className="group flex items-center gap-3 rounded-[1.6rem] border border-white/5 bg-black/20 px-3 py-3 transition-all duration-200 hover:border-brand-400/25 hover:bg-white/[0.03]"
+                                >
+                                    <div className="h-14 w-14 overflow-hidden rounded-[1.2rem] bg-surface-700">
+                                        {song.cover_url ? (
+                                            <img src={song.cover_url} alt={song.title} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <div className="grid h-full w-full place-items-center">
+                                                <Music className="h-5 w-5 text-gray-500" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-semibold text-white group-hover:text-brand-200">{song.title}</p>
+                                        <p className="truncate text-xs uppercase tracking-[0.18em] text-gray-500">{song.artist_name}</p>
+                                    </div>
+                                    <p className="shrink-0 text-xs text-gray-500">{formatRelative(song.created_at)}</p>
+                                </Link>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="mt-5 rounded-[1.6rem] border border-dashed border-white/10 bg-black/10 px-4 py-8 text-sm text-gray-400">
+                            Aun no hay canciones recientes en tu grupo.
+                        </div>
+                    )}
                 </section>
-            )}
+
+                <section className="card p-5">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <p className="page-kicker">Shared Balance</p>
+                            <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Tu resumen</h2>
+                        </div>
+                        <TrendingUp className="h-5 w-5 text-brand-300" />
+                    </div>
+
+                    {myBalance && (myBalance.owed > 0 || myBalance.lent > 0) ? (
+                        <div className="mt-5 grid gap-3">
+                            <div className="rounded-[1.6rem] border border-red-400/15 bg-red-400/8 p-4">
+                                <p className="text-[11px] uppercase tracking-[0.22em] text-red-200/80">Debes</p>
+                                <p className="mt-2 text-3xl font-headline font-extrabold text-red-200">{myBalance.owed.toFixed(2)} EUR</p>
+                            </div>
+                            <div className="rounded-[1.6rem] border border-emerald-400/15 bg-emerald-400/8 p-4">
+                                <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-200/80">Te deben</p>
+                                <p className="mt-2 text-3xl font-headline font-extrabold text-emerald-200">{myBalance.lent.toFixed(2)} EUR</p>
+                            </div>
+                            <Link to={ROUTES.DEBTS} className="btn-secondary mt-1">
+                                <CreditCard className="w-4 h-4" />
+                                Ver deudas
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="mt-5 rounded-[1.6rem] border border-dashed border-white/10 bg-black/10 px-4 py-8 text-sm text-gray-400">
+                            Tu balance esta limpio por ahora. Cuando haya movimientos del grupo apareceran aqui.
+                        </div>
+                    )}
+                </section>
+            </div>
         </div>
     )
 }

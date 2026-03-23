@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Edit2, LogOut, ArrowLeft } from 'lucide-react'
+﻿import React, { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Edit2, LogOut, Sparkles } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { profileService } from '@services/profile.service'
@@ -11,6 +11,7 @@ import { useAuth } from '@hooks/useAuth'
 import { profileSchema, validateAvatarFile, type ProfileFormData } from '@lib/validators'
 import { useToast } from '@components/ui/Toast'
 import { Avatar } from '@components/common/Avatar'
+import { PageHeader } from '@components/ui/PageHeader'
 import { formatDate } from '@lib/utils'
 
 const ProfilePage: React.FC = () => {
@@ -31,7 +32,12 @@ const ProfilePage: React.FC = () => {
         queryFn: () => profileService.getProfile(targetId),
     })
 
-    const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<ProfileFormData>({
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+        reset,
+    } = useForm<ProfileFormData>({
         resolver: zodResolver(profileSchema),
         values: {
             display_name: profile?.display_name ?? '',
@@ -79,107 +85,153 @@ const ProfilePage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="p-4 flex items-center justify-center h-64">
-                <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+            <div className="page-shell flex min-h-[50vh] items-center justify-center">
+                <div className="h-8 w-8 rounded-full border-2 border-brand-400 border-t-transparent animate-spin" />
             </div>
         )
     }
 
     if (!profile) {
-        return <div className="p-4 text-gray-400">Perfil no encontrado.</div>
+        return <div className="page-shell text-gray-400">Perfil no encontrado.</div>
     }
 
     return (
-        <div className="p-4 md:p-6 max-w-lg mx-auto space-y-5 animate-fade-in">
-            {/* Back for other profiles */}
-            {id && (
-                <button onClick={() => navigate(-1)} className="btn-ghost gap-2 -ml-1">
-                    <ArrowLeft className="w-4 h-4" /> Volver
+        <div className="page-shell max-w-5xl animate-fade-in">
+            {id ? (
+                <button onClick={() => navigate(-1)} className="btn-ghost -ml-2 w-fit gap-2">
+                    <ArrowLeft className="w-4 h-4" />
+                    Volver
                 </button>
-            )}
+            ) : null}
 
-            {/* Profile header */}
-            <div className="card p-6 flex flex-col items-center gap-4">
-                {/* Avatar */}
-                <div className="relative">
-                    <Avatar src={profile.avatar_url} name={profile.display_name} size="xl" />
-                    {isOwnProfile && (
-                        <label className="absolute bottom-0 right-0 w-8 h-8 bg-brand-600 hover:bg-brand-500 rounded-full flex items-center justify-center cursor-pointer transition-colors shadow-lg">
-                            <Edit2 className="w-3.5 h-3.5 text-white" />
-                            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                        </label>
-                    )}
-                    {isUploadingAvatar && (
-                        <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
-                            <span className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <PageHeader
+                kicker="Identity"
+                title={isOwnProfile ? 'Tu perfil' : profile.display_name}
+                description={profile.bio ?? 'Perfil de The Appden con identidad visual integrada y datos reales del sistema.'}
+                meta={
+                    <>
+                        {profile.username ? <span className="hero-meta-pill">@{profile.username}</span> : null}
+                        <span className="hero-meta-pill">Miembro desde {formatDate(profile.created_at)}</span>
+                    </>
+                }
+                actions={
+                    !editing && isOwnProfile ? (
+                        <button onClick={() => setEditing(true)} className="btn-primary">
+                            <Edit2 className="w-4 h-4" />
+                            Editar perfil
+                        </button>
+                    ) : undefined
+                }
+            />
+
+            <div className="grid gap-4 xl:grid-cols-[0.85fr,1.15fr]">
+                <section className="card p-6">
+                    <div className="flex flex-col items-center text-center">
+                        <div className="relative">
+                            <Avatar src={profile.avatar_url} name={profile.display_name} size="xl" />
+                            {isOwnProfile ? (
+                                <label className="absolute bottom-1 right-1 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-brand-500 text-black shadow-[0_16px_36px_rgba(133,173,255,0.25)]">
+                                    <Edit2 className="h-4 w-4" />
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                                </label>
+                            ) : null}
+                            {isUploadingAvatar ? (
+                                <div className="absolute inset-0 grid place-items-center rounded-full bg-black/55">
+                                    <span className="h-7 w-7 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                </div>
+                            ) : null}
                         </div>
-                    )}
-                </div>
 
-                {!editing ? (
-                    <div className="text-center">
-                        <h1 className="text-xl font-bold text-white">{profile.display_name}</h1>
-                        {profile.username && (
-                            <p className="text-sm text-brand-400 mt-0.5">@{profile.username}</p>
-                        )}
-                        {profile.bio && (
-                            <p className="text-sm text-gray-400 mt-2 max-w-xs">{profile.bio}</p>
-                        )}
-                        <p className="text-xs text-gray-500 mt-3">
-                            Miembro desde {formatDate(profile.created_at)}
-                        </p>
+                        <h2 className="mt-5 text-2xl font-headline font-extrabold text-white">{profile.display_name}</h2>
+                        {profile.username ? <p className="mt-1 text-sm text-brand-300">@{profile.username}</p> : null}
+                        {profile.bio ? <p className="mt-3 max-w-sm text-sm leading-relaxed text-gray-400">{profile.bio}</p> : null}
+
+                        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                            <span className="hero-meta-pill">
+                                <Sparkles className="w-3.5 h-3.5 text-brand-300" />
+                                Perfil activo
+                            </span>
+                            <span className="hero-meta-pill">{isOwnProfile ? 'Edicion disponible' : 'Solo lectura'}</span>
+                        </div>
                     </div>
-                ) : null}
+                </section>
 
-                {isOwnProfile && !editing && (
-                    <button onClick={() => setEditing(true)} className="btn-secondary w-full">
-                        <Edit2 className="w-4 h-4" />
-                        Editar perfil
-                    </button>
+                {editing && isOwnProfile ? (
+                    <section className="card p-5">
+                        <div>
+                            <p className="page-kicker">Edit Session</p>
+                            <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Actualizar identidad</h2>
+                        </div>
+
+                        <form onSubmit={handleSubmit((data) => updateProfile(data))} className="mt-5 space-y-4">
+                            <div>
+                                <label className="label" htmlFor="display_name">Nombre *</label>
+                                <input id="display_name" type="text" className={`input ${errors.display_name ? 'border-red-500' : ''}`} {...register('display_name')} />
+                                {errors.display_name ? <p className="mt-1 text-xs text-red-400">{errors.display_name.message}</p> : null}
+                            </div>
+
+                            <div>
+                                <label className="label" htmlFor="username">Nombre de usuario</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">@</span>
+                                    <input id="username" type="text" className="input pl-8" {...register('username')} />
+                                </div>
+                                {errors.username ? <p className="mt-1 text-xs text-red-400">{errors.username.message}</p> : null}
+                            </div>
+
+                            <div>
+                                <label className="label" htmlFor="bio">Bio</label>
+                                <textarea id="bio" rows={4} className="input resize-none" placeholder="Cuentanos algo de ti..." {...register('bio')} />
+                                {errors.bio ? <p className="mt-1 text-xs text-red-400">{errors.bio.message}</p> : null}
+                            </div>
+
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditing(false)
+                                        reset()
+                                    }}
+                                    className="btn-secondary flex-1"
+                                >
+                                    Cancelar
+                                </button>
+                                <button type="submit" disabled={isSubmitting} className="btn-primary flex-1">
+                                    {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                ) : (
+                    <section className="card p-5">
+                        <div>
+                            <p className="page-kicker">Account State</p>
+                            <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Resumen</h2>
+                        </div>
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-[1.4rem] border border-white/8 bg-black/15 p-4">
+                                <p className="label">Display name</p>
+                                <p className="text-white">{profile.display_name}</p>
+                            </div>
+                            <div className="rounded-[1.4rem] border border-white/8 bg-black/15 p-4">
+                                <p className="label">Username</p>
+                                <p className="text-white">{profile.username ? `@${profile.username}` : 'No definido'}</p>
+                            </div>
+                            <div className="rounded-[1.4rem] border border-white/8 bg-black/15 p-4 sm:col-span-2">
+                                <p className="label">Bio</p>
+                                <p className="text-white">{profile.bio || 'Sin bio todavia.'}</p>
+                            </div>
+                        </div>
+                    </section>
                 )}
             </div>
 
-            {/* Edit form */}
-            {editing && isOwnProfile && (
-                <div className="card p-5">
-                    <form onSubmit={handleSubmit((d) => updateProfile(d))} className="space-y-4">
-                        <div>
-                            <label className="label" htmlFor="display_name">Nombre *</label>
-                            <input id="display_name" type="text" className={`input ${errors.display_name ? 'border-red-500' : ''}`} {...register('display_name')} />
-                            {errors.display_name && <p className="text-xs text-red-400 mt-1">{errors.display_name.message}</p>}
-                        </div>
-                        <div>
-                            <label className="label" htmlFor="username">Nombre de usuario</label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">@</span>
-                                <input id="username" type="text" className="input pl-7" {...register('username')} />
-                            </div>
-                            {errors.username && <p className="text-xs text-red-400 mt-1">{errors.username.message}</p>}
-                        </div>
-                        <div>
-                            <label className="label" htmlFor="bio">Bio</label>
-                            <textarea id="bio" rows={3} className="input resize-none" placeholder="Cuéntanos algo de ti..." {...register('bio')} />
-                            {errors.bio && <p className="text-xs text-red-400 mt-1">{errors.bio.message}</p>}
-                        </div>
-                        <div className="flex gap-3">
-                            <button type="button" onClick={() => { setEditing(false); reset() }} className="btn-secondary flex-1">
-                                Cancelar
-                            </button>
-                            <button type="submit" disabled={isSubmitting} className="btn-primary flex-1">
-                                {isSubmitting ? 'Guardando...' : 'Guardar'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
-
-            {/* Logout */}
-            {isOwnProfile && (
-                <button onClick={handleLogout} className="btn-danger w-full">
+            {isOwnProfile ? (
+                <button onClick={handleLogout} className="btn-danger w-full sm:w-fit">
                     <LogOut className="w-4 h-4" />
-                    Cerrar sesión
+                    Cerrar sesion
                 </button>
-            )}
+            ) : null}
         </div>
     )
 }

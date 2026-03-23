@@ -17,6 +17,7 @@
 2. Improve continue-listening UX (visible resume prompt/modal).
 3. Complete production push pipeline (service worker push + backend trigger).
 4. Continue cleaning encoding inconsistencies in old docs/UI labels.
+5. Run a second-pass UI audit on remaining secondary pages (`FilesPage`, `NotificationsPage`, playlist detail flows, auth screens) so they match the new v1.6 shell more closely.
 
 ## Team/process
 

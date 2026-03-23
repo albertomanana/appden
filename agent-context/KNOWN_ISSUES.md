@@ -83,6 +83,7 @@ Suggested fix:
 
 - more route-level or feature-level code splitting
 - analyze heavy modules and lazy-load non-critical panels
+- note: v1.6 added `framer-motion` for premium feedback/animation, so future chunk work should preserve motion on high-value surfaces while lazy-loading heavier secondary panels
 
 ## 6) Encoding inconsistencies in some files
 
@@ -126,3 +127,22 @@ Suggested fix:
 - hard refresh the site
 - if needed, use the local session repair action to clear caches and service workers
 - verify new deploy serves `apple-touch-icon.png`, `masked-icon.svg`, and `/icons/*`
+
+## 9) Stitch export scope can be misunderstood by future agents
+
+Symptom:
+
+- agent expects a full exported React app from Stitch and tries to replace major parts of The Appden
+
+Reality:
+
+- the Stitch artifact used in v1.6 was mainly:
+  - one polished screen
+  - a `DESIGN.md`
+  - visual tokens and layout cues
+
+Safe approach:
+
+- keep existing logic, routes, stores and Supabase integration
+- reuse the design language through shared primitives and page-level adaptation
+- avoid introducing a second competing UI system

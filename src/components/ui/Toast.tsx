@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useCallback, useState, useEffect } from 'react'
-import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react'
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { AlertCircle, CheckCircle, Info, X, XCircle } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@lib/utils'
-
-// ── Types ────────────────────────────────────────────────────
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -24,8 +23,6 @@ interface ToastContextValue {
     dismiss: (id: string) => void
 }
 
-// ── Context ──────────────────────────────────────────────────
-
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 export function useToast(): ToastContextValue {
@@ -34,20 +31,18 @@ export function useToast(): ToastContextValue {
     return ctx
 }
 
-// ── Toast Item ───────────────────────────────────────────────
-
 const icons: Record<ToastType, React.ReactNode> = {
-    success: <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />,
-    error: <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />,
-    warning: <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0" />,
-    info: <Info className="w-5 h-5 text-brand-400 flex-shrink-0" />,
+    success: <CheckCircle className="w-5 h-5 text-emerald-300 flex-shrink-0" />,
+    error: <XCircle className="w-5 h-5 text-red-300 flex-shrink-0" />,
+    warning: <AlertCircle className="w-5 h-5 text-amber-300 flex-shrink-0" />,
+    info: <Info className="w-5 h-5 text-brand-300 flex-shrink-0" />,
 }
 
-const borderColors: Record<ToastType, string> = {
-    success: 'border-l-emerald-500',
-    error: 'border-l-red-500',
-    warning: 'border-l-amber-500',
-    info: 'border-l-brand-500',
+const accentClasses: Record<ToastType, string> = {
+    success: 'from-emerald-400/20 to-emerald-300/5 border-emerald-300/20',
+    error: 'from-red-400/20 to-red-300/5 border-red-300/20',
+    warning: 'from-amber-400/20 to-amber-300/5 border-amber-300/20',
+    info: 'from-brand-400/20 to-brand-300/5 border-brand-300/20',
 }
 
 interface ToastItemProps {
@@ -56,82 +51,89 @@ interface ToastItemProps {
 }
 
 const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
-    const [visible, setVisible] = useState(false)
-
-    useEffect(() => {
-        // Animate in
-        requestAnimationFrame(() => setVisible(true))
-        // Auto-dismiss
-        const duration = toast.duration ?? 4000
-        const timer = setTimeout(() => {
-            setVisible(false)
-            setTimeout(() => onDismiss(toast.id), 300)
-        }, duration)
-        return () => clearTimeout(timer)
-    }, [toast, onDismiss])
+    React.useEffect(() => {
+        const timeout = window.setTimeout(() => onDismiss(toast.id), toast.duration ?? 4000)
+        return () => window.clearTimeout(timeout)
+    }, [onDismiss, toast.duration, toast.id])
 
     return (
-        <div
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 18, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.96 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
             className={cn(
-                'flex items-start gap-3 w-full max-w-sm bg-surface-700 border border-surface-500 border-l-4 rounded-xl p-4 shadow-card',
-                'transition-all duration-300',
-                borderColors[toast.type],
-                visible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
+                'relative overflow-hidden w-full max-w-sm rounded-[1.35rem] border backdrop-blur-2xl',
+                'bg-[linear-gradient(180deg,rgba(26,25,25,0.92)_0%,rgba(14,14,14,0.94)_100%)] shadow-card',
+                accentClasses[toast.type]
             )}
         >
-            {icons[toast.type]}
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white leading-tight">{toast.title}</p>
-                {toast.description && (
-                    <p className="text-xs text-gray-400 mt-0.5">{toast.description}</p>
-                )}
+            <div className="absolute inset-x-0 top-0 h-px bg-white/10" />
+            <div className="flex items-start gap-3 p-4">
+                <div className="mt-0.5">{icons[toast.type]}</div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-white">{toast.title}</p>
+                    {toast.description ? (
+                        <p className="mt-1 text-xs leading-relaxed text-gray-400">{toast.description}</p>
+                    ) : null}
+                </div>
+                <button
+                    onClick={() => onDismiss(toast.id)}
+                    className="btn-ghost !min-h-0 !rounded-full p-1 text-gray-500 hover:text-white"
+                    aria-label="Cerrar"
+                >
+                    <X className="w-4 h-4" />
+                </button>
             </div>
-            <button
-                onClick={() => onDismiss(toast.id)}
-                className="text-gray-500 hover:text-gray-300 flex-shrink-0 mt-0.5 transition-colors"
-                aria-label="Cerrar"
-            >
-                <X className="w-4 h-4" />
-            </button>
-        </div>
+        </motion.div>
     )
 }
-
-// ── Provider ─────────────────────────────────────────────────
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [toasts, setToasts] = useState<Toast[]>([])
 
     const dismiss = useCallback((id: string) => {
-        setToasts((prev) => prev.filter((t) => t.id !== id))
+        setToasts((prev) => prev.filter((toast) => toast.id !== id))
     }, [])
 
     const toast = useCallback((opts: Omit<Toast, 'id'>) => {
         const id = crypto.randomUUID()
-        setToasts((prev) => [...prev.slice(-4), { ...opts, id }]) // max 5
+        setToasts((prev) => [...prev.slice(-4), { ...opts, id }])
     }, [])
 
-    const success = useCallback((title: string, description?: string) =>
-        toast({ type: 'success', title, description }), [toast])
-    const error = useCallback((title: string, description?: string) =>
-        toast({ type: 'error', title, description, duration: 6000 }), [toast])
-    const warning = useCallback((title: string, description?: string) =>
-        toast({ type: 'warning', title, description }), [toast])
-    const info = useCallback((title: string, description?: string) =>
-        toast({ type: 'info', title, description }), [toast])
+    const success = useCallback((title: string, description?: string) => {
+        toast({ type: 'success', title, description })
+    }, [toast])
+
+    const error = useCallback((title: string, description?: string) => {
+        toast({ type: 'error', title, description, duration: 6000 })
+    }, [toast])
+
+    const warning = useCallback((title: string, description?: string) => {
+        toast({ type: 'warning', title, description })
+    }, [toast])
+
+    const info = useCallback((title: string, description?: string) => {
+        toast({ type: 'info', title, description })
+    }, [toast])
+
+    const value = useMemo(
+        () => ({ toasts, toast, success, error, warning, info, dismiss }),
+        [dismiss, error, info, success, toast, toasts, warning]
+    )
 
     return (
-        <ToastContext.Provider value={{ toasts, toast, success, error, warning, info, dismiss }}>
+        <ToastContext.Provider value={value}>
             {children}
-            {/* Toast portal */}
-            <div
-                className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 md:bottom-4"
-                aria-live="polite"
-                aria-atomic="false"
-            >
-                {toasts.map((t) => (
-                    <ToastItem key={t.id} toast={t} onDismiss={dismiss} />
-                ))}
+            <div className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] right-4 z-[120] flex w-[min(100%-1rem,24rem)] flex-col gap-2 md:bottom-6">
+                <AnimatePresence initial={false}>
+                    {toasts.map((item) => (
+                        <div key={item.id} className="pointer-events-auto">
+                            <ToastItem toast={item} onDismiss={dismiss} />
+                        </div>
+                    ))}
+                </AnimatePresence>
             </div>
         </ToastContext.Provider>
     )

@@ -1,6 +1,6 @@
 ﻿# Repo Map
 
-Snapshot date: 2026-03-19
+Snapshot date: 2026-03-23
 
 ## Root
 
@@ -21,6 +21,11 @@ Snapshot date: 2026-03-19
 - `src/app/providers/AuthProvider.tsx`: auth bootstrap/guarding
 - `src/components/layout/AppLayout.tsx`: authenticated app shell + player integration
 - `src/components/layout/Navigation.tsx`: mobile bottom nav + desktop sidebar
+- `src/components/ui/PageHeader.tsx`: reusable editorial hero/header block for key screens
+- `src/components/ui/Toast.tsx`: animated toast system
+- `src/components/ui/ConfirmDialog.tsx`: animated confirmation modal
+- `src/styles/globals.css`: design tokens, premium dark theme utilities, cards/buttons/forms
+- `tailwind.config.js`: theme tokens + font families aligned with current visual system
 
 ## Feature modules (current target architecture)
 
@@ -112,3 +117,10 @@ Compatibility wrappers (redirect to feature modules):
   - `scripts/generate-changelog-from-git.mjs`
   - `.github/workflows/changelog-develop.yml`
   - `public/changelog.generated.json`
+
+## UI integration note
+
+The current premium visual layer was integrated from a Stitch export reference, but only as a design system merge:
+
+- do not search for a parallel `stitch/` React app inside the repo
+- the merged output lives directly in the current shell, shared components, and page JSX

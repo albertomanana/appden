@@ -7,46 +7,46 @@ export default {
     theme: {
         extend: {
             colors: {
-                // Primary brand palette - deep dark with electric accent
                 brand: {
-                    50: '#f0f4ff',
-                    100: '#e0e9ff',
-                    200: '#c7d7fe',
-                    300: '#a5b8fc',
-                    400: '#818cf8',
-                    500: '#6366f1', // main brand indigo
-                    600: '#4f46e5',
-                    700: '#4338ca',
-                    800: '#3730a3',
-                    900: '#312e81',
-                    950: '#1e1b4b',
+                    50: '#eef4ff',
+                    100: '#dde9ff',
+                    200: '#c2dbff',
+                    300: '#9cc2ff',
+                    400: '#85adff',
+                    500: '#6e9fff',
+                    600: '#5391ff',
+                    700: '#336fd6',
+                    800: '#204b9f',
+                    900: '#14356f',
+                    950: '#091a35',
                 },
-                // Surface / dark backgrounds
                 surface: {
-                    900: '#0a0a0f', // deepest bg
-                    800: '#0f0f1a', // main bg
-                    700: '#13131f', // card bg
-                    600: '#1a1a2e', // elevated card
-                    500: '#22223b', // borders/dividers
-                    400: '#2d2d47', // hover states
-                    300: '#3d3d5c', // subtle borders
+                    900: '#000000',
+                    800: '#0e0e0e',
+                    700: '#131313',
+                    600: '#1a1919',
+                    500: '#201f1f',
+                    400: '#262626',
+                    300: '#494847',
                 },
-                // Accent colors
                 accent: {
-                    purple: '#7c3aed',
-                    pink: '#ec4899',
-                    cyan: '#06b6d4',
-                    green: '#10b981',
-                    amber: '#f59e0b',
-                    red: '#ef4444',
+                    purple: '#ac8aff',
+                    pink: '#ff7ac8',
+                    cyan: '#6ee8ff',
+                    green: '#9bffce',
+                    amber: '#ffc966',
+                    red: '#ff716c',
                 },
             },
             fontFamily: {
-                sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-                display: ['Sora', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+                sans: ['Inter', 'system-ui', 'sans-serif'],
+                display: ['Epilogue', 'Inter', 'system-ui', 'sans-serif'],
+                headline: ['Epilogue', 'Inter', 'system-ui', 'sans-serif'],
+                body: ['Inter', 'system-ui', 'sans-serif'],
+                label: ['Inter', 'system-ui', 'sans-serif'],
             },
             borderRadius: {
-                '2xl': '1rem',
+                '2xl': '1.25rem',
                 '3xl': '1.5rem',
                 '4xl': '2rem',
             },
@@ -54,11 +54,12 @@ export default {
                 xs: '2px',
             },
             boxShadow: {
-                'glow-brand': '0 0 20px rgba(99,102,241,0.3)',
-                'glow-green': '0 0 20px rgba(16,185,129,0.3)',
-                'glow-purple': '0 0 20px rgba(124,58,237,0.3)',
-                'card': '0 4px 24px rgba(0,0,0,0.4)',
-                'card-hover': '0 8px 40px rgba(0,0,0,0.6)',
+                'glow-brand': '0 0 24px rgba(133,173,255,0.28)',
+                'glow-green': '0 0 24px rgba(155,255,206,0.22)',
+                'glow-purple': '0 0 24px rgba(172,138,255,0.24)',
+                'card': '0 20px 60px rgba(0,0,0,0.34)',
+                'card-hover': '0 30px 90px rgba(0,0,0,0.42)',
+                'ambient': '0 0 80px rgba(133,173,255,0.08)',
             },
             animation: {
                 'fade-in': 'fadeIn 0.2s ease-out',
@@ -66,6 +67,7 @@ export default {
                 'slide-down': 'slideDown 0.3s ease-out',
                 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                 'spin-slow': 'spin 3s linear infinite',
+                'float-soft': 'floatSoft 6s ease-in-out infinite',
             },
             keyframes: {
                 fadeIn: {
@@ -79,6 +81,10 @@ export default {
                 slideDown: {
                     '0%': { transform: 'translateY(-10px)', opacity: '0' },
                     '100%': { transform: 'translateY(0)', opacity: '1' },
+                },
+                floatSoft: {
+                    '0%, 100%': { transform: 'translateY(0px)' },
+                    '50%': { transform: 'translateY(-4px)' },
                 },
             },
         },

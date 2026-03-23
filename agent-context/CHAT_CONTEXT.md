@@ -98,6 +98,43 @@ This file captures decisions and incidents from this collaboration thread so fut
   - `npm run build`
   - `npm run changelog:generate`
 
+14. 2026-03-23 v1.6 Stitch-driven UI integration pass:
+- audited Stitch export first and confirmed it was a design reference, not a drop-in React app
+- integration strategy chosen:
+  - keep business logic, routing, auth, stores and Supabase services untouched
+  - transplant the visual language into shell, navigation, shared components and key screens
+- added `framer-motion` and used it for:
+  - upgraded toast transitions
+  - upgraded confirm dialog transitions
+  - animated changelog timeline
+  - mini player entrance motion
+- introduced shared editorial page hero component:
+  - `src/components/ui/PageHeader.tsx`
+- upgraded global visual system:
+  - `tailwind.config.js`
+  - `src/styles/globals.css`
+- premium UI pass applied to:
+  - `DashboardPage`
+  - `MusicPage`
+  - `GroupsPage`
+  - `GroupDetailPage`
+  - `ConnectionsPage`
+  - `ReportsPage`
+  - `ReportDetailPage`
+  - `DebtsPage`
+  - `ProfilePage`
+  - `ChangelogPage`
+- repeated UI components refreshed to align with the new shell:
+  - `SongCard`
+  - `GroupCard`
+  - `DebtCard`
+  - `GroupMemberList`
+  - `ReportForm`
+  - `ReportsList`
+- validated locally after integration:
+  - `npm run lint`
+  - `npm run build`
+
 ## Locked decisions
 
 - storage cover bucket name is `covers`
@@ -113,3 +150,4 @@ This file captures decisions and incidents from this collaboration thread so fut
 - Multiple services include localStorage fallbacks when DB tables are missing.
 - `src/services/song-social.service.ts` and `src/services/group-activity.service.ts` are wrappers to feature services.
 - `agent-context` must be updated in each relevant PR/session.
+- The Stitch export only provided one polished screen plus design rules; future UI work should continue adapting that system instead of trying to replace the app wholesale.

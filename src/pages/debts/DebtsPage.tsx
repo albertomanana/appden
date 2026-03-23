@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, CreditCard } from 'lucide-react'
+import { Calculator, CreditCard, Plus, Sparkles } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { debtsService } from '@services/debts.service'
@@ -13,6 +13,7 @@ import { DebtInsightsPanel } from '@components/debts/DebtInsightsPanel'
 import { DebtGoalsAndBadgesPanel } from '@components/debts/DebtGoalsAndBadgesPanel'
 import { EmptyState } from '@components/ui/EmptyState'
 import { DebtCardSkeleton, ListSkeleton } from '@components/ui/LoadingSkeleton'
+import { PageHeader } from '@components/ui/PageHeader'
 
 const DebtsPage: React.FC = () => {
     const { userId } = useAuth()
@@ -39,48 +40,45 @@ const DebtsPage: React.FC = () => {
     })
 
     return (
-        <div className="p-4 md:p-6 space-y-5 animate-fade-in">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="section-title">Deudas</h1>
-                    {debts && <p className="text-sm text-muted mt-0.5">{debts.length} registros</p>}
-                </div>
-                <button
-                    onClick={() => setShowForm(true)}
-                    className="btn-primary"
-                    disabled={!hasGroup}
-                    aria-label="Nueva deuda"
-                >
-                    <Plus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Nueva</span>
-                </button>
-            </div>
+        <div className="page-shell animate-fade-in">
+            <PageHeader
+                kicker="Shared Finance"
+                title="Deudas"
+                description="Control de balance, reparto y seguimiento entre miembros del grupo sin perder el contexto social de la app."
+                meta={
+                    <>
+                        <span className="hero-meta-pill">{debts?.length ?? 0} registros</span>
+                        <span className="hero-meta-pill">{hasGroup ? 'Grupo activo' : 'Sin grupo activo'}</span>
+                    </>
+                }
+                actions={
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => setShowSplitCalculator(true)}
+                            className="btn-secondary"
+                            disabled={!hasGroup}
+                        >
+                            <Calculator className="w-4 h-4" />
+                            Reparto
+                        </button>
+                        <button onClick={() => setShowForm(true)} className="btn-primary" disabled={!hasGroup} aria-label="Nueva deuda">
+                            <Plus className="w-4 h-4" />
+                            Nueva deuda
+                        </button>
+                    </>
+                }
+            />
 
-            <div className="flex flex-wrap items-center gap-2">
-                <button
-                    type="button"
-                    onClick={() => setShowSplitCalculator(true)}
-                    className="btn-secondary px-3 py-2 text-xs"
-                    disabled={!hasGroup}
-                >
-                    Calculadora reparto
-                </button>
-            </div>
+            {summary && userId ? <DebtSummary summary={summary} currentUserId={userId} /> : null}
 
-            {/* Summary */}
-            {summary && userId && (
-                <DebtSummary summary={summary} currentUserId={userId} />
-            )}
-
-            {/* Debt list */}
             {isLoading ? (
                 <ListSkeleton count={3} item={<DebtCardSkeleton />} />
             ) : !debts || debts.length === 0 ? (
                 <EmptyState
                     icon={<CreditCard className="w-7 h-7" />}
                     title="Sin deudas registradas"
-                    description="Registra deudas entre el grupo para llevar un control claro."
+                    description="Cuando registres movimientos dentro del grupo apareceran aqui con mejor contexto y progreso visual."
                     action={
                         hasGroup ? (
                             <button onClick={() => setShowForm(true)} className="btn-primary">
@@ -91,24 +89,30 @@ const DebtsPage: React.FC = () => {
                     }
                 />
             ) : (
-                <div className="space-y-3">
-                    {debts.map((debt) => (
-                        <DebtCard key={debt.id} debt={debt} />
-                    ))}
-                </div>
+                <section className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <p className="page-kicker">Open Ledger</p>
+                            <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Movimientos del grupo</h2>
+                        </div>
+                        <span className="hero-meta-pill">
+                            <Sparkles className="w-3.5 h-3.5 text-brand-400" />
+                            Seguimiento premium
+                        </span>
+                    </div>
+                    <div className="space-y-3">
+                        {debts.map((debt) => (
+                            <DebtCard key={debt.id} debt={debt} />
+                        ))}
+                    </div>
+                </section>
             )}
 
-            {groupId && members ? (
-                <DebtInsightsPanel groupId={groupId} members={members} />
-            ) : null}
+            {groupId && members ? <DebtInsightsPanel groupId={groupId} members={members} /> : null}
+            {groupId && members ? <DebtGoalsAndBadgesPanel groupId={groupId} members={members} /> : null}
 
-            {groupId && members ? (
-                <DebtGoalsAndBadgesPanel groupId={groupId} members={members} />
-            ) : null}
-
-            {/* Create debt modal */}
-            {showForm && <DebtForm onClose={() => setShowForm(false)} />}
-            {showSplitCalculator && <DebtSplitCalculator onClose={() => setShowSplitCalculator(false)} />}
+            {showForm ? <DebtForm onClose={() => setShowForm(false)} /> : null}
+            {showSplitCalculator ? <DebtSplitCalculator onClose={() => setShowSplitCalculator(false)} /> : null}
         </div>
     )
 }

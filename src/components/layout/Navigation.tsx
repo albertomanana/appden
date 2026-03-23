@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { NavLink } from 'react-router-dom'
 import {
     Bell,
@@ -10,10 +10,11 @@ import {
     Home,
     ListMusic,
     Music,
-    UserRoundPlus,
     User,
+    UserRoundPlus,
     Users,
 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { cn } from '@lib/utils'
 import { ROUTES } from '@lib/constants'
 import { useAuth } from '@hooks/useAuth'
@@ -26,12 +27,12 @@ type NavItem = {
 }
 
 const mobileNavItems: NavItem[] = [
-    { icon: Home, label: 'Inicio', to: ROUTES.DASHBOARD },
-    { icon: Music, label: 'Musica', to: ROUTES.MUSIC },
-    { icon: Users, label: 'Grupos', to: ROUTES.GROUPS },
-    { icon: UserRoundPlus, label: 'Conexiones', to: ROUTES.CONNECTIONS },
-    { icon: CreditCard, label: 'Deudas', to: ROUTES.DEBTS },
-    { icon: Flag, label: 'Reportes', to: ROUTES.REPORTS },
+    { icon: Home, label: 'Home', to: ROUTES.DASHBOARD },
+    { icon: Music, label: 'Music', to: ROUTES.MUSIC },
+    { icon: Users, label: 'Groups', to: ROUTES.GROUPS },
+    { icon: UserRoundPlus, label: 'Social', to: ROUTES.CONNECTIONS },
+    { icon: CreditCard, label: 'Debt', to: ROUTES.DEBTS },
+    { icon: Flag, label: 'Reports', to: ROUTES.REPORTS },
 ]
 
 const sidebarItems: NavItem[] = [
@@ -56,44 +57,52 @@ export const BottomNav: React.FC = () => {
     const { data: unreadAdminReports = 0 } = useUnreadAdminReportsCount(userId, isAdmin)
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden safe-bottom">
-            <div className="bg-surface-800/95 backdrop-blur-xl border-t border-surface-500 shadow-[0_-12px_40px_rgba(0,0,0,0.35)]">
-                <div className="grid grid-cols-6 gap-1 px-2 py-2">
+        <motion.nav
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+            className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-30 w-[calc(100%-1.25rem)] max-w-lg -translate-x-1/2 md:hidden"
+        >
+            <div className="glass-dock rounded-[1.75rem] px-2 py-2">
+                <div className="grid grid-cols-6 gap-1">
                     {mobileNavItems.map(({ icon: Icon, label, to }) => (
                         <NavLink
                             key={to}
                             to={to}
                             className={({ isActive }) =>
                                 cn(
-                                    'flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-xl transition-all duration-200 active:scale-95',
-                                    isActive
-                                        ? 'text-brand-300 bg-brand-500/15'
-                                        : 'text-gray-500 hover:text-gray-300'
+                                    'relative flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition-all duration-200 active:scale-95',
+                                    isActive ? 'text-brand-300' : 'text-gray-500'
                                 )
                             }
                             aria-label={label}
                         >
                             {({ isActive }) => (
                                 <>
-                                    <div className="relative">
-                                        <Icon
-                                            className={cn('w-5 h-5 transition-transform duration-200', isActive && 'scale-110')}
-                                            strokeWidth={isActive ? 2.4 : 1.8}
-                                        />
+                                    <motion.div
+                                        whileTap={{ scale: 0.94 }}
+                                        className={cn(
+                                            'relative flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-200',
+                                            isActive ? 'bg-white/8 shadow-glow-brand' : 'bg-transparent'
+                                        )}
+                                    >
+                                        <Icon className="w-4.5 h-4.5" strokeWidth={isActive ? 2.4 : 1.9} />
                                         {to === ROUTES.REPORTS && unreadAdminReports > 0 ? (
-                                            <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-[9px] leading-[14px] text-white text-center">
+                                            <span className="absolute -top-0.5 -right-0.5 inline-flex min-w-[16px] h-[16px] items-center justify-center rounded-full bg-brand-500 px-1 text-[9px] font-bold text-black">
                                                 {Math.min(unreadAdminReports, 9)}
                                             </span>
                                         ) : null}
-                                    </div>
-                                    <span className="text-[10px] font-medium leading-none">{label}</span>
+                                    </motion.div>
+                                    <span className={cn('font-label text-[9px] uppercase tracking-[0.24em]', isActive ? 'text-brand-300' : 'text-gray-500')}>
+                                        {label}
+                                    </span>
                                 </>
                             )}
                         </NavLink>
                     ))}
                 </div>
             </div>
-        </nav>
+        </motion.nav>
     )
 }
 
@@ -104,37 +113,56 @@ export const Sidebar: React.FC = () => {
     const { data: unreadAdminReports = 0 } = useUnreadAdminReportsCount(userId, isAdmin)
 
     return (
-        <aside className="hidden md:flex flex-col w-64 bg-surface-900 border-r border-surface-500 min-h-screen sticky top-0">
-            <div className="px-6 py-6 border-b border-surface-500">
-                <h1 className="text-xl font-extrabold text-gradient">The Appden</h1>
-                <p className="text-xs text-gray-500 mt-0.5">Espacio social privado</p>
-            </div>
+        <aside className="hidden md:flex md:w-[286px] md:flex-col md:px-4 md:py-5">
+            <div className="glass-dock sticky top-5 flex min-h-[calc(100vh-2.5rem)] flex-col rounded-[2rem] px-4 py-5">
+                <div className="px-3 pb-5">
+                    <p className="font-display text-[1.85rem] font-black italic tracking-[-0.05em] text-gradient">
+                        The Appden
+                    </p>
+                    <p className="mt-2 max-w-[14rem] text-xs uppercase tracking-[0.24em] text-gray-500">
+                        Private sonic system
+                    </p>
+                </div>
 
-            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                {sidebarItems.map(({ icon: Icon, label, to }) => (
-                    <NavLink
-                        key={to}
-                        to={to}
-                        className={({ isActive }) =>
-                            cn(
-                                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                                isActive
-                                    ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30'
-                                    : 'text-gray-400 hover:text-white hover:bg-surface-700'
-                            )
-                        }
-                    >
-                        <Icon className="w-4.5 h-4.5 flex-shrink-0" />
-                        <span className="flex-1">{label}</span>
-                        {to === ROUTES.REPORTS && unreadAdminReports > 0 ? (
-                            <span className="inline-flex min-w-5 h-5 px-1.5 items-center justify-center rounded-full bg-red-500 text-[11px] text-white">
-                                {unreadAdminReports > 99 ? '99+' : unreadAdminReports}
-                            </span>
-                        ) : null}
-                    </NavLink>
-                ))}
-            </nav>
+                <nav className="flex-1 space-y-1 overflow-y-auto px-1">
+                    {sidebarItems.map(({ icon: Icon, label, to }) => (
+                        <NavLink
+                            key={to}
+                            to={to}
+                            className={({ isActive }) =>
+                                cn(
+                                    'group flex items-center gap-3 rounded-[1.35rem] px-3 py-3 text-sm transition-all duration-200',
+                                    isActive
+                                        ? 'bg-white/8 text-brand-300 shadow-glow-brand'
+                                        : 'text-gray-400 hover:bg-white/4 hover:text-white'
+                                )
+                            }
+                        >
+                            {({ isActive }) => (
+                                <>
+                                    <div className={cn(
+                                        'flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-200',
+                                        isActive ? 'bg-brand-500/14' : 'bg-surface-700/70'
+                                    )}>
+                                        <Icon className="w-4.5 h-4.5" strokeWidth={isActive ? 2.25 : 1.85} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate font-medium">{label}</p>
+                                        <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500 group-hover:text-gray-400">
+                                            {to.replace('/', '') || 'home'}
+                                        </p>
+                                    </div>
+                                    {to === ROUTES.REPORTS && unreadAdminReports > 0 ? (
+                                        <span className="inline-flex min-w-6 h-6 items-center justify-center rounded-full bg-brand-500 px-1.5 text-[10px] font-black text-black">
+                                            {unreadAdminReports > 99 ? '99+' : unreadAdminReports}
+                                        </span>
+                                    ) : null}
+                                </>
+                            )}
+                        </NavLink>
+                    ))}
+                </nav>
+            </div>
         </aside>
     )
 }
-
