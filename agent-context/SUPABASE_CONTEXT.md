@@ -1,6 +1,6 @@
 ﻿# Supabase Context
 
-Snapshot date: 2026-03-20
+Snapshot date: 2026-04-07
 
 ## Environment variables
 
@@ -8,9 +8,12 @@ Expected in `.env.local`:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (required for `scripts/qa-seed/*`)
 - optional:
   - `VITE_ASR_TRANSCRIBE_ENDPOINT`
   - `VITE_LYRICS_TRANSLATE_ENDPOINT`
+  - `QA_SEED_EMAIL_DOMAIN`
+  - `QA_SEED_DEFAULT_PASSWORD`
 
 ## Migrations (run order)
 
@@ -24,6 +27,8 @@ Expected in `.env.local`:
 8. `supabase/migrations/008_fix_rls_groups_recursion.sql`
 9. `supabase/migrations/009_social_connections_reports_admin.sql`
 10. `supabase/migrations/010_groups_rls_rpc_hardening.sql`
+11. `supabase/migrations/011_song_upload_storage_hardening.sql`
+12. `supabase/migrations/012_song_artist_credits.sql`
 
 ## Storage buckets
 
@@ -54,6 +59,8 @@ References:
 - `supabase/migrations/008_fix_rls_groups_recursion.sql`
 - `supabase/migrations/009_social_connections_reports_admin.sql`
 - `supabase/migrations/010_groups_rls_rpc_hardening.sql`
+- `supabase/migrations/011_song_upload_storage_hardening.sql`
+- `supabase/migrations/012_song_artist_credits.sql`
 
 ## Critical historical incident
 
@@ -111,11 +118,39 @@ Fix pattern:
 - reports are readable by all authenticated users in-app
 - report status management is creator-or-admin
 
+### Song upload hardening notes (after migration 011)
+
+- canonical storage policies for `avatars`, `covers`, `songs`, and `files` are now part of the migration chain
+- `song_owners` policies no longer rely on self-referential checks inside the same table policy
+- `handle_song_post_insert()` now auto-syncs:
+  - uploader ownership row in `song_owners`
+  - `group_activity` row for `song_uploaded`
+- the client upload flow no longer needs extra `POST /song_owners` or `POST /group_activity` requests after a successful `songs` insert
+- if the `songs` insert fails after storage upload, the client now removes the uploaded storage objects as cleanup
+
+### Song artist credits notes (after migration 012)
+
+- new table: `song_artist_credits`
+- purpose:
+  - support one-or-many credited artists per song
+  - allow credits linked to existing users (`profile_id`)
+  - allow manual credits for external artists without accounts (`artist_name`)
+- compatibility model:
+  - `songs.artist_name` remains as the summary string
+  - structured credits are read from `song_artist_credits` when available
+- if migration `012` is missing:
+  - upload/edit continues using the compatibility summary string
+  - the app tolerates the missing relation instead of crashing
+  - structured multi-artist persistence is disabled
+
 ## Signed URL behavior
 
 - app uses signed URLs for private buckets
 - helper: `getStorageUrl(bucket, path)` in `src/lib/supabase/client.ts`
 - function normalizes URLs and plain paths and retries path variants
+- known remaining risk:
+  - profile avatars still persist signed URLs in `profiles.avatar_url`
+  - this should eventually move to stable storage paths + sign-on-read
 
 ## Missing-table fallback strategy in services
 
@@ -136,14 +171,29 @@ Implication:
 
 - app can appear to work partially even when DB setup is incomplete
 - production launch must verify migrations are fully applied
+- QA must treat fallback-backed behavior as non-launchable even if the UI appears populated
+
+## QA seed notes
+
+- service-role seeding is implemented under `scripts/qa-seed/*`
+- seed commands:
+  - `npm run seed:qa`
+  - `npm run seed:qa:fresh`
+  - `npm run seed:qa:reset`
+- the current fixture set expects the latest schema including:
+  - `friend_requests`, `friendships`, `user_roles`, `report_notifications`
+  - `group_member_permissions`, `group_goals`, `debt_installments`, `debt_reminders`
+  - `group_activity`, `song_owners`, `group_invitations`
 
 ## Pre-launch DB checklist
 
-- all 10 migrations executed in target project
+- all 12 migrations executed in target project
 - all 5 storage buckets exist with correct names (`reports` optional but recommended)
 - storage policies allow authenticated read/upload where expected
 - user can:
   - upload song + cover
+  - upload song without stray 500s from client-side ownership/activity follow-up requests
+  - persist and read multi-artist song credits correctly
   - fetch signed URLs for song and cover
   - login and load groups without recursion errors
   - create a group through the app without a second manual owner insert

@@ -25,6 +25,7 @@ export const SongCard: React.FC<SongCardProps> = ({ song, onPlay, showArtist = t
     const { groupId } = useActiveGroup()
     const currentSong = usePlayerStore((state) => state.currentSong)
     const isPlaying = usePlayerStore((state) => state.isPlaying)
+    const togglePlay = usePlayerStore((state) => state.togglePlay)
     const { success, error: toastError } = useToast()
     const queryClient = useQueryClient()
     const isCurrentSong = currentSong?.id === song.id
@@ -61,6 +62,9 @@ export const SongCard: React.FC<SongCardProps> = ({ song, onPlay, showArtist = t
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: ['songs', groupId] })
+            void queryClient.invalidateQueries({ queryKey: ['favorites'] })
+            void queryClient.invalidateQueries({ queryKey: ['playlists', groupId] })
+            void queryClient.invalidateQueries({ queryKey: ['song', song.id] })
             success('Cancion', 'Cancion eliminada correctamente')
             setShowDeleteDialog(false)
         },
@@ -79,7 +83,13 @@ export const SongCard: React.FC<SongCardProps> = ({ song, onPlay, showArtist = t
             >
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={onPlay}
+                        onClick={() => {
+                            if (isCurrentSong) {
+                                togglePlay()
+                                return
+                            }
+                            onPlay()
+                        }}
                         className="group/play relative h-16 w-16 shrink-0 overflow-hidden rounded-[1.35rem] bg-surface-700"
                         aria-label={isThisPlaying ? 'Pausar' : 'Reproducir'}
                     >

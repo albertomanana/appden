@@ -126,14 +126,16 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return (
         <ToastContext.Provider value={value}>
             {children}
-            <div className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] right-4 z-[120] flex w-[min(100%-1rem,24rem)] flex-col gap-2 md:bottom-6">
-                <AnimatePresence initial={false}>
-                    {toasts.map((item) => (
-                        <div key={item.id} className="pointer-events-auto">
-                            <ToastItem toast={item} onDismiss={dismiss} />
-                        </div>
-                    ))}
-                </AnimatePresence>
+            <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+6.9rem)] z-[120] flex justify-center px-3 safe-left safe-right md:inset-x-auto md:right-6 md:justify-end md:px-0 md:bottom-6">
+                <div className="flex w-full max-w-sm flex-col gap-2">
+                    <AnimatePresence initial={false}>
+                        {toasts.map((item) => (
+                            <div key={item.id} className="pointer-events-auto">
+                                <ToastItem toast={item} onDismiss={dismiss} />
+                            </div>
+                        ))}
+                    </AnimatePresence>
+                </div>
             </div>
         </ToastContext.Provider>
     )

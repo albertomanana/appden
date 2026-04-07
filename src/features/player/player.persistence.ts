@@ -1,7 +1,6 @@
 import type {
     ContinueListeningSnapshot,
     PlaybackHistoryItem,
-    PlayerPreferences,
     PlayerSong,
     QueueState,
 } from '@features/player/player.types'
@@ -10,7 +9,6 @@ const STORAGE_KEYS = {
     queue: 'appden:player:queue',
     history: 'appden:player:history',
     snapshot: 'appden:player:snapshot',
-    preferences: 'appden:player:preferences',
 } as const
 
 const MAX_HISTORY = 200
@@ -45,23 +43,12 @@ export const playerPersistence = {
         remove(STORAGE_KEYS.snapshot)
     },
 
-    savePreferences(preferences: PlayerPreferences): void {
-        write(STORAGE_KEYS.preferences, preferences)
-    },
-
-    loadPreferences(): PlayerPreferences | null {
-        return read<PlayerPreferences>(STORAGE_KEYS.preferences)
-    },
-
     async persistHistoryRemote(
-        userId: string,
-        song: PlayerSong,
-        playedAt: string
+        _userId: string,
+        _song: PlayerSong,
+        _playedAt: string
     ): Promise<void> {
-        // Backend simulation.
-        await new Promise((resolve) => setTimeout(resolve, 60))
-        const simulatedPayload = { userId, songId: song.id, playedAt }
-        void simulatedPayload
+        // Playback history stays local until a real backend endpoint is needed.
     },
 }
 

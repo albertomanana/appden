@@ -1,6 +1,6 @@
 ﻿# Repo Map
 
-Snapshot date: 2026-03-23
+Snapshot date: 2026-04-07
 
 ## Root
 
@@ -8,6 +8,11 @@ Snapshot date: 2026-03-23
 - `QUICK_START.md`: quick setup
 - `CONTRIBUTING.md`: contribution rules
 - `docs/*`: branching, onboarding, launch, GitHub setup
+- QA docs:
+  - `docs/QA_PRELAUNCH_AUDIT.md`
+  - `docs/QA_FUNCTIONAL_MAP.md`
+  - `docs/QA_TEST_CHECKLIST.md`
+  - `docs/QA_SEEDING_GUIDE.md`
 - `supabase/migrations/*`: DB schema and feature migrations
 - `supabase-storage-setup.sql`: storage bucket/policy setup script
 - `agent-context/*`: persistent cross-IDE/cross-agent context pack
@@ -20,10 +25,16 @@ Snapshot date: 2026-03-23
 - `src/app/router/index.tsx`: route definitions
 - `src/app/providers/AuthProvider.tsx`: auth bootstrap/guarding
 - `src/components/layout/AppLayout.tsx`: authenticated app shell + player integration
-- `src/components/layout/Navigation.tsx`: mobile bottom nav + desktop sidebar
+- `src/components/layout/Navigation.tsx`: floating 5-item bottom dock (mobile-safe centered grid)
 - `src/components/ui/PageHeader.tsx`: reusable editorial hero/header block for key screens
 - `src/components/ui/Toast.tsx`: animated toast system
 - `src/components/ui/ConfirmDialog.tsx`: animated confirmation modal
+- `src/components/ui/Button.tsx`: action primitive
+- `src/components/ui/Card.tsx`: surface primitive
+- `src/components/ui/Chip.tsx`: chip/toggle primitive
+- `src/components/ui/Input.tsx`: field primitive
+- `src/components/ui/Modal.tsx`: modal primitive
+- `src/components/ui/Tabs.tsx`: section/tab navigation primitive
 - `src/styles/globals.css`: design tokens, premium dark theme utilities, cards/buttons/forms
 - `tailwind.config.js`: theme tokens + font families aligned with current visual system
 
@@ -64,6 +75,16 @@ Core services:
 - `src/services/share.service.ts`
 - `src/services/shared-links.service.ts`
 - `src/services/playlists.service.ts`
+- music artist credit helpers:
+  - `src/features/music/utils/artistCredits.ts`
+
+Pre-launch critical files:
+
+- `src/components/music/SongUploadForm.tsx`: upload modal and client validation
+- `src/components/music/SongArtistCreditsInput.tsx`: structured one-or-many artist credit input
+- `src/features/player/components/MiniPlayer.tsx`: mobile floating player dock above nav
+- `src/features/player/components/FullPlayer.tsx`: immersive full-screen player
+- `src/features/social/components/GroupActivityFeed.tsx`: premium social/activity feed card stack
 
 Compatibility wrappers (redirect to feature modules):
 
@@ -113,8 +134,16 @@ Compatibility wrappers (redirect to feature modules):
   - `supabase/migrations/007_group_invitations.sql`
   - `supabase/migrations/008_fix_rls_groups_recursion.sql`
   - `supabase/migrations/009_social_connections_reports_admin.sql`
+  - `supabase/migrations/010_groups_rls_rpc_hardening.sql`
+  - `supabase/migrations/011_song_upload_storage_hardening.sql`
+  - `supabase/migrations/012_song_artist_credits.sql`
 - changelog automation:
   - `scripts/generate-changelog-from-git.mjs`
+  - QA seed system:
+    - `scripts/qa-seed/shared.mjs`
+    - `scripts/qa-seed/reset.mjs`
+    - `scripts/qa-seed/fixtures.mjs`
+    - `scripts/qa-seed/seed.mjs`
   - `.github/workflows/changelog-develop.yml`
   - `public/changelog.generated.json`
 

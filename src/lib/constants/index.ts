@@ -20,7 +20,6 @@ export const ALLOWED_AUDIO_TYPES = [
     'audio/flac',
     'audio/aac',
     'video/mp4', // Allow video/mp4 for audio files saved as .mp4
-    'video/quicktime', // MOV files
 ]
 
 export const ALLOWED_IMAGE_TYPES = [
@@ -91,4 +90,3 @@ export const ROUTES = {
     FILES: '/files',
     SHARED: (token: string) => `/shared/${token}`,
 } as const
-

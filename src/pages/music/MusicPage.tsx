@@ -1,22 +1,19 @@
-﻿import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Clock3, Heart, Music, Play, Plus, Search, Sparkles, Upload } from 'lucide-react'
+import { AlertCircle, Music, Play, Plus, Search, Upload } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { songsService } from '@services/songs.service'
 import { usePlayerStore } from '@app/store/player.store'
-import { useAdvancedPlayerStore } from '@features/player/player.store'
 import { SongCard } from '@components/music/SongCard'
 import { SongUploadForm } from '@components/music/SongUploadForm'
 import { EditSongForm } from '@components/music/EditSongForm'
-import { GroupActivityFeed } from '@features/social/components/GroupActivityFeed'
 import { EmptyState } from '@components/ui/EmptyState'
 import { ListSkeleton } from '@components/ui/LoadingSkeleton'
 import { PageHeader } from '@components/ui/PageHeader'
+import { Tabs } from '@components/ui/Tabs'
+import { ROUTES } from '@lib/constants'
 import type { Song } from '@/types'
-
-type SongFilter = 'all' | 'favorites' | 'recent'
-type SongSort = 'recent' | 'title' | 'artist'
 
 const MusicPage: React.FC = () => {
     const { userId } = useAuth()
@@ -24,193 +21,145 @@ const MusicPage: React.FC = () => {
     const [showUpload, setShowUpload] = useState(false)
     const [editingSong, setEditingSong] = useState<Song | null>(null)
     const [search, setSearch] = useState('')
-    const [filter, setFilter] = useState<SongFilter>('all')
-    const [sortBy, setSortBy] = useState<SongSort>('recent')
-    const theme = useAdvancedPlayerStore((state) => state.theme)
-    const setTheme = useAdvancedPlayerStore((state) => state.setTheme)
     const setQueue = usePlayerStore((state) => state.setQueue)
 
-    const { data: songs, isLoading } = useQuery({
-        queryKey: ['songs', groupId],
+    const {
+        data: songs,
+        isLoading,
+        error,
+        refetch,
+    } = useQuery({
+        queryKey: ['songs', groupId, userId],
         queryFn: () => songsService.getSongs(groupId!, userId!),
         enabled: !!groupId && !!userId,
     })
 
     const filtered = useMemo(() => {
         const source = songs ?? []
-        const byText = source.filter(
+        const query = search.trim().toLowerCase()
+        if (!query) return source
+
+        return source.filter(
             (song) =>
-                song.title.toLowerCase().includes(search.toLowerCase()) ||
-                song.artist_name.toLowerCase().includes(search.toLowerCase())
+                song.title.toLowerCase().includes(query) ||
+                song.artist_name.toLowerCase().includes(query) ||
+                (song.album_name ?? '').toLowerCase().includes(query)
         )
-
-        const byFilter = byText.filter((song) => {
-            if (filter === 'favorites') return !!song.is_favorite
-            if (filter === 'recent') {
-                const createdAt = new Date(song.created_at).getTime()
-                const days7 = 1000 * 60 * 60 * 24 * 7
-                return Date.now() - createdAt <= days7
-            }
-            return true
-        })
-
-        const sorted = [...byFilter]
-        if (sortBy === 'title') {
-            sorted.sort((a, b) => a.title.localeCompare(b.title))
-        } else if (sortBy === 'artist') {
-            sorted.sort((a, b) => a.artist_name.localeCompare(b.artist_name))
-        } else {
-            sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        }
-
-        return sorted
-    }, [songs, search, filter, sortBy])
-
-    const favoritesCount = useMemo(() => (songs ?? []).filter((song) => song.is_favorite).length, [songs])
+    }, [songs, search])
 
     const handlePlayAll = () => {
-        if (filtered.length > 0) setQueue(filtered, 0)
+        if (filtered.length > 0) {
+            setQueue(filtered, 0)
+        }
     }
 
     return (
         <div className="page-shell animate-fade-in">
             <PageHeader
-                kicker="Shared Library"
+                kicker="Music"
                 title="Musica"
-                description="Biblioteca social del grupo con player, actividad y curacion visual integrada sobre la logica existente."
-                meta={
-                    <>
-                        <span className="hero-meta-pill">{songs?.length ?? 0} canciones</span>
-                        <span className="hero-meta-pill">{favoritesCount} favoritas</span>
-                    </>
-                }
+                description="Sube, organiza y reproduce la biblioteca del grupo."
+                meta={<span className="hero-meta-pill">{songs?.length ?? 0} canciones</span>}
                 actions={
                     <button onClick={() => setShowUpload(true)} className="btn-primary" disabled={!hasGroup} aria-label="Subir cancion">
-                        <Plus className="w-4 h-4" />
+                        <Plus className="h-4 w-4" />
                         Subir
                     </button>
                 }
             />
 
-            <section className="card p-5 space-y-4">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="text-gray-400">Tema visual:</span>
-                        {(['dark', 'neon', 'minimal'] as const).map((option) => (
-                            <button
-                                key={option}
-                                type="button"
-                                onClick={() => setTheme(option)}
-                                className={option === theme ? 'badge-brand' : 'badge bg-white/6 text-gray-300 border border-white/10'}
-                            >
-                                {option}
-                            </button>
-                        ))}
+            <Tabs
+                active="music"
+                items={[
+                    { label: 'Music', value: 'music', href: ROUTES.MUSIC },
+                    { label: 'Playlists', value: 'playlists', href: ROUTES.PLAYLISTS },
+                    { label: 'Favorites', value: 'favorites', href: ROUTES.FAVORITES },
+                ]}
+            />
+
+            <section className="card space-y-4 p-5">
+                <div className="grid gap-3 sm:grid-cols-[1fr,auto]">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                        <input
+                            type="search"
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder="Buscar canciones, artistas o albumes"
+                            className="input pl-11"
+                            disabled={!hasGroup}
+                        />
                     </div>
 
-                    <div className="grid gap-2 sm:grid-cols-[1fr,auto] xl:min-w-[460px]">
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                            <input
-                                type="search"
-                                value={search}
-                                onChange={(event) => setSearch(event.target.value)}
-                                placeholder="Buscar canciones o artistas..."
-                                className="input pl-11"
-                            />
-                        </div>
-                        <button onClick={handlePlayAll} className="btn-secondary" aria-label="Reproducir todo">
-                            <Play className="w-4 h-4" />
-                            Play all
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setFilter('all')}
-                        className={filter === 'all' ? 'badge-brand' : 'badge bg-white/6 text-gray-300 border border-white/10'}
-                    >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Todas
+                    <button onClick={handlePlayAll} className="btn-secondary" aria-label="Reproducir todo" disabled={filtered.length === 0}>
+                        <Play className="h-4 w-4" />
+                        Reproducir todo
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => setFilter('favorites')}
-                        className={filter === 'favorites' ? 'badge-brand' : 'badge bg-white/6 text-gray-300 border border-white/10'}
-                    >
-                        <Heart className="w-3.5 h-3.5" />
-                        Favoritas
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setFilter('recent')}
-                        className={filter === 'recent' ? 'badge-brand' : 'badge bg-white/6 text-gray-300 border border-white/10'}
-                    >
-                        <Clock3 className="w-3.5 h-3.5" />
-                        Ultimos 7 dias
-                    </button>
-
-                    <select
-                        value={sortBy}
-                        onChange={(event) => setSortBy(event.target.value as SongSort)}
-                        className="input ml-auto max-w-[220px] text-xs"
-                    >
-                        <option value="recent">Orden: Recientes</option>
-                        <option value="title">Orden: Titulo</option>
-                        <option value="artist">Orden: Artista</option>
-                    </select>
                 </div>
             </section>
 
-            <div className="grid gap-4 xl:grid-cols-[1.2fr,0.8fr]">
-                <section className="space-y-3">
-                    {isLoading ? (
-                        <ListSkeleton count={6} />
-                    ) : filtered.length === 0 ? (
-                        <EmptyState
-                            icon={<Music className="w-7 h-7" />}
-                            title={songs?.length === 0 ? 'Sin canciones todavia' : 'Sin resultados'}
-                            description={
-                                songs?.length === 0
-                                    ? 'Sube la primera cancion para arrancar la biblioteca del grupo.'
-                                    : 'Prueba con otra busqueda o cambia filtros.'
-                            }
-                            action={
-                                songs?.length === 0 && hasGroup ? (
-                                    <button onClick={() => setShowUpload(true)} className="btn-primary">
-                                        <Upload className="w-4 h-4" />
-                                        Subir primera cancion
-                                    </button>
-                                ) : undefined
-                            }
-                        />
-                    ) : (
-                        <>
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <p className="page-kicker">Track Stack</p>
-                                    <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Biblioteca visible</h2>
-                                </div>
-                                <span className="hero-meta-pill">{filtered.length} resultados</span>
+            <section className="space-y-3">
+                {!hasGroup ? (
+                    <EmptyState
+                        icon={<Music className="h-7 w-7" />}
+                        title="Sin grupo activo"
+                        description="Selecciona o crea un grupo antes de gestionar la musica."
+                    />
+                ) : isLoading ? (
+                    <ListSkeleton count={6} />
+                ) : error ? (
+                    <section className="card border border-red-400/20 bg-red-400/8 p-4">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-red-200">No pudimos cargar la biblioteca</p>
+                                <p className="mt-1 text-sm text-red-100/80">
+                                    {error instanceof Error ? error.message : 'La consulta de canciones fallo y no vamos a ocultarlo como si no hubiera datos.'}
+                                </p>
                             </div>
-                            <div className="space-y-3">
-                                {filtered.map((song, index) => (
-                                    <SongCard
-                                        key={song.id}
-                                        song={song}
-                                        onPlay={() => setQueue(filtered, index)}
-                                        onEdit={() => setEditingSong(song)}
-                                    />
-                                ))}
-                            </div>
-                        </>
-                    )}
-                </section>
+                            <button onClick={() => void refetch()} className="btn-secondary !min-h-[2.5rem]">
+                                Reintentar
+                            </button>
+                        </div>
+                    </section>
+                ) : filtered.length === 0 ? (
+                    <EmptyState
+                        icon={<Music className="h-7 w-7" />}
+                        title={songs?.length === 0 ? 'Sin canciones' : 'Sin resultados'}
+                        description={
+                            songs?.length === 0
+                                ? 'Sube la primera cancion del grupo.'
+                                : 'Prueba otra busqueda.'
+                        }
+                        action={
+                            songs?.length === 0 ? (
+                                <button onClick={() => setShowUpload(true)} className="btn-primary">
+                                    <Upload className="h-4 w-4" />
+                                    Subir cancion
+                                </button>
+                            ) : undefined
+                        }
+                    />
+                ) : (
+                    <>
+                        <div className="flex items-center justify-between gap-3">
+                            <h2 className="text-2xl font-headline font-extrabold text-white">Biblioteca</h2>
+                            <span className="hero-meta-pill">{filtered.length} resultados</span>
+                        </div>
 
-                {groupId ? <GroupActivityFeed groupId={groupId} /> : null}
-            </div>
+                        <div className="space-y-3">
+                            {filtered.map((song, index) => (
+                                <SongCard
+                                    key={song.id}
+                                    song={song}
+                                    onPlay={() => setQueue(filtered, index)}
+                                    onEdit={() => setEditingSong(song)}
+                                />
+                            ))}
+                        </div>
+                    </>
+                )}
+            </section>
 
             {showUpload ? <SongUploadForm onClose={() => setShowUpload(false)} /> : null}
             {editingSong ? <EditSongForm song={editingSong} onClose={() => setEditingSong(null)} /> : null}

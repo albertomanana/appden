@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react'
-import { GripVertical, Music2, Trash2 } from 'lucide-react'
+﻿import React, { useMemo, useState } from 'react'
+import { GripVertical, Trash2 } from 'lucide-react'
 import type { PlayerSong } from '@features/player/player.types'
 
 interface QueuePanelProps {
@@ -24,21 +24,23 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
     const nowPlaying = queue[queueIndex]
 
     return (
-        <aside className="w-full md:w-80 rounded-2xl bg-black/35 border border-white/10 p-3">
-            <h3 className="text-sm font-semibold text-white mb-3">Queue</h3>
+        <aside className="w-full rounded-[1.5rem] bg-[#131313] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.35)] md:w-80">
+            <div className="mb-4">
+                <p className="page-kicker">Cola</p>
+                <h3 className="mt-2 text-2xl font-headline font-extrabold text-white">Siguiente</h3>
+            </div>
+
             {nowPlaying ? (
-                <div className="mb-3 rounded-xl bg-white/10 p-2.5">
-                    <p className="text-[11px] uppercase tracking-wider text-white/60">Now Playing</p>
-                    <p className="text-sm font-semibold text-white truncate">{nowPlaying.title}</p>
-                    <p className="text-xs text-white/60 truncate">{nowPlaying.artist_name}</p>
+                    <div className="mb-4 rounded-[1.2rem] bg-[#201f1f] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-white/55">Sonando</p>
+                    <p className="mt-2 truncate text-sm font-semibold text-white">{nowPlaying.title}</p>
+                    <p className="truncate text-xs uppercase tracking-[0.18em] text-white/55">{nowPlaying.artist_name}</p>
                 </div>
             ) : null}
 
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
                 {nextUp.length === 0 ? (
-                    <div className="text-sm text-white/60 py-6 text-center">
-                        No hay canciones en cola.
-                    </div>
+                    <div className="py-6 text-center text-sm text-white/60">No hay canciones en cola.</div>
                 ) : (
                     nextUp.map((song, offset) => {
                         const index = queueIndex + 1 + offset
@@ -62,40 +64,24 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
                                     setDragFrom(null)
                                     setDragTo(null)
                                 }}
-                                className={`flex items-center gap-2 rounded-xl p-2 transition-colors ${
-                                    isDropTarget ? 'bg-brand-500/30' : 'bg-white/5 hover:bg-white/10'
+                                className={`flex items-center gap-2 rounded-[1.15rem] p-2.5 transition-colors ${
+                                    isDropTarget ? 'bg-brand-500/22' : 'bg-[#201f1f] hover:bg-[#262626]'
                                 }`}
                             >
-                                <button
-                                    type="button"
-                                    className="text-white/45 hover:text-white"
-                                    aria-label="Drag to reorder"
-                                >
+                                <button type="button" className="text-white/35 hover:text-white" aria-label="Mover en cola">
                                     <GripVertical className="w-4 h-4" />
                                 </button>
-                                <button
-                                    onClick={() => onPlayIndex(index)}
-                                    className="min-w-0 flex-1 text-left"
-                                >
-                                    <p className="text-sm text-white truncate">{song.title}</p>
-                                    <p className="text-xs text-white/60 truncate">{song.artist_name}</p>
+                                <button onClick={() => onPlayIndex(index)} className="min-w-0 flex-1 text-left">
+                                    <p className="truncate text-sm text-white">{song.title}</p>
+                                    <p className="truncate text-xs uppercase tracking-[0.18em] text-white/55">{song.artist_name}</p>
                                 </button>
-                                <button
-                                    onClick={() => onRemove(song.id)}
-                                    className="text-white/45 hover:text-red-300"
-                                    aria-label="Remove from queue"
-                                >
+                                <button onClick={() => onRemove(song.id)} className="text-white/35 hover:text-red-300" aria-label="Quitar de la cola">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         )
                     })
                 )}
-            </div>
-
-            <div className="mt-3 text-xs text-white/55 flex items-center gap-1">
-                <Music2 className="w-3.5 h-3.5" />
-                Drag and drop para reordenar la cola
             </div>
         </aside>
     )

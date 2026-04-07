@@ -5,9 +5,11 @@ import { Avatar } from '@components/common/Avatar'
 import { EmptyState } from '@components/ui/EmptyState'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { PageHeader } from '@components/ui/PageHeader'
+import { Tabs } from '@components/ui/Tabs'
 import { useAuth } from '@hooks/useAuth'
 import { useToast } from '@components/ui/Toast'
 import { connectionsService } from '@features/social/services/connections.service'
+import { ROUTES } from '@lib/constants'
 
 export default function ConnectionsPage() {
     const { userId } = useAuth()
@@ -118,6 +120,14 @@ export default function ConnectionsPage() {
                         <span className="hero-meta-pill">{incoming.length} pendientes</span>
                     </>
                 }
+            />
+
+            <Tabs
+                active="connections"
+                items={[
+                    { label: 'Groups', value: 'groups', href: ROUTES.GROUPS },
+                    { label: 'Connections', value: 'connections', href: ROUTES.CONNECTIONS },
+                ]}
             />
 
             <section className="card p-5 space-y-4">

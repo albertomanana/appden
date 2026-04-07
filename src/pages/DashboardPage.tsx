@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
     CreditCard,
-    FolderOpen,
-    Heart,
-    ListMusic,
+    Flag,
+    MessageSquare,
     Music,
     Sparkles,
     TrendingUp,
@@ -13,7 +12,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
-import { Avatar } from '@components/common/Avatar'
 import { PageHeader } from '@components/ui/PageHeader'
 import { ROUTES } from '@lib/constants'
 import { songsService } from '@services/songs.service'
@@ -48,17 +46,17 @@ const DashboardPage: React.FC = () => {
             color: 'from-brand-400 via-brand-500 to-brand-600',
         },
         {
-            icon: ListMusic,
-            label: 'Playlists',
-            subtitle: 'Curated sets',
-            to: ROUTES.PLAYLISTS,
+            icon: Users,
+            label: 'Grupos',
+            subtitle: 'Private rooms',
+            to: ROUTES.GROUPS,
             color: 'from-violet-400 via-violet-500 to-indigo-500',
         },
         {
-            icon: Heart,
-            label: 'Favoritos',
-            subtitle: 'Saved songs',
-            to: ROUTES.FAVORITES,
+            icon: MessageSquare,
+            label: 'Social',
+            subtitle: 'Connections',
+            to: ROUTES.CONNECTIONS,
             color: 'from-pink-400 via-fuchsia-500 to-violet-500',
         },
         {
@@ -69,10 +67,10 @@ const DashboardPage: React.FC = () => {
             color: 'from-amber-300 via-orange-400 to-orange-500',
         },
         {
-            icon: FolderOpen,
-            label: 'Archivos',
-            subtitle: 'Dropzone',
-            to: ROUTES.FILES,
+            icon: Flag,
+            label: 'Reports',
+            subtitle: 'Issue board',
+            to: ROUTES.REPORTS,
             color: 'from-cyan-300 via-sky-400 to-brand-500',
         },
     ]
@@ -94,11 +92,6 @@ const DashboardPage: React.FC = () => {
                             {(recentSongs?.length ?? 0)} tracks recientes
                         </span>
                     </>
-                }
-                actions={
-                    <Link to={ROUTES.PROFILE} aria-label="Perfil" className="shrink-0">
-                        <Avatar src={profile?.avatar_url} name={profile?.display_name} size="lg" />
-                    </Link>
                 }
             />
 

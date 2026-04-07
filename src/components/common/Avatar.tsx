@@ -29,7 +29,7 @@ export const Avatar: React.FC<AvatarProps> = ({ src, name, size = 'md', classNam
                 src={src}
                 alt={name ?? 'Avatar'}
                 className={cn(
-                    'rounded-full object-cover flex-shrink-0 border border-surface-500',
+                    'rounded-full object-cover flex-shrink-0 border border-white/10',
                     sizeClass,
                     className
                 )}
@@ -46,7 +46,7 @@ export const Avatar: React.FC<AvatarProps> = ({ src, name, size = 'md', classNam
             <div
                 className={cn(
                     'rounded-full flex items-center justify-center font-semibold flex-shrink-0',
-                    'bg-gradient-to-br from-brand-600 to-accent-purple text-white',
+                    'bg-gradient-to-br from-brand-500 to-brand-700 text-white',
                     sizeClass,
                     className
                 )}
@@ -61,7 +61,7 @@ export const Avatar: React.FC<AvatarProps> = ({ src, name, size = 'md', classNam
         <div
             className={cn(
                 'rounded-full flex items-center justify-center flex-shrink-0',
-                'bg-surface-600 border border-surface-500 text-gray-500',
+                'bg-surface-700 border border-white/10 text-gray-500',
                 sizeClass,
                 className
             )}

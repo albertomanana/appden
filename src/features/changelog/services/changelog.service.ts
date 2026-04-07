@@ -6,6 +6,25 @@ const GENERATED_CHANGELOG_PATH = '/changelog.generated.json'
 
 export const changelogService = {
     async list(): Promise<{ entries: ChangelogItem[]; currentVersion: string; source: 'generated' | 'supabase' | 'fallback' }> {
+        const fallback = readFallback()
+        const { data, error } = await supabase
+            .from('changelog_entries')
+            .select('*')
+            .order('release_date', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(100)
+
+        if (!error) {
+            const entries = (data ?? []) as ChangelogItem[]
+            if (entries.length > 0) {
+                return {
+                    entries,
+                    currentVersion: this.getCurrentVersion(entries),
+                    source: 'supabase',
+                }
+            }
+        }
+
         const generated = await this.readGeneratedFile()
         if (generated) {
             return {
@@ -14,14 +33,6 @@ export const changelogService = {
                 source: 'generated',
             }
         }
-
-        const fallback = readFallback()
-        const { data, error } = await supabase
-            .from('changelog_entries')
-            .select('*')
-            .order('release_date', { ascending: false })
-            .order('created_at', { ascending: false })
-            .limit(100)
 
         if (error) {
             if (isMissingRelationError(error)) {
@@ -34,11 +45,10 @@ export const changelogService = {
             throw error
         }
 
-        const entries = (data ?? []) as ChangelogItem[]
         return {
-            entries,
-            currentVersion: this.getCurrentVersion(entries),
-            source: 'supabase',
+            entries: fallback,
+            currentVersion: this.getCurrentVersion(fallback),
+            source: 'fallback',
         }
     },
 
@@ -83,4 +93,3 @@ function isMissingRelationError(error: unknown): boolean {
     const raw = `${anyError.code ?? ''} ${anyError.message ?? ''} ${anyError.details ?? ''}`.toLowerCase()
     return raw.includes('42p01') || raw.includes('pgrst205') || raw.includes('does not exist')
 }
-

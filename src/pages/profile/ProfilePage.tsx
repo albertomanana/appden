@@ -12,7 +12,9 @@ import { profileSchema, validateAvatarFile, type ProfileFormData } from '@lib/va
 import { useToast } from '@components/ui/Toast'
 import { Avatar } from '@components/common/Avatar'
 import { PageHeader } from '@components/ui/PageHeader'
+import { Tabs } from '@components/ui/Tabs'
 import { formatDate } from '@lib/utils'
+import { ROUTES } from '@lib/constants'
 
 const ProfilePage: React.FC = () => {
     const { id } = useParams<{ id?: string }>()
@@ -96,7 +98,7 @@ const ProfilePage: React.FC = () => {
     }
 
     return (
-        <div className="page-shell max-w-5xl animate-fade-in">
+        <div className="page-shell animate-fade-in">
             {id ? (
                 <button onClick={() => navigate(-1)} className="btn-ghost -ml-2 w-fit gap-2">
                     <ArrowLeft className="w-4 h-4" />
@@ -122,6 +124,17 @@ const ProfilePage: React.FC = () => {
                         </button>
                     ) : undefined
                 }
+            />
+
+            <Tabs
+                active="profile"
+                items={[
+                    { label: 'Profile', value: 'profile', href: ROUTES.PROFILE },
+                    { label: 'Reports', value: 'reports', href: ROUTES.REPORTS },
+                    { label: 'Changelog', value: 'changelog', href: ROUTES.CHANGELOG },
+                    { label: 'Files', value: 'files', href: ROUTES.FILES },
+                    { label: 'Alerts', value: 'notifications', href: ROUTES.NOTIFICATIONS },
+                ]}
             />
 
             <div className="grid gap-4 xl:grid-cols-[0.85fr,1.15fr]">

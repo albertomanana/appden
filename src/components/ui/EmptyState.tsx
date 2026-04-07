@@ -21,7 +21,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => (
     <div
         className={cn(
-            'relative overflow-hidden flex flex-col items-center justify-center text-center py-16 px-6 rounded-2xl border border-surface-500 bg-surface-700/60',
+            'relative overflow-hidden flex flex-col items-center justify-center text-center py-16 px-6 rounded-[1.5rem] bg-[#131313]',
             className
         )}
     >
@@ -29,7 +29,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <div className="absolute -bottom-14 -left-10 w-32 h-32 rounded-full bg-cyan-500/15 blur-2xl pointer-events-none" />
 
         {icon && (
-            <div className="relative w-16 h-16 rounded-2xl bg-surface-600 border border-surface-500 flex items-center justify-center mb-5 text-gray-500 shadow-card">
+            <div className="relative mb-5 flex h-16 w-16 items-center justify-center rounded-[1.2rem] bg-[#201f1f] text-gray-500">
                 {icon}
             </div>
         )}

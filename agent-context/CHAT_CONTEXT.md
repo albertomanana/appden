@@ -135,19 +135,147 @@ This file captures decisions and incidents from this collaboration thread so fut
   - `npm run lint`
   - `npm run build`
 
+15. 2026-03-23 aggressive Stitch-first rebuild follow-up:
+- user requested a more dominant Stitch reconstruction instead of a conservative merge
+- main shell changed again:
+  - fixed top header now mirrors Stitch more closely
+  - bottom nav reduced to 5 primary destinations
+  - desktop sidebar pattern removed from the main experience
+- page structure changed:
+  - page headers are now open editorial sections instead of card-like hero blocks
+  - new `Tabs` primitive added for secondary route access
+- new UI primitives added:
+  - `Button`
+  - `Card`
+  - `Chip`
+  - `Input`
+  - `Modal`
+  - `Tabs`
+- player UI rebuilt to align with the new shell:
+  - `FullPlayer`
+  - `PlayerControls`
+  - `QueuePanel`
+- supporting system/social surfaces rebuilt:
+  - `GroupActivityFeed`
+  - `GroupInvitationsPanel`
+  - `GroupPermissionsPanel`
+  - `FilesPage`
+  - `NotificationsPage`
+- validated again:
+  - `npm run lint`
+  - `npm run build`
+
+16. 2026-03-23 pre-launch hardening pass:
+- user requested a release-candidate style intervention before pushing to `main`
+- diagnosed two concrete pre-launch issues from the current shell/logs:
+  - bottom dock could shift/right-overflow on mobile because the nav items relied on free-width flex distribution, `min-width`s and active scaling
+  - song upload could show a success toast while the browser still logged a `POST 500` from secondary follow-up writes
+- shell fixes:
+  - `Navigation.tsx` changed from loose flex spacing to a centered 5-column dock grid
+  - mobile toast stack moved to a centered position above the dock
+  - `MiniPlayer` now shares the same horizontal rhythm and safe-area spacing as the dock
+  - `globals.css` now explicitly clips horizontal overflow at `html`, `body`, and `#root`
+- upload fixes:
+  - `songs.service.ts` now uploads with explicit content types, clearer error messages and storage cleanup on metadata failure
+  - `SongUploadForm.tsx` no longer creates fragile client-side owner/activity follow-up writes
+  - new migration `011_song_upload_storage_hardening.sql` now:
+    - normalizes storage bucket policies
+    - adds `is_song_owner(...)`
+    - hardens `song_owners` RLS
+    - auto-syncs uploader ownership + `song_uploaded` activity on `songs` insert
+- premium polish:
+  - `GroupActivityFeed` rebuilt into a featured-card + timeline feed
+  - `FullPlayer` and `PlayerControls` received another hierarchy/immersion pass
+- validated locally:
+  - `npm run lint`
+  - `npm run build`
+
+17. 2026-03-26 QA audit + seed readiness pass:
+- audited repo/module/schema status with explicit prelaunch focus on auth, groups, music upload, player, debts, reports, changelog, responsive shell and RLS/storage risks
+- found and fixed a real files-module bug:
+  - `src/services/files.service.ts` was persisting the result of an async URL helper incorrectly instead of a stable storage path
+  - upload/delete now includes better storage cleanup behavior
+- found and fixed changelog source precedence:
+  - `src/features/changelog/services/changelog.service.ts` now prefers Supabase rows when present, then falls back to generated JSON/local fallback
+- created reusable QA seed system:
+  - `scripts/qa-seed/shared.mjs`
+  - `scripts/qa-seed/reset.mjs`
+  - `scripts/qa-seed/fixtures.mjs`
+  - `scripts/qa-seed/seed.mjs`
+- created QA docs:
+  - `docs/QA_PRELAUNCH_AUDIT.md`
+  - `docs/QA_FUNCTIONAL_MAP.md`
+  - `docs/QA_TEST_CHECKLIST.md`
+  - `docs/QA_SEEDING_GUIDE.md`
+- important remaining launch risks recorded explicitly:
+  - notifications UI still not wired to backend `notifications`
+  - localStorage fallbacks can mask missing backend tables during QA
+  - avatars still persist signed URLs and should move to path-based storage
+
+18. 2026-03-31 music-core simplification pass:
+- user requested to reduce saturation and refocus the app on its core job: upload music and listen reliably
+- the player was simplified aggressively:
+  - `src/features/player/player.engine.ts` moved to a single stable audio path
+  - crossfade/EQ-style audio complexity removed from the active listening flow
+  - `FullPlayer`, `MiniPlayer`, `PlayerControls`, and `ProgressBar` now expose only the essential controls
+- old or duplicate player surfaces removed:
+  - `src/components/music/MusicPlayer.tsx`
+  - `src/components/music/SpotifyMusicPlayer.tsx`
+  - `src/components/music/AudioDebug.tsx`
+  - `src/features/player/components/PlayerIntegrationExample.tsx`
+  - `src/features/player/player.equalizer.ts`
+  - `src/features/player/utils/colorExtraction.ts`
+- music library simplified:
+  - `MusicPage` now centers search, upload, play-all and the song list
+  - `GroupActivityFeed` was removed from the main music screen to reduce noise
+- upload simplified and hardened:
+  - `SongUploadForm.tsx` no longer loads group members to suggest artist names
+  - upload success no longer waits for auto-transcription
+  - if cover upload fails, the whole upload fails clearly instead of silently degrading
+- small playback UX fix:
+  - pressing play on the current song card/detail toggles play/pause instead of forcibly requeueing
+- validated locally:
+  - `npx tsc --noEmit`
+  - `npm run lint`
+  - `npm run build`
+
+19. 2026-04-07 music catalog + playlists reliability pass:
+- user reported that uploaded songs were not appearing in the library, so they also could not be played
+- playlists were also failing because playlist detail depended on nested raw song rows instead of fully hydrated playable songs
+- artist modeling was too basic (`artist_name` only) for real music metadata needs
+- execution performed:
+  - `songs.service.ts` was reworked so song reads no longer depend on one fragile mega-join
+  - song hydration now resolves base rows, profiles, owners, favorites, artist credits, and signed media URLs in separate steps
+  - new structured multi-artist flow added:
+    - `src/components/music/SongArtistCreditsInput.tsx`
+    - `src/features/music/utils/artistCredits.ts`
+    - migration `012_song_artist_credits.sql`
+  - upload/edit forms now support one-or-many artists, mixing existing user profiles and external manual names
+  - `playlists.service.ts` now resolves playlist songs through `songsService.getSongsByIds(...)` so playlist playback uses the same signed/hydrated media path as the music library
+  - `MusicPage`, `PlaylistsPage`, and `PlaylistDetailPage` now expose clear load/error/no-group states instead of silently looking empty
+- validation performed:
+  - `npx tsc --noEmit`
+  - `npm run lint`
+  - `npm run build`
+  - real browser smoke for login/register/auth-gate routes via Playwright/Chromium
+- limitation recorded honestly:
+  - full authenticated end-to-end browser smoke could not be completed from this machine because the target Supabase project required email confirmation and then hit signup email rate limiting during test account creation
+
 ## Locked decisions
 
 - storage cover bucket name is `covers`
 - keep buckets private and use signed URLs
 - preserve group privacy through RLS as default posture
-- keep advanced player modular under `src/features/player`
+- keep the global player modular under `src/features/player`, but prioritize simple playback over experimental audio features
 - keep social/changelog/reports modular under `src/features/*`
 - keep collaboration workflow PR-first (no direct push to `main`)
 
 ## Things future agents must remember
 
-- There are legacy and advanced player layers; changes must keep compatibility with existing pages.
+- The previous legacy/advanced player split has been collapsed toward a single simpler playback path; avoid reintroducing duplicate player implementations.
+- The music catalog now expects playlist playback to go through hydrated song reads; avoid reintroducing raw nested playlist song payloads with unsigned storage paths.
 - Multiple services include localStorage fallbacks when DB tables are missing.
 - `src/services/song-social.service.ts` and `src/services/group-activity.service.ts` are wrappers to feature services.
 - `agent-context` must be updated in each relevant PR/session.
 - The Stitch export only provided one polished screen plus design rules; future UI work should continue adapting that system instead of trying to replace the app wholesale.
+- For v1.6+, avoid reintroducing sidebar-first app shells unless product direction explicitly changes.

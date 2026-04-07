@@ -32,7 +32,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                     {meta ? <div className="mt-4 flex flex-wrap items-center gap-2">{meta}</div> : null}
                 </div>
 
-                {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+                {actions ? <div className="flex flex-wrap items-center gap-2 md:justify-end">{actions}</div> : null}
             </div>
         </section>
     )

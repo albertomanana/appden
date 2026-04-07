@@ -1,7 +1,7 @@
 # The Appden Agent Context Pack
 
-Snapshot date: 2026-03-23
-Release: v1.6.0
+Snapshot date: 2026-04-07
+Release: v1.6.3-music-catalog
 
 This folder contains a reusable context pack so any developer or AI agent can work on The Appden from another IDE/model without losing project and conversation context.
 
@@ -48,6 +48,53 @@ Recent additions tracked in this snapshot:
   - visual primitives refreshed in `tailwind.config.js` and `src/styles/globals.css`
   - animated feedback now uses `framer-motion`
   - premium UI pass applied to dashboard, music, groups, connections, reports, changelog, debts and profile
+- aggressive Stitch-first rebuild follow-up:
+  - shell now uses a fixed top bar and a 5-item floating bottom dock as the default app navigation
+  - new UI primitives added under `src/components/ui/`:
+    - `Button.tsx`
+    - `Card.tsx`
+    - `Chip.tsx`
+    - `Input.tsx`
+    - `Modal.tsx`
+    - `Tabs.tsx`
+  - player UI rebuilt again (`FullPlayer`, `PlayerControls`, `QueuePanel`)
+  - system pages (`FilesPage`, `NotificationsPage`) aligned with the same visual direction
+- pre-launch hardening pass:
+  - new migration: `011_song_upload_storage_hardening.sql`
+  - bottom navigation rebuilt again to avoid mobile overflow/right-shift
+  - toast stack repositioned above the dock on mobile
+  - mini player spacing aligned with the dock and safe areas
+  - song upload no longer depends on fragile client-side `song_owners` / `group_activity` follow-up writes
+  - song upload now cleans storage files if DB metadata insert fails
+  - social feed upgraded to a richer featured-card + timeline presentation
+- QA readiness pass:
+  - reusable Supabase seed system under `scripts/qa-seed/*`
+  - docs added:
+    - `docs/QA_PRELAUNCH_AUDIT.md`
+    - `docs/QA_FUNCTIONAL_MAP.md`
+    - `docs/QA_TEST_CHECKLIST.md`
+    - `docs/QA_SEEDING_GUIDE.md`
+  - files service hardened to persist real storage paths and clean up orphaned uploads
+  - changelog service now prefers real Supabase rows before generated JSON fallback
+- music-first simplification pass:
+  - player engine reduced to a single stable audio path without active crossfade/EQ layers
+  - full/mini player rebuilt around the essential controls only
+  - old experimental/legacy player components removed (`MusicPlayer`, `SpotifyMusicPlayer`, `AudioDebug`, `PlayerIntegrationExample`, `player.equalizer`, dynamic cover palette extraction)
+  - music library page simplified to search + upload + play
+  - upload form simplified to direct metadata entry
+  - upload no longer waits for auto-transcription after success
+  - cover upload failures now fail clearly instead of silently continuing without portada
+- music catalog + playlists reliability pass:
+  - new migration: `012_song_artist_credits.sql`
+  - songs service now hydrates songs in separate steps instead of one fragile mega-join
+  - playlist detail now resolves playable songs through the hydrated songs pipeline
+  - upload/edit flows support multiple artists:
+    - existing user profiles
+    - manual external artists
+    - ordered mixed credits
+  - music/playlists pages now show explicit load/error/no-group states instead of silently looking empty
+  - browser smoke was run locally for login/register/auth-gate routes
+  - full authenticated browser smoke remains blocked in this environment by Supabase email confirmation + signup rate limiting
 
 ## Recommended reading order
 

@@ -10,7 +10,6 @@ import { Avatar } from '@components/common/Avatar'
 import { LyricsPanel } from '@components/music/LyricsPanel'
 import { SongSocialPanel } from '@features/social/components/SongSocialPanel'
 import { ShareButton } from '@components/share/ShareButton'
-import { extractDynamicPalette } from '@features/player/utils/colorExtraction'
 import { formatBytes, formatDate, formatDuration } from '@lib/utils'
 
 const SongDetailPage: React.FC = () => {
@@ -23,15 +22,12 @@ const SongDetailPage: React.FC = () => {
     const setQueue = usePlayerStore((state) => state.setQueue)
     const setCurrentTime = usePlayerStore((state) => state.setCurrentTime)
     const setPlaying = usePlayerStore((state) => state.setPlaying)
+    const togglePlay = usePlayerStore((state) => state.togglePlay)
     const currentSong = usePlayerStore((state) => state.currentSong)
     const currentTime = usePlayerStore((state) => state.currentTime)
 
     const [activeTab, setActiveTab] = useState<'overview' | 'lyrics' | 'social'>('overview')
     const [coverFailed, setCoverFailed] = useState(false)
-    const [dynamicBackground, setDynamicBackground] = useState({
-        gradient: 'linear-gradient(135deg, rgba(22,24,38,0.96), rgba(10,10,14,0.98) 70%)',
-        blurOverlay: 'radial-gradient(circle at 18% 12%, rgba(74,102,210,0.22), rgba(10,10,14,0) 62%)',
-    })
     const appliedTimestampRef = useRef<string | null>(null)
 
     const { data: song, isLoading } = useQuery({
@@ -57,6 +53,11 @@ const SongDetailPage: React.FC = () => {
     const handlePlay = () => {
         if (!song) return
 
+        if (currentSong?.id === song.id) {
+            togglePlay()
+            return
+        }
+
         if (groupSongs && groupSongs.length > 0) {
             const idx = groupSongs.findIndex((item) => item.id === song.id)
             setQueue(groupSongs, idx >= 0 ? idx : 0)
@@ -69,25 +70,6 @@ const SongDetailPage: React.FC = () => {
     useEffect(() => {
         setCoverFailed(false)
     }, [song?.id, song?.cover_url])
-
-    useEffect(() => {
-        let cancelled = false
-
-        void (async () => {
-            if (!song?.cover_url) return
-            const palette = await extractDynamicPalette(song.cover_url)
-            if (!cancelled) {
-                setDynamicBackground({
-                    gradient: palette.gradient,
-                    blurOverlay: palette.blurOverlay,
-                })
-            }
-        })()
-
-        return () => {
-            cancelled = true
-        }
-    }, [song?.cover_url])
 
     useEffect(() => {
         if (!song || sharedTimestamp == null) return
@@ -131,10 +113,11 @@ const SongDetailPage: React.FC = () => {
         return <div className="p-4 text-gray-400">Cancion no encontrada.</div>
     }
 
+    const artistCredits = song.artist_credits ?? []
+
     return (
         <div className="relative min-h-full">
-            <div className="absolute inset-0 opacity-85 pointer-events-none" style={{ backgroundImage: dynamicBackground.gradient }} />
-            <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: dynamicBackground.blurOverlay }} />
+            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(42,64,117,0.18),transparent_28%),linear-gradient(180deg,#09090c_0%,#111114_100%)] opacity-95" />
 
             <div className="relative p-4 md:p-6 max-w-3xl mx-auto space-y-5 animate-fade-in">
                 <button onClick={() => navigate(-1)} className="btn-ghost gap-2 -ml-1">
@@ -163,6 +146,27 @@ const SongDetailPage: React.FC = () => {
                                 <h1 className="text-2xl md:text-3xl font-extrabold text-white truncate">{song.title}</h1>
                                 <p className="text-base text-gray-300 mt-1 truncate">{song.artist_name}</p>
                                 {song.album_name ? <p className="text-sm text-gray-400">{song.album_name}</p> : null}
+                                {artistCredits.length > 0 ? (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {artistCredits.map((credit) => {
+                                            const label = credit.profile?.display_name ?? credit.artist_name ?? 'Artista'
+                                            return credit.profile?.id ? (
+                                                <button
+                                                    key={credit.id}
+                                                    type="button"
+                                                    onClick={() => navigate(`/profile/${credit.profile!.id}`)}
+                                                    className="hero-meta-pill hover:border-brand-300/40 hover:text-white"
+                                                >
+                                                    {label}
+                                                </button>
+                                            ) : (
+                                                <span key={credit.id} className="hero-meta-pill">
+                                                    {label}
+                                                </span>
+                                            )
+                                        })}
+                                    </div>
+                                ) : null}
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -246,11 +250,10 @@ const SongDetailPage: React.FC = () => {
                             </div>
                             <div className="rounded-xl border border-surface-500 bg-surface-700/60 p-3 md:col-span-2">
                                 <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                                    <Sparkles className="w-3.5 h-3.5" /> Consejo
+                                    <Sparkles className="w-3.5 h-3.5" /> Letras
                                 </p>
                                 <p className="text-sm text-gray-200 mt-2">
-                                    Activa la pestana de letras para generar un borrador sincronizado y luego
-                                    editarlo manualmente con timestamps.
+                                    Si quieres, puedes abrir la pestana de letras para editar o sincronizar el texto.
                                 </p>
                             </div>
                         </div>

@@ -6,6 +6,7 @@ import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { useToast } from '@components/ui/Toast'
 import { PageHeader } from '@components/ui/PageHeader'
+import { Tabs } from '@components/ui/Tabs'
 import { ReportForm } from '@features/reports/components/ReportForm'
 import { ReportsList } from '@features/reports/components/ReportsList'
 import {
@@ -14,6 +15,7 @@ import {
     useUnreadAdminReportsCount,
 } from '@features/reports/hooks/useReports'
 import { reportsService } from '@features/reports/services/reports.service'
+import { ROUTES } from '@lib/constants'
 import type { ReportStatus, ReportType } from '@features/reports/types'
 
 const statusOptions: Array<{ value: ReportStatus | 'all'; label: string }> = [
@@ -91,6 +93,15 @@ export default function ReportsPage() {
                         </span>
                     )
                 }
+            />
+
+            <Tabs
+                active="reports"
+                items={[
+                    { label: 'Reports', value: 'reports', href: ROUTES.REPORTS },
+                    { label: 'Changelog', value: 'changelog', href: ROUTES.CHANGELOG },
+                    { label: 'Files', value: 'files', href: ROUTES.FILES },
+                ]}
             />
 
             <ReportForm

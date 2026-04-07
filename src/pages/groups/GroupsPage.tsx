@@ -9,8 +9,10 @@ import { GroupCard } from '@components/groups/GroupCard'
 import { EmptyState } from '@components/ui/EmptyState'
 import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
 import { PageHeader } from '@components/ui/PageHeader'
+import { Tabs } from '@components/ui/Tabs'
 import { useNotifications } from '@hooks/useNotifications'
 import { useGroupStore } from '@app/store/group.store'
+import { ROUTES } from '@lib/constants'
 import type { Group, GroupInvitation } from '@/types'
 
 export default function GroupsPage() {
@@ -158,6 +160,14 @@ export default function GroupsPage() {
                         {showForm ? 'Cerrar' : 'Nuevo grupo'}
                     </button>
                 }
+            />
+
+            <Tabs
+                active="groups"
+                items={[
+                    { label: 'Groups', value: 'groups', href: ROUTES.GROUPS },
+                    { label: 'Connections', value: 'connections', href: ROUTES.CONNECTIONS },
+                ]}
             />
 
             {showForm ? (

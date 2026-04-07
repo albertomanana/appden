@@ -2,11 +2,15 @@ import React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { X, Save } from 'lucide-react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { songsService } from '@services/songs.service'
+import { groupsService } from '@services/groups.service'
 import { songSchema, type SongFormData } from '@lib/validators'
+import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { useToast } from '@components/ui/Toast'
+import { SongArtistCreditsInput } from '@components/music/SongArtistCreditsInput'
+import { getSongArtistCreditDrafts } from '@features/music/utils/artistCredits'
 import type { Song } from '@/types'
 
 interface EditSongFormProps {
@@ -15,34 +19,54 @@ interface EditSongFormProps {
 }
 
 export const EditSongForm: React.FC<EditSongFormProps> = ({ song, onClose }) => {
+    const { userId } = useAuth()
     const { groupId } = useActiveGroup()
     const { success, error: toastError } = useToast()
     const queryClient = useQueryClient()
+    const targetGroupId = groupId ?? song.group_id
 
-    const { register, handleSubmit, formState: { errors } } = useForm<SongFormData>({
+    const { data: groupMembers = [] } = useQuery({
+        queryKey: ['group-members', targetGroupId],
+        queryFn: () => groupsService.getGroupMembers(targetGroupId),
+        enabled: !!targetGroupId,
+    })
+
+    const {
+        control,
+        register,
+        handleSubmit,
+        watch,
+        setValue,
+        formState: { errors },
+    } = useForm<SongFormData, undefined, SongFormData>({
         resolver: zodResolver(songSchema),
         defaultValues: {
             title: song.title,
-            artist_name: song.artist_name,
+            artist_credits: getSongArtistCreditDrafts(song),
             album_name: song.album_name ?? '',
         },
     })
 
     const { mutate: updateSong, isPending } = useMutation({
         mutationFn: async (data: SongFormData) => {
-            return songsService.updateSong(song.id, {
+            if (!userId) {
+                throw new Error('Necesitas sesion para editar la cancion.')
+            }
+
+            return songsService.updateSong(song.id, userId, {
+                ...data,
                 title: data.title,
-                artist_name: data.artist_name,
-                album_name: (data.album_name?.trim() || null) as string | null,
+                album_name: data.album_name?.trim() ?? '',
             })
         },
         onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: ['songs', groupId] })
-            success('Éxito', 'Canción actualizada correctamente')
+            void queryClient.invalidateQueries({ queryKey: ['songs', targetGroupId] })
+            void queryClient.invalidateQueries({ queryKey: ['song', song.id] })
+            success('Exito', 'Cancion actualizada correctamente')
             onClose()
         },
         onError: (err) => {
-            toastError('Error', err instanceof Error ? err.message : 'No se pudo actualizar la canción')
+            toastError('Error', err instanceof Error ? err.message : 'No se pudo actualizar la cancion')
         },
     })
 
@@ -50,54 +74,47 @@ export const EditSongForm: React.FC<EditSongFormProps> = ({ song, onClose }) => 
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
             <div className="relative w-full sm:max-w-md card rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up">
-                {/* Header */}
                 <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-lg font-bold text-white">Editar canción</h2>
+                    <h2 className="text-lg font-bold text-white">Editar cancion</h2>
                     <button onClick={onClose} className="btn-ghost p-2 rounded-xl">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit((d) => updateSong(d))} className="space-y-4">
-                    {/* Title */}
+                <form onSubmit={handleSubmit((data: SongFormData) => updateSong(data))} className="space-y-4">
                     <div>
-                        <label className="label" htmlFor="title">Título *</label>
+                        <label className="label" htmlFor="title">Titulo *</label>
                         <input
                             id="title"
                             type="text"
-                            placeholder="Nombre de la canción"
+                            placeholder="Nombre de la cancion"
                             className={`input ${errors.title ? 'border-red-500' : ''}`}
                             {...register('title')}
                         />
                         {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title.message}</p>}
                     </div>
 
-                    {/* Artist */}
-                    <div>
-                        <label className="label" htmlFor="artist_name">Artista *</label>
-                        <input
-                            id="artist_name"
-                            type="text"
-                            placeholder="Nombre del artista"
-                            className={`input ${errors.artist_name ? 'border-red-500' : ''}`}
-                            {...register('artist_name')}
-                        />
-                        {errors.artist_name && <p className="text-xs text-red-400 mt-1">{errors.artist_name.message}</p>}
-                    </div>
+                    <SongArtistCreditsInput
+                        control={control}
+                        register={register}
+                        watch={watch}
+                        setValue={setValue}
+                        errors={errors}
+                        members={groupMembers}
+                        disabled={isPending}
+                    />
 
-                    {/* Album */}
                     <div>
-                        <label className="label" htmlFor="album_name">Álbum (opcional)</label>
+                        <label className="label" htmlFor="album_name">Album (opcional)</label>
                         <input
                             id="album_name"
                             type="text"
-                            placeholder="Nombre del álbum"
+                            placeholder="Nombre del album"
                             className="input"
                             {...register('album_name')}
                         />
                     </div>
 
-                    {/* Submit */}
                     <button
                         type="submit"
                         disabled={isPending}

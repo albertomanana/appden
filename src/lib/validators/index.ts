@@ -58,8 +58,35 @@ export const profileSchema = z.object({
 // ── Song validators ──────────────────────────────────────────
 
 export const songSchema = z.object({
-    title: z.string().min(1, 'El título es obligatorio').max(100),
-    artist_name: z.string().min(1, 'El artista es obligatorio').max(100),
+    title: z.string().min(1, 'El titulo es obligatorio').max(100),
+    artist_credits: z
+        .array(
+            z
+                .object({
+                    source: z.enum(['profile', 'manual']),
+                    profile_id: z.string().uuid('Selecciona un usuario valido').optional().or(z.literal('')),
+                    artist_name: z.string().max(100, 'El nombre del artista es demasiado largo').optional().or(z.literal('')),
+                })
+                .superRefine((credit, ctx) => {
+                    if (credit.source === 'profile' && !credit.profile_id) {
+                        ctx.addIssue({
+                            code: z.ZodIssueCode.custom,
+                            path: ['profile_id'],
+                            message: 'Selecciona un usuario del grupo.',
+                        })
+                    }
+
+                    if (credit.source === 'manual' && !credit.artist_name?.trim()) {
+                        ctx.addIssue({
+                            code: z.ZodIssueCode.custom,
+                            path: ['artist_name'],
+                            message: 'Escribe el nombre del artista.',
+                        })
+                    }
+                })
+        )
+        .min(1, 'Anade al menos un artista.')
+        .max(6, 'Maximo 6 artistas por cancion.'),
     album_name: z.string().max(100).optional().or(z.literal('')),
 })
 
@@ -98,10 +125,9 @@ export const fileSchema = z.object({
 // ── File input validation helpers ────────────────────────────
 
 export function validateAudioFile(file: File): string | null {
-    // Be flexible with MIME types - some files detected incorrectly by browser
-    const isAudioLike = file.type.startsWith('audio/') ||
-                        file.type.startsWith('video/') ||
-                        ALLOWED_AUDIO_TYPES.includes(file.type)
+    const fileName = file.name.toLowerCase()
+    const hasSupportedExtension = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac', '.webm', '.mp4'].some((ext) => fileName.endsWith(ext))
+    const isAudioLike = ALLOWED_AUDIO_TYPES.includes(file.type) || hasSupportedExtension
 
     if (!isAudioLike) {
         return 'Formato de audio no permitido. Usa MP3, MP4, OGG, WAV, FLAC, WebM o AAC.'
@@ -153,3 +179,4 @@ export type PlaylistFormData = z.infer<typeof playlistSchema>
 export type DebtFormData = z.infer<typeof debtSchema>
 export type PaymentFormData = z.infer<typeof paymentSchema>
 export type FileFormData = z.infer<typeof fileSchema>
+

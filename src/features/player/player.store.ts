@@ -4,7 +4,6 @@ import { playerPersistence } from '@features/player/player.persistence'
 import { getStorageUrl, STORAGE_BUCKETS } from '@lib/supabase/client'
 import {
     addSongToQueue,
-    buildAutoRadioQueue,
     getNextIndex,
     getPreviousIndex,
     removeSongFromQueue,
@@ -12,13 +11,8 @@ import {
 } from '@features/player/player.queue'
 import type {
     ContinueListeningSnapshot,
-    CrossfadeDuration,
-    DynamicPalette,
-    EqualizerPreset,
     PlaybackHistoryItem,
-    PlayerTheme,
     PlayerMetrics,
-    PlayerPreferences,
     PlayerSong,
     RepeatMode,
 } from '@features/player/player.types'
@@ -34,22 +28,14 @@ interface PlayerStoreState {
     queueIndex: number
     history: PlaybackHistoryItem[]
     volume: number
-    crossfade: CrossfadeDuration
-    equalizerPreset: EqualizerPreset
     repeatMode: RepeatMode
     isShuffle: boolean
     isFullPlayer: boolean
     isQueueOpen: boolean
-    dynamicPalette: DynamicPalette
     metrics: PlayerMetrics
     catalog: PlayerSong[]
-    isRadioEnabled: boolean
-    radioSeedSong: PlayerSong | null
     continueOffer: ContinueOffer
     hasInitialized: boolean
-    theme: PlayerTheme
-    isCompactMode: boolean
-    rhythmMode: boolean
 
     initialize: (catalog?: PlayerSong[], userId?: string) => Promise<void>
     setCatalog: (catalog: PlayerSong[]) => void
@@ -61,8 +47,6 @@ interface PlayerStoreState {
     previous: () => Promise<void>
     seekTo: (time: number) => void
     setVolume: (volume: number) => void
-    setCrossfade: (seconds: CrossfadeDuration) => void
-    setEqualizer: (preset: EqualizerPreset) => void
     setRepeatMode: (mode: RepeatMode) => void
     toggleShuffle: () => void
     addToQueue: (song: PlayerSong) => void
@@ -71,21 +55,8 @@ interface PlayerStoreState {
     clearQueue: () => void
     toggleFullPlayer: (next?: boolean) => void
     toggleQueuePanel: (next?: boolean) => void
-    setDynamicPalette: (palette: DynamicPalette) => void
-    startRadioFromSong: (seed?: PlayerSong) => void
-    stopRadio: () => void
     resumeFromContinueOffer: () => Promise<void>
     dismissContinueOffer: () => void
-    setTheme: (theme: PlayerTheme) => void
-    toggleCompactMode: (next?: boolean) => void
-    setRhythmMode: (enabled: boolean) => void
-}
-
-const DEFAULT_PALETTE: DynamicPalette = {
-    dominant: 'rgb(28,31,45)',
-    accent: 'rgb(78,97,180)',
-    gradient: 'linear-gradient(135deg, rgba(28,31,45,0.94), rgba(14,16,24,0.98) 64%)',
-    blurOverlay: 'radial-gradient(circle at 18% 12%, rgba(78,97,180,0.25), rgba(11,12,18,0) 62%)',
 }
 
 let engineBound = false
@@ -99,22 +70,14 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
     queueIndex: 0,
     history: [],
     volume: 0.85,
-    crossfade: 4,
-    equalizerPreset: 'flat',
     repeatMode: 'off',
     isShuffle: false,
     isFullPlayer: false,
     isQueueOpen: false,
-    dynamicPalette: DEFAULT_PALETTE,
     metrics: { currentTime: 0, duration: 0, buffered: 0 },
     catalog: [],
-    isRadioEnabled: false,
-    radioSeedSong: null,
     continueOffer: null,
     hasInitialized: false,
-    theme: 'dark',
-    isCompactMode: false,
-    rhythmMode: true,
 
     initialize: async (catalog = [], userId = 'local-user') => {
         await playerEngine.initialize()
@@ -138,7 +101,6 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
         const persistedQueue = playerPersistence.loadQueue()
         const persistedHistory = playerPersistence.loadHistory()
         const continueSnapshot = playerPersistence.loadSnapshot()
-        const persistedPreferences = playerPersistence.loadPreferences()
 
         if (persistedQueue && persistedQueue.queue.length > 0) {
             const hydratedQueue = await refreshQueueMedia(persistedQueue.queue)
@@ -163,17 +125,7 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
             set({ continueOffer: continueSnapshot })
         }
 
-        if (persistedPreferences) {
-            set({
-                theme: persistedPreferences.theme,
-                isCompactMode: persistedPreferences.isCompactMode,
-                rhythmMode: persistedPreferences.rhythmMode,
-            })
-        }
-
         playerEngine.setVolume(get().volume)
-        playerEngine.setCrossfade(get().crossfade)
-        playerEngine.setEqualizerPreset(get().equalizerPreset)
         set({ hasInitialized: true })
     },
 
@@ -274,10 +226,6 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
         const nextSong = state.queue[nextIndex]
         if (!nextSong) return
         await state.playSong(nextSong, state.queue, nextIndex, 0)
-
-        if (state.isRadioEnabled && state.queue.length - nextIndex <= 3) {
-            state.startRadioFromSong(state.radioSeedSong ?? nextSong)
-        }
     },
 
     previous: async () => {
@@ -306,16 +254,6 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
         const safeVolume = clamp(volume, 0, 1)
         playerEngine.setVolume(safeVolume)
         set({ volume: safeVolume })
-    },
-
-    setCrossfade: (seconds) => {
-        playerEngine.setCrossfade(seconds)
-        set({ crossfade: seconds })
-    },
-
-    setEqualizer: (preset) => {
-        playerEngine.setEqualizerPreset(preset)
-        set({ equalizerPreset: preset })
     },
 
     setRepeatMode: (mode) => set({ repeatMode: mode }),
@@ -358,30 +296,6 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
 
     toggleQueuePanel: (next) => set((state) => ({ isQueueOpen: next ?? !state.isQueueOpen })),
 
-    setDynamicPalette: (palette) => set({ dynamicPalette: palette }),
-
-    startRadioFromSong: (seed) => {
-        const state = get()
-        const base = seed ?? state.currentSong
-        if (!base || state.catalog.length === 0) return
-
-        const generated = buildAutoRadioQueue(base, state.catalog, 20)
-        if (generated.length === 0) return
-
-        const deduped = generated.filter((item) => !state.queue.some((existing) => existing.id === item.id))
-        if (deduped.length === 0) return
-
-        const queue = [...state.queue, ...deduped]
-        set({
-            queue,
-            isRadioEnabled: true,
-            radioSeedSong: base,
-        })
-        playerPersistence.saveQueue({ queue, queueIndex: state.queueIndex })
-    },
-
-    stopRadio: () => set({ isRadioEnabled: false, radioSeedSong: null }),
-
     resumeFromContinueOffer: async () => {
         const state = get()
         const snapshot = state.continueOffer
@@ -402,21 +316,6 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
         playerPersistence.clearSnapshot()
         set({ continueOffer: null })
     },
-
-    setTheme: (theme) => {
-        set({ theme })
-        persistPreferences(get())
-    },
-
-    toggleCompactMode: (next) => {
-        set((state) => ({ isCompactMode: next ?? !state.isCompactMode }))
-        persistPreferences(get())
-    },
-
-    setRhythmMode: (enabled) => {
-        set({ rhythmMode: enabled })
-        persistPreferences(get())
-    },
 }))
 
 function maybePersistContinueSnapshot(state: PlayerStoreState, metrics: PlayerMetrics): void {
@@ -432,16 +331,6 @@ function maybePersistContinueSnapshot(state: PlayerStoreState, metrics: PlayerMe
         savedAt: new Date(now).toISOString(),
     })
 }
-
-function persistPreferences(state: PlayerStoreState): void {
-    const preferences: PlayerPreferences = {
-        theme: state.theme,
-        isCompactMode: state.isCompactMode,
-        rhythmMode: state.rhythmMode,
-    }
-    playerPersistence.savePreferences(preferences)
-}
-
 function replaceQueueSongAt(queue: PlayerSong[], index: number, song: PlayerSong): PlayerSong[] {
     if (index < 0 || index >= queue.length) return queue
     const current = queue[index]

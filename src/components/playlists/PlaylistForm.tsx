@@ -33,10 +33,15 @@ export const PlaylistForm: React.FC<PlaylistFormProps> = ({ onClose, existing })
                 : playlistsService.createPlaylist(userId!, groupId!, data),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: ['playlists', groupId] })
+            if (existing) {
+                void queryClient.invalidateQueries({ queryKey: ['playlist', existing.id] })
+            }
             success(existing ? 'Playlist actualizada' : 'Playlist creada')
             onClose()
         },
-        onError: () => toastError('Error', 'No se pudo guardar la playlist.'),
+        onError: (err) => {
+            toastError('Error', err instanceof Error ? err.message : 'No se pudo guardar la playlist.')
+        },
     })
 
     return (
@@ -51,15 +56,15 @@ export const PlaylistForm: React.FC<PlaylistFormProps> = ({ onClose, existing })
                     <button onClick={onClose} className="btn-ghost p-2 rounded-xl"><X className="w-4 h-4" /></button>
                 </div>
 
-                <form onSubmit={handleSubmit((d) => mutate(d))} className="space-y-4">
+                <form onSubmit={handleSubmit((data) => mutate(data))} className="space-y-4">
                     <div>
                         <label className="label" htmlFor="pl-name">Nombre *</label>
                         <input id="pl-name" type="text" placeholder="Mi playlist" className={`input ${errors.name ? 'border-red-500' : ''}`} {...register('name')} />
-                        {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name.message}</p>}
+                        {errors.name ? <p className="text-xs text-red-400 mt-1">{errors.name.message}</p> : null}
                     </div>
                     <div>
-                        <label className="label" htmlFor="pl-desc">Descripción (opcional)</label>
-                        <textarea id="pl-desc" rows={2} className="input resize-none" placeholder="De qué va esta playlist..." {...register('description')} />
+                        <label className="label" htmlFor="pl-desc">Descripcion (opcional)</label>
+                        <textarea id="pl-desc" rows={2} className="input resize-none" placeholder="De que va esta playlist..." {...register('description')} />
                     </div>
                     <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-3 font-semibold">
                         {isSubmitting ? 'Guardando...' : existing ? 'Actualizar' : 'Crear playlist'}

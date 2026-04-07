@@ -7,9 +7,6 @@ interface ProgressBarProps {
     bufferedRatio?: number
     onSeek: (time: number) => void
     className?: string
-    rhythmMode?: boolean
-    isPlaying?: boolean
-    tempoBpm?: number | null
 }
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
@@ -18,13 +15,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     bufferedRatio = 0,
     onSeek,
     className,
-    rhythmMode = false,
-    isPlaying = false,
-    tempoBpm,
 }) => {
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0
     const buffered = Math.max(progress, bufferedRatio * 100)
-    const beatDuration = tempoBpm && tempoBpm > 0 ? Math.max(0.28, 60 / tempoBpm) : 0.62
 
     return (
         <div className={className}>
@@ -34,11 +27,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
                     style={{ width: `${buffered}%` }}
                 />
                 <div
-                    className={`absolute inset-y-0 left-0 bg-white ${rhythmMode && isPlaying ? 'rhythm-progress' : ''}`}
-                    style={{
-                        width: `${progress}%`,
-                        animationDuration: `${beatDuration}s`,
-                    }}
+                    className="absolute inset-y-0 left-0 bg-white"
+                    style={{ width: `${progress}%` }}
                 />
                 <input
                     type="range"

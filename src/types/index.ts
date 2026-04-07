@@ -73,7 +73,20 @@ export interface Song {
         role: 'owner' | 'contributor'
         profile?: Profile
     }>
+    artist_credits?: SongArtistCredit[]
     is_favorite?: boolean
+}
+
+export interface SongArtistCredit {
+    id: string
+    song_id: string
+    position: number
+    profile_id: string | null
+    artist_name: string | null
+    added_by: string | null
+    created_at: string
+    // Joined
+    profile?: Pick<Profile, 'id' | 'display_name' | 'username' | 'avatar_url'>
 }
 
 export type GroupFriendRequestStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled'

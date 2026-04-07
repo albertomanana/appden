@@ -150,10 +150,11 @@ const SharedSongPreview: React.FC<{ resourceId: string; sharedTimestamp: number 
 }
 
 const SharedPlaylistPreview: React.FC<{ resourceId: string }> = ({ resourceId }) => {
+    const { userId } = useAuth()
     const { data: playlist, isLoading } = useQuery({
         queryKey: ['shared-playlist', resourceId],
-        queryFn: () => playlistsService.getPlaylist(resourceId),
-        enabled: !!resourceId,
+        queryFn: () => playlistsService.getPlaylist(resourceId, userId ?? ''),
+        enabled: !!resourceId && !!userId,
     })
 
     if (isLoading) return <PreviewSkeleton />
@@ -239,4 +240,3 @@ function formatSecondsAsTimestamp(seconds: number): string {
 }
 
 export default SharedPage
-
