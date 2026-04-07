@@ -261,6 +261,19 @@ This file captures decisions and incidents from this collaboration thread so fut
 - limitation recorded honestly:
   - full authenticated end-to-end browser smoke could not be completed from this machine because the target Supabase project required email confirmation and then hit signup email rate limiting during test account creation
 
+20. 2026-04-07 scroll + interface cleanup follow-up:
+- user reported a practical UX blocker: mouse-wheel scrolling was failing
+- likely root cause was the protected shell relying on the document scroll with several aggressive overflow/fixed-layer decisions
+- fixes applied:
+  - `AppLayout` now owns a dedicated `overflow-y-auto` scroll container
+  - protected-route navigation resets that container to top on route change
+  - modal wrappers (`SongUploadForm`, `EditSongForm`, `PlaylistForm`, debt modals) now support wheel scrolling from the overlay container
+  - music/playlists surfaces were cleaned visually to reduce density and improve consistency
+- validated locally:
+  - `npx tsc --noEmit`
+  - `npm run lint`
+  - `npm run build`
+
 ## Locked decisions
 
 - storage cover bucket name is `covers`

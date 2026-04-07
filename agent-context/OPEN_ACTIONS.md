@@ -18,6 +18,7 @@
    - multiple existing user artists
    - mixed existing user + manual external artist
 13. Keep one confirmed QA account available so browser smoke does not depend on live signup email confirmation/rate limits.
+14. Re-verify desktop mouse-wheel scrolling on a fully authenticated long page after the new `AppLayout` scroll-container change.
 
 ## Medium priority
 

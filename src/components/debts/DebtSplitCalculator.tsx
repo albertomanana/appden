@@ -98,9 +98,9 @@ export const DebtSplitCalculator: React.FC<DebtSplitCalculatorProps> = ({ onClos
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-0 sm:items-center sm:p-4">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-full sm:max-w-2xl card rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
+            <div className="relative my-auto w-full sm:max-w-2xl card rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-2">
                         <Calculator className="w-5 h-5 text-brand-300" />

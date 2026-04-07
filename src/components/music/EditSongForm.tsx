@@ -71,9 +71,9 @@ export const EditSongForm: React.FC<EditSongFormProps> = ({ song, onClose }) => 
     })
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-0 sm:items-center sm:p-4">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-full sm:max-w-md card rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up">
+            <div className="relative my-auto w-full sm:max-w-md card rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up">
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-lg font-bold text-white">Editar cancion</h2>
                     <button onClick={onClose} className="btn-ghost p-2 rounded-xl">

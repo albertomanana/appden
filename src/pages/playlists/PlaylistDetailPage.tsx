@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@components/ui/ConfirmDialog'
 import { SongCard } from '@components/music/SongCard'
 import { PlaylistForm } from '@components/playlists/PlaylistForm'
 import { EmptyState } from '@components/ui/EmptyState'
+import { PageHeader } from '@components/ui/PageHeader'
 
 const PlaylistDetailPage: React.FC = () => {
     const { playlistId } = useParams<{ playlistId: string }>()
@@ -101,7 +102,7 @@ const PlaylistDetailPage: React.FC = () => {
 
     if (error) {
         return (
-            <div className="p-4 md:p-6 max-w-xl mx-auto">
+            <div className="page-shell max-w-3xl">
                 <section className="card border border-red-400/20 bg-red-400/8 p-4">
                     <div className="flex items-start gap-3">
                         <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
@@ -121,29 +122,33 @@ const PlaylistDetailPage: React.FC = () => {
     }
 
     if (!playlist) {
-        return <div className="p-4 text-gray-400">Playlist no encontrada.</div>
+        return <div className="page-shell text-gray-400">Playlist no encontrada.</div>
     }
 
     const isOwner = playlist.created_by === userId
 
     return (
-        <div className="p-4 md:p-6 max-w-xl mx-auto space-y-5 animate-fade-in">
+        <div className="page-shell max-w-3xl space-y-5 animate-fade-in">
             <button onClick={() => navigate(-1)} className="btn-ghost gap-2 -ml-1">
                 <ArrowLeft className="w-4 h-4" /> Volver
             </button>
 
-            <div className="flex items-start gap-4">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-600 to-accent-purple flex items-center justify-center flex-shrink-0">
-                    <ListMusic className="w-9 h-9 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <h1 className="text-xl font-bold text-white">{playlist.name}</h1>
-                    {playlist.description ? <p className="text-sm text-gray-400 mt-0.5">{playlist.description}</p> : null}
-                    <p className="text-xs text-gray-500 mt-1">
-                        {songs.length} {songs.length === 1 ? 'cancion' : 'canciones'}
-                    </p>
-                </div>
-            </div>
+            <PageHeader
+                kicker="Playlist"
+                title={playlist.name}
+                description={playlist.description?.trim() || 'Coleccion lista para reproducir con canciones reales del grupo.'}
+                meta={
+                    <>
+                        <span className="hero-meta-pill">
+                            <ListMusic className="h-3.5 w-3.5 text-brand-400" />
+                            {songs.length} {songs.length === 1 ? 'cancion' : 'canciones'}
+                        </span>
+                        <span className="hero-meta-pill">
+                            {playlist.creator?.display_name ?? 'Grupo'}
+                        </span>
+                    </>
+                }
+            />
 
             <div className="flex gap-2 flex-wrap">
                 {songs.length > 0 ? (
@@ -170,7 +175,7 @@ const PlaylistDetailPage: React.FC = () => {
 
             {showAddSongs ? (
                 <div className="card p-4 space-y-3">
-                    <h3 className="text-sm font-semibold text-white">Anadir del grupo</h3>
+                    <h3 className="text-sm font-semibold text-white">Anadir canciones del grupo</h3>
                     {allSongsError ? (
                         <p className="text-sm text-red-300">
                             {allSongsError instanceof Error ? allSongsError.message : 'No pudimos cargar las canciones disponibles.'}

@@ -116,13 +116,11 @@ export const SongCard: React.FC<SongCardProps> = ({ song, onPlay, showArtist = t
                             {song.is_favorite ? <span className="badge-brand !px-2 !py-0.5">Fav</span> : null}
                         </div>
 
-                        {showArtist ? (
-                            <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-gray-500">{song.artist_name}</p>
-                        ) : null}
+                        {showArtist ? <p className="mt-1 truncate text-sm text-gray-400">{song.artist_name}</p> : null}
 
                         <div className="mt-3 flex flex-wrap items-center gap-2">
                             <span className="hero-meta-pill !px-3 !py-1">{formatDuration(song.duration_seconds)}</span>
-                            {isCurrentSong ? <span className="hero-meta-pill !px-3 !py-1">Now playing</span> : null}
+                            {isCurrentSong ? <span className="hero-meta-pill !px-3 !py-1">En reproduccion</span> : null}
                         </div>
                     </div>
 

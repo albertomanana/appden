@@ -128,10 +128,10 @@ export const SongUploadForm: React.FC<SongUploadFormProps> = ({ onClose }) => {
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-0 sm:items-center sm:p-4">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
-            <div className="relative card max-h-[90vh] w-full overflow-y-auto rounded-t-2xl p-6 sm:max-w-md sm:rounded-2xl">
+            <div className="relative my-auto card max-h-[90vh] w-full overflow-y-auto rounded-t-2xl p-6 sm:max-w-md sm:rounded-2xl">
                 <div className="mb-5 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white">Subir cancion</h2>
                     <button onClick={onClose} className="btn-ghost rounded-xl p-2" aria-label="Cerrar">

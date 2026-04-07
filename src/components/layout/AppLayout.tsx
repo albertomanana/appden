@@ -1,5 +1,5 @@
-import React from 'react'
-import { Link, Outlet, useNavigate } from 'react-router-dom'
+import React, { useEffect, useRef } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { BottomNav } from '@components/layout/Navigation'
 import { Avatar } from '@components/common/Avatar'
@@ -13,14 +13,20 @@ import { ROUTES } from '@lib/constants'
 
 export const AppLayout: React.FC = () => {
     const navigate = useNavigate()
+    const location = useLocation()
     const { userId, profile } = useAuth()
     usePlayer({ userId: userId ?? 'local-user' })
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
     const currentSong = usePlayerStore((state) => state.currentSong)
     const hasPlayer = !!currentSong
 
+    useEffect(() => {
+        scrollContainerRef.current?.scrollTo({ top: 0, left: 0 })
+    }, [location.pathname])
+
     return (
-        <div className="min-h-screen overflow-x-hidden bg-background text-on-background">
+        <div className="relative h-dvh overflow-hidden bg-background text-on-background">
             <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-[linear-gradient(180deg,rgba(4,4,8,0.94)_0%,rgba(4,4,8,0.76)_100%)] px-4 pb-4 pt-[calc(env(safe-area-inset-top)+0.9rem)] backdrop-blur-2xl sm:px-6">
                 <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
                     <Link to={ROUTES.DASHBOARD} className="min-w-0">
@@ -45,9 +51,15 @@ export const AppLayout: React.FC = () => {
                 </div>
             </header>
 
-            <main className={hasPlayer ? 'relative overflow-x-clip pb-[14rem] pt-[6.7rem] md:pb-44' : 'relative overflow-x-clip pb-32 pt-[6.7rem]'}>
-                <Outlet />
-            </main>
+            <div
+                ref={scrollContainerRef}
+                className="h-full overflow-y-auto overflow-x-hidden overscroll-y-contain"
+                style={{ scrollbarGutter: 'stable' }}
+            >
+                <main className={hasPlayer ? 'relative min-h-full overflow-x-clip pb-[14rem] pt-[6.7rem] md:pb-44' : 'relative min-h-full overflow-x-clip pb-32 pt-[6.7rem]'}>
+                    <Outlet />
+                </main>
+            </div>
 
             <MiniPlayer />
             <BottomNav />

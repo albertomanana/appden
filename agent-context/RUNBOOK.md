@@ -205,3 +205,16 @@ Latest local verification pass:
 Open limitation:
 
 - full authenticated browser smoke against the current Supabase project still needs a confirmed QA account or relaxed staging auth because signup confirmation + rate limiting blocked fresh-session verification
+
+## Scroll sanity check
+
+After the latest shell follow-up:
+
+- protected routes should scroll inside the `AppLayout` internal scroll container
+- wheel scrolling should also work inside the major modal overlays
+
+If desktop wheel scrolling still feels dead:
+
+1. verify there is no stale service worker/client cache
+2. hard refresh after deploy
+3. inspect `src/components/layout/AppLayout.tsx` and confirm the internal `overflow-y-auto` shell is present

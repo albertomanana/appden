@@ -58,7 +58,7 @@ const MusicPage: React.FC = () => {
             <PageHeader
                 kicker="Music"
                 title="Musica"
-                description="Sube, organiza y reproduce la biblioteca del grupo."
+                description="La biblioteca del grupo para subir, ordenar y reproducir sin ruido."
                 meta={<span className="hero-meta-pill">{songs?.length ?? 0} canciones</span>}
                 actions={
                     <button onClick={() => setShowUpload(true)} className="btn-primary" disabled={!hasGroup} aria-label="Subir cancion">
@@ -85,7 +85,7 @@ const MusicPage: React.FC = () => {
                             type="search"
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Buscar canciones, artistas o albumes"
+                            placeholder="Buscar por titulo, artista o album"
                             className="input pl-11"
                             disabled={!hasGroup}
                         />

@@ -108,6 +108,13 @@ v1.6.3 playlist reliability:
 - this avoids the old failure mode where playlist reads returned raw storage paths that were not playable in the global player
 - playlists pages now expose explicit load/error/no-group states
 
+v1.6.3 shell usability follow-up:
+
+- `AppLayout` now uses an explicit internal scroll container for protected routes
+- this was added to avoid desktop mouse-wheel dead zones caused by the previous shell/overflow combination
+- route changes now reset the protected scroll container to the top
+- modal wrappers for song upload/edit, playlist form and debt flows now allow wheel scrolling on the overlay container as well
+
 ### 3) Global player
 
 - `src/features/player/*`
