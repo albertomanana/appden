@@ -74,6 +74,10 @@ Recent additions tracked in this snapshot:
     - `docs/QA_FUNCTIONAL_MAP.md`
     - `docs/QA_TEST_CHECKLIST.md`
     - `docs/QA_SEEDING_GUIDE.md`
+  - manual SQL fallback for smoke testing without service-role access:
+    - `supabase/seeds/qa_manual_smoke_seed.sql`
+    - `supabase/seeds/qa_manual_smoke_reset.sql`
+    - `docs/QA_MANUAL_SMOKE_ES.md`
   - files service hardened to persist real storage paths and clean up orphaned uploads
   - changelog service now prefers real Supabase rows before generated JSON fallback
 - music-first simplification pass:

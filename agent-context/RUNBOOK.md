@@ -72,6 +72,7 @@ Reference docs:
 - `docs/QA_SEEDING_GUIDE.md`
 - `docs/QA_TEST_CHECKLIST.md`
 - `docs/QA_PRELAUNCH_AUDIT.md`
+- `docs/QA_MANUAL_SMOKE_ES.md`
 
 Important:
 
@@ -79,6 +80,12 @@ Important:
 - the current seed namespace uses:
   - emails ending in `@<QA_SEED_EMAIL_DOMAIN>`
   - group names prefixed with `QA Seed:`
+
+Manual fallback when `SUPABASE_SERVICE_ROLE_KEY` is not available:
+
+- use `supabase/seeds/qa_manual_smoke_reset.sql`
+- then run `supabase/seeds/qa_manual_smoke_seed.sql` in Supabase SQL Editor
+- this creates temporary groups named `QA Temp:%` using existing profiles instead of creating auth users
 
 ## Incognito-only symptom recovery flow
 

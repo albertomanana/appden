@@ -58,6 +58,35 @@ Result:
 - the seed scripts were implemented and syntax-validated
 - the seed was not executed against Supabase from this machine
 
+## Manual Fallback Without Service Role
+
+If you do not have `SUPABASE_SERVICE_ROLE_KEY` but you do have access to Supabase SQL Editor, use the manual smoke seed:
+
+- `supabase/seeds/qa_manual_smoke_reset.sql`
+- `supabase/seeds/qa_manual_smoke_seed.sql`
+- `docs/QA_MANUAL_SMOKE_ES.md`
+
+What it does:
+
+- reuses existing `profiles`
+- creates a temporary QA group visible to existing users
+- creates playable songs using public sample MP3 URLs
+- creates playlists, comments, reactions, debts, reports, files and changelog rows
+- creates an additional sparse/empty-state group
+
+Temporary namespace used by the manual SQL seed:
+
+- groups named `QA Temp:%`
+- friend requests with `message LIKE 'QA Temp:%'`
+
+Recommended manual run order:
+
+1. apply migrations `001-012`
+2. run `qa_manual_smoke_reset.sql`
+3. run `qa_manual_smoke_seed.sql`
+4. login with any existing user
+5. validate flows using `docs/QA_MANUAL_SMOKE_ES.md`
+
 ## What The Seed Creates
 
 Expected dataset from the current fixture set:
