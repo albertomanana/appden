@@ -33,6 +33,27 @@ export default function GroupDetailPage() {
         }
     }, [groupId])
 
+    // If there's an invite token in the URL, attempt to join using it
+    React.useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const invite = params.get('invite')
+        if (invite && user && groupId) {
+            void (async () => {
+                try {
+                    await groupsService.joinWithToken(invite, user.id)
+                    addNotification({ type: 'success', title: 'Bienvenido', message: 'Te uniste al grupo usando la invitación.' })
+                    await loadGroupDetails()
+                    // remove invite param
+                    params.delete('invite')
+                    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`
+                    window.history.replaceState({}, '', newUrl)
+                } catch (err) {
+                    addNotification({ type: 'error', title: 'Invitación inválida', message: err instanceof Error ? err.message : 'No se pudo usar la invitación' })
+                }
+            })()
+        }
+    }, [user, groupId])
+
     async function loadGroupDetails() {
         try {
             setLoading(true)
@@ -124,6 +145,28 @@ export default function GroupDetailPage() {
         })
     }
 
+    async function handleRequestJoin() {
+        if (!groupId || !user) return
+        try {
+            await groupsService.requestJoin(groupId, user.id)
+            addNotification({ type: 'success', title: 'Solicitud enviada', message: 'Se solicitó unirse al grupo. Espera la respuesta del propietario.' })
+        } catch (err) {
+            addNotification({ type: 'error', title: 'Error', message: err instanceof Error ? err.message : 'No se pudo enviar la solicitud' })
+        }
+    }
+
+    async function handleGenerateInvite() {
+        if (!groupId || !user) return
+        try {
+            const token = await groupsService.createInviteToken(groupId, user.id)
+            const link = `${window.location.origin}/groups/${groupId}?invite=${token}`
+            await navigator.clipboard.writeText(link)
+            addNotification({ type: 'success', title: 'Invitación generada', message: 'Enlace de invitación copiado al portapapeles' })
+        } catch (err) {
+            addNotification({ type: 'error', title: 'Error', message: err instanceof Error ? err.message : 'No se pudo generar la invitación' })
+        }
+    }
+
     const isOwner = !!(group && user && group.created_by === user.id)
     const myMembership = user ? members.find((member) => member.user_id === user.id) : null
     const isManager = isOwner || myMembership?.role === 'admin'
@@ -190,10 +233,30 @@ export default function GroupDetailPage() {
                             <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Link compartido</h2>
                             <p className="mt-2 text-sm text-gray-400">Copia este enlace y usa el panel de invitaciones para dar acceso formal.</p>
                         </div>
-                        <button onClick={copyInviteCode} className="btn-secondary">
-                            <CopyIcon className="w-4 h-4" />
-                            Copiar link
-                        </button>
+                        <div className="flex gap-2">
+                            {(!myMembership && group.is_private) ? (
+                                <button onClick={handleRequestJoin} className="btn-primary">
+                                    Solicitar unirse
+                                </button>
+                            ) : null}
+
+                            {isManager ? (
+                                <>
+                                    <button onClick={handleGenerateInvite} className="btn-secondary">
+                                        Generar invitación
+                                    </button>
+                                    <button onClick={copyInviteCode} className="btn-secondary">
+                                        <CopyIcon className="w-4 h-4" />
+                                        Copiar link
+                                    </button>
+                                </>
+                            ) : (
+                                <button onClick={copyInviteCode} className="btn-secondary">
+                                    <CopyIcon className="w-4 h-4" />
+                                    Copiar link
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </section>
 

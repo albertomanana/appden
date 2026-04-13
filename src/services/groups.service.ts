@@ -207,6 +207,117 @@ export const groupsService = {
         return (count ?? 0) > 0
     },
 
+    /**
+     * Request to join a private group. Creates a group_friend_requests row with status 'pending'.
+     */
+    async requestJoin(groupId: string, userId: string, toUserId?: string): Promise<void> {
+        const payload: any = {
+            group_id: groupId,
+            from_user_id: userId,
+            to_user_id: toUserId ?? null,
+            status: 'pending',
+        }
+
+        // If to_user_id is null we will insert a request without the recipient (owners/admins read it)
+        const { error } = await supabase.from('group_friend_requests').insert(payload)
+        if (error) {
+            // If recipient is null and DB complained about NOT NULL, try a simpler insert (some schemas may differ)
+            if ((error as any)?.message?.includes('null value in column') && !toUserId) {
+                const { error: fallbackError } = await supabase.from('group_friend_requests').insert({ group_id: groupId, from_user_id: userId, to_user_id: userId, status: 'pending' })
+                if (fallbackError) throw fallbackError
+                return
+            }
+
+            // If duplicate request, ignore
+            const raw = `${(error as any).code ?? ''} ${(error as any).message ?? ''}`.toLowerCase()
+            if (raw.includes('23505') || raw.includes('duplicate')) return
+
+            throw error
+        }
+    },
+
+    /**
+     * Generate a time-limited invite token for a group (returns token string).
+     */
+    async createInviteToken(groupId: string, createdBy: string, expiresAt?: string): Promise<string> {
+        // create a random token
+        const token = `${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`
+        const { data, error } = await supabase.from('group_invite_tokens').insert({ group_id: groupId, token, created_by: createdBy, expires_at: expiresAt ?? null }).select().single()
+        if (error) throw error
+        return (data as any).token
+    },
+
+    /**
+     * Join a group using an invite token. Validates token and creates membership.
+     */
+    async joinWithToken(token: string, userId: string): Promise<void> {
+        // Validate token
+        const { data: tokenRow, error } = await supabase.from('group_invite_tokens').select('*').eq('token', token).maybeSingle()
+        if (error) throw error
+        if (!tokenRow) throw new Error('Invalid invite token')
+
+        if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) {
+            throw new Error('Invite token expired')
+        }
+
+        // Add membership
+        const { error: insertErr } = await supabase.from('group_members').insert({ group_id: tokenRow.group_id, user_id: userId, role: 'member' })
+        if (insertErr) {
+            // Ignore if already member
+            const raw = `${(insertErr as any)?.message ?? ''}`.toLowerCase()
+            if (!raw.includes('duplicate')) {
+                throw insertErr
+            }
+        }
+
+        // Mark token used
+        const { error: markErr } = await supabase.from('group_invite_tokens').update({ used_by: userId }).eq('id', tokenRow.id)
+        if (markErr) throw markErr
+    },
+
+    /**
+     * List pending join requests for a group
+     */
+    async getPendingJoinRequests(groupId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('group_friend_requests')
+            .select('*, requester:profiles!group_friend_requests_from_user_id_fkey(id, display_name, username, avatar_url)')
+            .eq('group_id', groupId)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+        return data ?? []
+    },
+
+    /**
+     * Approve or reject a join request
+     */
+    async respondToJoinRequest(requestId: string, status: 'accepted' | 'rejected', groupId: string, fromUserId: string): Promise<void> {
+        // Update request status
+        const { error: updateErr } = await supabase
+            .from('group_friend_requests')
+            .update({ status, responded_at: new Date().toISOString() })
+            .eq('id', requestId)
+        
+        if (updateErr) throw updateErr
+
+        // If accepted, add user to group
+        if (status === 'accepted') {
+            const { error: insertErr } = await supabase
+                .from('group_members')
+                .insert({ group_id: groupId, user_id: fromUserId, role: 'member' })
+            
+            // Ignore errors if already a member
+            if (insertErr) {
+                const raw = `${(insertErr as any)?.message ?? ''}`.toLowerCase()
+                if (!raw.includes('duplicate')) {
+                    throw insertErr
+                }
+            }
+        }
+    },
+
     async getMyRole(groupId: string, userId: string): Promise<'owner' | 'admin' | 'member' | null> {
         const { data, error } = await supabase
             .from('group_members')

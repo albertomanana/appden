@@ -27,6 +27,8 @@ export interface Profile {
     bio: string | null
     created_at: string
     updated_at: string
+    // If present and false, the user must be approved by an admin before using the app
+    is_approved?: boolean
 }
 
 // -- Group --
@@ -37,6 +39,7 @@ export interface Group {
     description: string | null
     avatar_url: string | null
     created_by: string
+    is_private?: boolean
     created_at: string
     updated_at: string
 }
@@ -223,6 +226,15 @@ export interface SongLike {
     created_at: string
 }
 
+export interface Post {
+    id: string
+    user_id: string
+    content: string
+    visibility: 'public' | 'private' | 'group'
+    group_id?: string | null
+    created_at: string
+    author?: Pick<Profile, 'id' | 'display_name' | 'username' | 'avatar_url'>
+}
 export interface SongComment {
     id: string
     song_id: string

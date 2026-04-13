@@ -132,6 +132,7 @@ const ProfilePage: React.FC = () => {
                     { label: 'Profile', value: 'profile', href: ROUTES.PROFILE },
                     { label: 'Reports', value: 'reports', href: ROUTES.REPORTS },
                     { label: 'Changelog', value: 'changelog', href: ROUTES.CHANGELOG },
+                    { label: 'Admin Auth', value: 'admin', href: ROUTES.ADMIN_REQUESTS },
                     { label: 'Files', value: 'files', href: ROUTES.FILES },
                     { label: 'Alerts', value: 'notifications', href: ROUTES.NOTIFICATIONS },
                 ]}

@@ -54,9 +54,9 @@ const DashboardPage: React.FC = () => {
         },
         {
             icon: MessageSquare,
-            label: 'Social',
-            subtitle: 'Connections',
-            to: ROUTES.CONNECTIONS,
+            label: 'Feed Social',
+            subtitle: 'Nuevos posts',
+            to: ROUTES.SOCIAL,
             color: 'from-pink-400 via-fuchsia-500 to-violet-500',
         },
         {

@@ -24,6 +24,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         try {
             const profile = await profileService.getProfile(userId)
+            // If the profile exists but hasn't been approved by an admin, force logout
+            if (profile && (profile as any).is_approved === false) {
+                console.warn('[Auth] Account not approved yet, signing out')
+                try {
+                    await authService.hardResetClientState()
+                    await authService.logout()
+                } catch (e) {
+                    console.warn('[Auth] error during forced logout for unapproved account', e)
+                }
+
+                setUser(null)
+                setMyGroups([])
+                setLoading(false)
+                setInitialized(true)
+                return
+            }
             const session = await authService.getSession()
             setUser({
                 id: userId,

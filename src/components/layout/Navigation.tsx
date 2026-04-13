@@ -28,8 +28,8 @@ const dockItems: DockItem[] = [
     {
         icon: MessageSquare,
         label: 'Social',
-        to: ROUTES.GROUPS,
-        isActive: (pathname) => pathname.startsWith('/groups') || pathname.startsWith('/connections') || pathname.startsWith('/notifications'),
+        to: ROUTES.SOCIAL,
+        isActive: (pathname) => pathname.startsWith('/social') || pathname.startsWith('/groups') || pathname.startsWith('/connections'),
     },
     {
         icon: CreditCard,

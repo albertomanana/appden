@@ -26,8 +26,10 @@ const FilesPage = React.lazy(() => import('@pages/FilesPage'))
 const SharedPage = React.lazy(() => import('@pages/SharedPage'))
 const GroupsPage = React.lazy(() => import('@pages/groups/GroupsPage'))
 const GroupDetailPage = React.lazy(() => import('@pages/groups/GroupDetailPage'))
+const AccountRequestsPage = React.lazy(() => import('@pages/admin/AccountRequestsPage'))
 const MemberProfilePage = React.lazy(() => import('@pages/groups/MemberProfilePage'))
 const NotificationsPage = React.lazy(() => import('@pages/NotificationsPage'))
+const SocialPage = React.lazy(() => import('@pages/SocialPage'))
 
 const PageLoader: React.FC = () => (
     <div className="flex items-center justify-center min-h-screen">
@@ -58,6 +60,7 @@ export const AppRouter: React.FC = () => (
                     <Route path="/profile/:id" element={<ArtistProfilePage />} />
                     <Route path="/groups" element={<GroupsPage />} />
                     <Route path="/groups/:groupId" element={<GroupDetailPage />} />
+                    <Route path="/admin/account-requests" element={<AccountRequestsPage />} />
                     <Route path="/groups/:groupId/members/:userId" element={<MemberProfilePage />} />
                     <Route path="/friends" element={<Navigate to="/connections" replace />} />
                     <Route path="/notifications" element={<NotificationsPage />} />
@@ -67,6 +70,7 @@ export const AppRouter: React.FC = () => (
                     <Route path="/playlists/:playlistId" element={<PlaylistDetailPage />} />
                     <Route path="/favorites" element={<FavoritesPage />} />
                     <Route path="/connections" element={<ConnectionsPage />} />
+                    <Route path="/social" element={<SocialPage />} />
                     <Route path="/changelog" element={<ChangelogPage />} />
                     <Route path="/report" element={<ReportPage />} />
                     <Route path="/reports" element={<ReportsPage />} />

@@ -89,4 +89,6 @@ export const ROUTES = {
     DEBT: (id: string) => `/debts/${id}`,
     FILES: '/files',
     SHARED: (token: string) => `/shared/${token}`,
+    SOCIAL: '/social',
+    ADMIN_REQUESTS: '/admin/account-requests',
 } as const
