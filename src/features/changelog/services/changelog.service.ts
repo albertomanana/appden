@@ -1,4 +1,5 @@
 import { supabase } from '@lib/supabase/client'
+import { reportLocalFallback } from '@lib/diagnostics/fallback'
 import type { ChangelogItem, GeneratedChangelogPayload } from '@features/changelog/types'
 
 const FALLBACK_STORAGE_KEY = 'appden:changelog:fallback:v2'
@@ -36,6 +37,7 @@ export const changelogService = {
 
         if (error) {
             if (isMissingRelationError(error)) {
+                reportLocalFallback('changelog', error)
                 return {
                     entries: fallback,
                     currentVersion: this.getCurrentVersion(fallback),

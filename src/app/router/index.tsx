@@ -1,7 +1,8 @@
-﻿import React from 'react'
+import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@components/common/ProtectedRoute'
 import { AppLayout } from '@components/layout/AppLayout'
+import { AppSplash } from '@components/layout/RouteFallback'
 
 // Pages - lazy loaded for performance
 const LoginPage = React.lazy(() => import('@pages/auth/LoginPage'))
@@ -12,6 +13,9 @@ const ProfilePage = React.lazy(() => import('@pages/profile/ProfilePage'))
 const ArtistProfilePage = React.lazy(() => import('@pages/ArtistProfilePage'))
 const MusicPage = React.lazy(() => import('@pages/music/MusicPage'))
 const SongDetailPage = React.lazy(() => import('@pages/music/SongDetailPage'))
+const AlbumsPage = React.lazy(() => import('@pages/music/AlbumsPage'))
+const AlbumDetailPage = React.lazy(() => import('@pages/music/AlbumDetailPage'))
+const ArtistsPage = React.lazy(() => import('@pages/music/ArtistsPage'))
 const PlaylistsPage = React.lazy(() => import('@pages/playlists/PlaylistsPage'))
 const PlaylistDetailPage = React.lazy(() => import('@pages/playlists/PlaylistDetailPage'))
 const FavoritesPage = React.lazy(() => import('@pages/FavoritesPage'))
@@ -31,15 +35,10 @@ const MemberProfilePage = React.lazy(() => import('@pages/groups/MemberProfilePa
 const NotificationsPage = React.lazy(() => import('@pages/NotificationsPage'))
 const SocialPage = React.lazy(() => import('@pages/SocialPage'))
 
-const PageLoader: React.FC = () => (
-    <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-)
 
 export const AppRouter: React.FC = () => (
     <BrowserRouter>
-        <React.Suspense fallback={<PageLoader />}>
+        <React.Suspense fallback={<AppSplash />}>
             <Routes>
                 {/* Public routes */}
                 <Route path="/login" element={<LoginPage />} />
@@ -65,6 +64,9 @@ export const AppRouter: React.FC = () => (
                     <Route path="/friends" element={<Navigate to="/connections" replace />} />
                     <Route path="/notifications" element={<NotificationsPage />} />
                     <Route path="/music" element={<MusicPage />} />
+                    <Route path="/music/albums" element={<AlbumsPage />} />
+                    <Route path="/music/albums/:albumId" element={<AlbumDetailPage />} />
+                    <Route path="/music/artists" element={<ArtistsPage />} />
                     <Route path="/music/:songId" element={<SongDetailPage />} />
                     <Route path="/playlists" element={<PlaylistsPage />} />
                     <Route path="/playlists/:playlistId" element={<PlaylistDetailPage />} />

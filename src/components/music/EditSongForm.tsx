@@ -1,7 +1,7 @@
 import React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { X, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { songsService } from '@services/songs.service'
 import { groupsService } from '@services/groups.service'
@@ -12,6 +12,7 @@ import { useToast } from '@components/ui/Toast'
 import { SongArtistCreditsInput } from '@components/music/SongArtistCreditsInput'
 import { getSongArtistCreditDrafts } from '@features/music/utils/artistCredits'
 import type { Song } from '@/types'
+import { Modal } from '@components/ui/Modal'
 
 interface EditSongFormProps {
     song: Song
@@ -71,15 +72,7 @@ export const EditSongForm: React.FC<EditSongFormProps> = ({ song, onClose }) => 
     })
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-0 sm:items-center sm:p-4">
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative my-auto w-full sm:max-w-md card rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up">
-                <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-lg font-bold text-white">Editar cancion</h2>
-                    <button onClick={onClose} className="btn-ghost p-2 rounded-xl">
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
+        <Modal open onClose={onClose} title={"Editar cancion"} size="sm">
 
                 <form onSubmit={handleSubmit((data: SongFormData) => updateSong(data))} className="space-y-4">
                     <div>
@@ -133,7 +126,6 @@ export const EditSongForm: React.FC<EditSongFormProps> = ({ song, onClose }) => 
                         )}
                     </button>
                 </form>
-            </div>
-        </div>
+        </Modal>
     )
 }

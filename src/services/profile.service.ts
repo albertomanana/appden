@@ -1,4 +1,4 @@
-import { supabase, STORAGE_BUCKETS, getStorageUrl } from '@lib/supabase/client'
+import { supabase, STORAGE_BUCKETS } from '@lib/supabase/client'
 import { generateStoragePath } from '@lib/utils'
 import type { Profile } from '@/types'
 import type { ProfileFormData } from '@lib/validators'
@@ -40,7 +40,7 @@ export const profileService = {
 
     /**
      * Upload an avatar image and update the profile record.
-     * Returns the new public URL.
+     * Returns the stable Storage path persisted in the profile.
      */
     async uploadAvatar(userId: string, file: File): Promise<string> {
         const path = generateStoragePath('avatars', userId, file.name)
@@ -54,19 +54,14 @@ export const profileService = {
 
         if (uploadError) throw uploadError
 
-        const url = await getStorageUrl(STORAGE_BUCKETS.AVATARS, path)
-        if (!url) {
-            throw new Error('No se pudo firmar la URL del avatar.')
-        }
-
         const { error: updateError } = await supabase
             .from('profiles')
-            .update({ avatar_url: url, updated_at: new Date().toISOString() })
+            .update({ avatar_url: path, updated_at: new Date().toISOString() })
             .eq('id', userId)
 
         if (updateError) throw updateError
 
-        return url
+        return path
     },
 
     /**

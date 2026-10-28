@@ -79,15 +79,15 @@ function formatSongUploadError(
     const raw = `${error.code ?? ''} ${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase()
 
     if (raw.includes('bucket not found')) {
-        return new Error('El bucket de Storage no existe en Supabase. Ejecuta la migracion 011 o el setup de buckets antes de subir musica.')
+        return new Error('El almacenamiento de música no está configurado todavía. Pide al admin que lo revise antes de subir canciones.')
     }
 
     if (raw.includes('row-level security') || raw.includes('permission denied') || raw.includes('42501')) {
         if (stage === 'metadata') {
-            return new Error('Supabase esta bloqueando la insercion en songs por permisos. Revisa RLS y confirma que el usuario pertenece al grupo.')
+            return new Error('No tienes permiso para subir canciones a este grupo. Comprueba que sigues siendo miembro.')
         }
 
-        return new Error('Supabase Storage esta bloqueando la subida del archivo. Revisa las policies del bucket songs/covers antes de relanzar.')
+        return new Error('No se pudo guardar el archivo por falta de permisos. Inténtalo de nuevo o avisa al admin.')
     }
 
     if (raw.includes('payload too large') || raw.includes('entity too large')) {
@@ -99,7 +99,7 @@ function formatSongUploadError(
     }
 
     if (raw.includes('relation') && raw.includes('does not exist')) {
-        return new Error('La tabla o relacion necesaria para subir canciones no existe en Supabase. Revisa las migraciones pendientes.')
+        return new Error('Falta actualizar la base de datos para poder subir canciones. Avisa al admin.')
     }
 
     if (stage === 'audio') {
@@ -110,7 +110,7 @@ function formatSongUploadError(
         return new Error(error.message || 'No se pudo subir la portada a Supabase Storage.')
     }
 
-    return new Error(error.message || 'No se pudo guardar la cancion en la base de datos.')
+    return new Error(error.message || 'No se pudo guardar la canción.')
 }
 
 function isMissingRelationError(error: unknown): boolean {
@@ -168,13 +168,17 @@ function normalizeProfileRecord(
     return profile ?? undefined
 }
 
+// NOTE: song_owners and song_artist_credits both have two foreign keys to profiles
+// (user_id/profile_id + added_by), so an embedded `profile:profiles(...)` select is
+// ambiguous for PostgREST (PGRST201) and used to fail silently. Profiles are loaded
+// in a separate query instead.
 async function fetchSongOwnersMap(songIds: string[]): Promise<Map<string, Song['owners']>> {
     const uniqueIds = Array.from(new Set(songIds.filter(Boolean)))
     if (uniqueIds.length === 0) return new Map()
 
     const { data, error } = await supabase
         .from('song_owners')
-        .select('song_id, user_id, role, profile:profiles(id, display_name, username, avatar_url, bio, created_at, updated_at)')
+        .select('song_id, user_id, role')
         .in('song_id', uniqueIds)
 
     if (error) {
@@ -184,13 +188,16 @@ async function fetchSongOwnersMap(songIds: string[]): Promise<Map<string, Song['
         return new Map()
     }
 
+    const rows = (data ?? []) as SongOwnerRow[]
+    const profilesMap = await fetchProfilesMap(rows.map((row) => row.user_id))
+
     const ownersMap = new Map<string, Song['owners']>()
-    for (const row of (data ?? []) as unknown as SongOwnerRow[]) {
+    for (const row of rows) {
         const current = ownersMap.get(row.song_id) ?? []
         current.push({
             user_id: row.user_id,
             role: row.role,
-            profile: normalizeProfileRecord(row.profile),
+            profile: normalizeProfileRecord(row.profile) ?? profilesMap.get(row.user_id),
         })
         ownersMap.set(row.song_id, current)
     }
@@ -204,7 +211,7 @@ async function fetchSongArtistCreditsMap(songIds: string[]): Promise<Map<string,
 
     const { data, error } = await supabase
         .from('song_artist_credits')
-        .select('id, song_id, position, profile_id, artist_name, added_by, created_at, profile:profiles(id, display_name, username, avatar_url, bio, created_at, updated_at)')
+        .select('id, song_id, position, profile_id, artist_name, added_by, created_at')
         .in('song_id', uniqueIds)
         .order('position', { ascending: true })
 
@@ -215,14 +222,25 @@ async function fetchSongArtistCreditsMap(songIds: string[]): Promise<Map<string,
         return new Map()
     }
 
+    const rows = (data ?? []) as SongArtistCredit[]
+    const profilesMap = await fetchProfilesMap(
+        rows.map((row) => row.profile_id).filter((id): id is string => !!id)
+    )
+
     const creditsMap = new Map<string, SongArtistCredit[]>()
-    for (const row of (data ?? []) as unknown as SongArtistCredit[]) {
+    for (const row of rows) {
         const current = creditsMap.get(row.song_id) ?? []
         current.push({
             ...row,
-            profile: normalizeProfileRecord(row.profile as Profile | Profile[] | null | undefined),
+            profile:
+                normalizeProfileRecord(row.profile as Profile | Profile[] | null | undefined) ??
+                (row.profile_id ? profilesMap.get(row.profile_id) : undefined),
         })
         creditsMap.set(row.song_id, current)
+    }
+
+    for (const credits of creditsMap.values()) {
+        credits.sort((a, b) => a.position - b.position)
     }
 
     return creditsMap
@@ -396,11 +414,11 @@ function normalizeSongInput(metadata: SongFormData): {
     const artistSummary = buildArtistSummary(artistCredits)
 
     if (!artistSummary) {
-        throw new Error('Anade al menos un artista valido antes de guardar la cancion.')
+        throw new Error('Añade al menos un artista antes de guardar la canción.')
     }
 
     if (artistSummary.length > 200) {
-        throw new Error('La combinacion de artistas es demasiado larga. Reduce nombres o numero de artistas.')
+        throw new Error('Hay demasiados artistas para una sola canción. Quita alguno o acorta los nombres.')
     }
 
     return {
@@ -445,7 +463,7 @@ export const songsService = {
         const [song] = await hydrateSongs(rows, userId)
 
         if (!song) {
-            throw new Error('Cancion no encontrada.')
+            throw new Error('No encontramos esta canción. Puede que se haya eliminado.')
         }
 
         return song
@@ -559,7 +577,8 @@ export const songsService = {
     async updateSong(songId: string, userId: string, data: SongFormData): Promise<Song> {
         const normalizedMetadata = normalizeSongInput(data)
 
-        const { error } = await supabase
+        // `album_name` is enough: with migration 016 a trigger links (or creates) the album row.
+        const { data: updatedRows, error } = await supabase
             .from('songs')
             .update({
                 title: normalizedMetadata.title,
@@ -567,10 +586,21 @@ export const songsService = {
                 album_name: normalizedMetadata.album_name,
             })
             .eq('id', songId)
+            .select('id')
 
         if (error) throw error
 
         await syncSongArtistCredits(songId, userId, normalizedMetadata.artist_credits)
+
+        // RLS hides the row instead of failing: without the UPDATE policy (migration 016),
+        // or when the user is not the uploader, nothing was saved.
+        if (!updatedRows || updatedRows.length === 0) {
+            console.warn('[Songs] songs UPDATE affected 0 rows. Is migration 016 applied?')
+            throw new Error(
+                'Los artistas se han guardado, pero el título y el álbum no se pudieron cambiar. Solo quien subió la canción puede editarlos; si eres tú, avisa al admin para que actualice la base de datos.'
+            )
+        }
+
         return this.getSong(songId, userId)
     },
 }

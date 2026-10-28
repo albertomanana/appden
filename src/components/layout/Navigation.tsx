@@ -1,92 +1,52 @@
 import React from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
-import { CreditCard, Home, Library, MessageSquare, User } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { NAV_SECTIONS, resolveActiveNav } from '@components/layout/navItems'
 import { cn } from '@lib/utils'
-import { ROUTES } from '@lib/constants'
 
-type DockItem = {
-    icon: React.ComponentType<{ className?: string; strokeWidth?: number | string }>
-    label: string
-    to: string
-    isActive: (pathname: string) => boolean
-}
-
-const dockItems: DockItem[] = [
-    {
-        icon: Home,
-        label: 'Home',
-        to: ROUTES.DASHBOARD,
-        isActive: (pathname) => pathname === ROUTES.DASHBOARD,
-    },
-    {
-        icon: Library,
-        label: 'Music',
-        to: ROUTES.MUSIC,
-        isActive: (pathname) => pathname.startsWith('/music') || pathname.startsWith('/playlists') || pathname.startsWith('/favorites'),
-    },
-    {
-        icon: MessageSquare,
-        label: 'Social',
-        to: ROUTES.SOCIAL,
-        isActive: (pathname) => pathname.startsWith('/social') || pathname.startsWith('/groups') || pathname.startsWith('/connections'),
-    },
-    {
-        icon: CreditCard,
-        label: 'Debt',
-        to: ROUTES.DEBTS,
-        isActive: (pathname) => pathname.startsWith('/debts'),
-    },
-    {
-        icon: User,
-        label: 'Profile',
-        to: ROUTES.PROFILE,
-        isActive: (pathname) => pathname.startsWith('/profile') || pathname.startsWith('/reports') || pathname.startsWith('/changelog') || pathname.startsWith('/files'),
-    },
-]
-
+/**
+ * Bottom tab bar for phones (edge-to-edge, safe-area aware).
+ * From 768px up the left rail / sidebar replaces it.
+ */
 export const BottomNav: React.FC = () => {
     const location = useLocation()
+    const activeKey = resolveActiveNav(location.pathname).section?.key
 
     return (
-        <motion.nav
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.32, ease: 'easeOut' }}
-            className="pointer-events-none fixed inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 px-3 safe-left safe-right sm:px-4"
+        <nav
+            aria-label="Navegación principal"
+            className="fixed inset-x-0 bottom-0 z-[60] border-t border-white/[0.06] bg-[#0b0b0d]/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl safe-left safe-right md:hidden"
         >
-            <div className="pointer-events-auto mx-auto w-full max-w-md rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,24,0.88)_0%,rgba(10,10,10,0.92)_100%)] p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.52)] backdrop-blur-2xl">
-                <div className="grid grid-cols-5 gap-1">
-                {dockItems.map(({ icon: Icon, label, to, isActive }) => {
-                    const active = isActive(location.pathname)
+            <div className="mx-auto grid h-16 max-w-lg grid-cols-5">
+                {NAV_SECTIONS.map(({ key, icon: Icon, label, to, accent }) => {
+                    const active = activeKey === key
 
                     return (
-                        <NavLink
-                            key={to}
+                        <Link
+                            key={key}
                             to={to}
+                            aria-current={active ? 'page' : undefined}
                             className={cn(
-                                'relative flex min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-[20px] px-1 py-2.5 transition-all duration-200',
-                                active
-                                    ? 'text-blue-300'
-                                    : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'
+                                'relative flex min-w-0 flex-col items-center justify-center gap-1 outline-none transition-colors duration-150 active:scale-95 focus-visible:text-white',
+                                active ? 'text-white' : 'text-gray-500 hover:text-gray-300'
                             )}
                         >
-                            {active ? (
-                                <motion.span
-                                    layoutId="bottom-nav-active-pill"
-                                    className="absolute inset-0 rounded-[20px] bg-[linear-gradient(180deg,rgba(55,115,255,0.18)_0%,rgba(55,115,255,0.08)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_24px_rgba(55,115,255,0.18)]"
-                                    transition={{ type: 'spring', stiffness: 340, damping: 28 }}
-                                />
-                            ) : null}
-                            <Icon className="relative z-[1] h-5 w-5" strokeWidth={active ? 2.4 : 2} />
-                            <span className="relative z-[1] truncate text-center font-body text-[9px] font-semibold uppercase tracking-[0.18em]">
-                                {label}
+                            <span className="relative grid h-8 w-14 place-items-center" style={active ? { color: accent } : undefined}>
+                                {active ? (
+                                    <motion.span
+                                        layoutId="bottom-nav-active-pill"
+                                        className="absolute inset-0 rounded-full"
+                                        style={{ background: `color-mix(in srgb, ${accent} 18%, transparent)` }}
+                                        transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                                    />
+                                ) : null}
+                                <Icon className="relative h-[22px] w-[22px]" strokeWidth={active ? 2.3 : 1.9} />
                             </span>
-                        </NavLink>
+                            <span className={cn('text-[11px] leading-none', active ? 'font-semibold' : 'font-medium')}>{label}</span>
+                        </Link>
                     )
                 })}
-                </div>
             </div>
-        </motion.nav>
+        </nav>
     )
 }

@@ -26,3 +26,11 @@
 - SQL changes must include rollback notes.
 - Never commit secrets.
 - Respect naming conventions for branches and commits.
+
+## Local runtime separation
+
+- The Appden runs on `http://127.0.0.1:4173`.
+- Do not reuse the CarCare development server or its port (`5173`).
+- If the app remains on the session loading screen, check the browser console and
+  verify that Supabase session, profile, and group bootstrap requests finish or
+  time out instead of waiting indefinitely.

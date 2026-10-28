@@ -1,271 +1,161 @@
 ﻿import React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { AlertCircle, Check, Plus, Users, X } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Check, Mail, Plus, Users, X } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
+import { useActiveGroup, useRefreshMyGroups } from '@hooks/useActiveGroup'
 import { groupsService } from '@services/groups.service'
 import { groupInvitationsService } from '@features/social/services/group-invitations.service'
 import { GroupForm, type GroupFormData } from '@components/groups/GroupForm'
 import { GroupCard } from '@components/groups/GroupCard'
+import { SocialTabs } from '@components/social/SocialTabs'
 import { EmptyState } from '@components/ui/EmptyState'
-import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
-import { PageHeader } from '@components/ui/PageHeader'
-import { Tabs } from '@components/ui/Tabs'
-import { useNotifications } from '@hooks/useNotifications'
-import { useGroupStore } from '@app/store/group.store'
+import { ErrorNotice } from '@components/ui/ErrorNotice'
+import { ListSkeleton } from '@components/ui/LoadingSkeleton'
+import { Modal } from '@components/ui/Modal'
+import { PageHeader, SectionHeader } from '@components/ui/PageHeader'
+import { useToast } from '@components/ui/Toast'
 import { ROUTES } from '@lib/constants'
-import type { Group, GroupInvitation } from '@/types'
 
 export default function GroupsPage() {
-    const { user } = useAuth()
+    const { userId } = useAuth()
     const navigate = useNavigate()
-    const { addNotification } = useNotifications()
-    const setActiveGroup = useGroupStore((state) => state.setActiveGroup)
+    const toast = useToast()
+    const queryClient = useQueryClient()
+    const refreshMyGroups = useRefreshMyGroups()
+    const { activeGroup } = useActiveGroup()
+    const [searchParams, setSearchParams] = useSearchParams()
+    const [showForm, setShowForm] = React.useState(searchParams.get('nuevo') === '1')
 
-    const [groups, setGroups] = React.useState<Group[]>([])
-    const [incomingInvites, setIncomingInvites] = React.useState<GroupInvitation[]>([])
-    const [groupCounts, setGroupCounts] = React.useState<Record<string, number>>({})
-    const [loading, setLoading] = React.useState(true)
-    const [error, setError] = React.useState<string | null>(null)
-    const [showForm, setShowForm] = React.useState(false)
-    const [isSubmitting, setIsSubmitting] = React.useState(false)
+    const groupsQuery = useQuery({
+        queryKey: ['my-groups', userId],
+        queryFn: () => groupsService.getGroups(userId!),
+        enabled: !!userId,
+    })
+    const groups = groupsQuery.data ?? []
 
-    React.useEffect(() => {
-        void loadGroups()
-        void loadIncomingInvites()
-    }, [user?.id])
+    const { data: counts = {} } = useQuery({
+        queryKey: ['group-member-counts', groups.map((group) => group.id).join(',')],
+        queryFn: () => groupsService.getMemberCounts(groups.map((group) => group.id)),
+        enabled: groups.length > 0,
+    })
 
-    async function loadGroups() {
-        try {
-            setLoading(true)
-            setError(null)
-            if (!user?.id) {
-                setGroups([])
-                setGroupCounts({})
-                return
-            }
+    const invitesQuery = useQuery({
+        queryKey: ['group-invitations', 'incoming', userId],
+        queryFn: () => groupInvitationsService.listIncoming(userId!),
+        enabled: !!userId,
+    })
+    const incomingInvites = invitesQuery.data ?? []
 
-            const data = await groupsService.getGroups(user.id)
-            setGroups(data)
-
-            const counts = Object.fromEntries(
-                await Promise.all(
-                    data.map(async (group) => {
-                        try {
-                            const members = await groupsService.getGroupMembers(group.id)
-                            return [group.id, members.length] as const
-                        } catch {
-                            return [group.id, 0] as const
-                        }
-                    })
-                )
-            )
-
-            setGroupCounts(counts)
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load groups')
-        } finally {
-            setLoading(false)
+    const closeForm = () => {
+        setShowForm(false)
+        if (searchParams.has('nuevo')) {
+            searchParams.delete('nuevo')
+            setSearchParams(searchParams, { replace: true })
         }
     }
 
-    async function loadIncomingInvites() {
-        try {
-            if (!user?.id) {
-                setIncomingInvites([])
-                return
-            }
-            const data = await groupInvitationsService.listIncoming(user.id)
-            setIncomingInvites(data)
-        } catch {
-            setIncomingInvites([])
-        }
-    }
+    const createGroup = useMutation({
+        mutationFn: (data: GroupFormData) =>
+            groupsService.createGroup({ name: data.name, description: data.description || null, created_by: userId! }),
+        onSuccess: async (newGroup) => {
+            await refreshMyGroups(newGroup.id)
+            void queryClient.invalidateQueries({ queryKey: ['my-groups'] })
+            closeForm()
+            toast.success('Grupo creado', `Ahora estás en ${newGroup.name}. Invita a tu gente.`)
+            navigate(`${ROUTES.GROUP(newGroup.id)}?invitar=1`)
+        },
+    })
 
-    async function handleCreateGroup(data: GroupFormData) {
-        try {
-            setIsSubmitting(true)
-            if (!user?.id) throw new Error('Not authenticated')
-
-            const newGroup = await groupsService.createGroup({
-                name: data.name,
-                description: data.description || null,
-                created_by: user.id,
-            })
-
-            setGroups((current) => [newGroup, ...current.filter((group) => group.id !== newGroup.id)])
-            setGroupCounts((current) => ({ ...current, [newGroup.id]: 1 }))
-            setShowForm(false)
-            setActiveGroup(newGroup)
-            navigate(`/groups/${newGroup.id}`)
-
-            addNotification({
-                type: 'info',
-                title: 'Group Created',
-                message: `${newGroup.name} has been created successfully`,
-            })
-        } catch (err) {
-            addNotification({
-                type: 'error',
-                title: 'Error',
-                message: err instanceof Error ? err.message : 'Failed to create group',
-            })
-        } finally {
-            setIsSubmitting(false)
-        }
-    }
-
-    async function handleRespondInvitation(invitationId: string, accept: boolean) {
-        try {
-            await groupInvitationsService.respond(invitationId, accept)
-            await Promise.all([loadGroups(), loadIncomingInvites()])
-            addNotification({
-                type: 'success',
-                title: accept ? 'Invitacion aceptada' : 'Invitacion rechazada',
-                message: accept ? 'Ya tienes acceso al grupo.' : 'La invitacion fue rechazada.',
-            })
-        } catch (err) {
-            addNotification({
-                type: 'error',
-                title: 'Error',
-                message: err instanceof Error ? err.message : 'No se pudo responder a la invitacion',
-            })
-        }
-    }
-
-    if (loading) {
-        return (
-            <div className="page-shell">
-                <LoadingSkeleton />
-                <LoadingSkeleton />
-                <LoadingSkeleton />
-            </div>
-        )
-    }
+    const respond = useMutation({
+        mutationFn: ({ id, accept }: { id: string; accept: boolean; groupId: string }) => groupInvitationsService.respond(id, accept),
+        onSuccess: async (_data, { accept, groupId }) => {
+            await refreshMyGroups(accept ? groupId : null)
+            void queryClient.invalidateQueries({ queryKey: ['my-groups'] })
+            void queryClient.invalidateQueries({ queryKey: ['group-invitations'] })
+            toast.success(accept ? 'Te has unido al grupo' : 'Invitación rechazada')
+        },
+        onError: (err) => toast.error('No se pudo responder a la invitación', err instanceof Error ? err.message : undefined),
+    })
 
     return (
         <div className="page-shell animate-fade-in">
             <PageHeader
-                kicker="Social Graph"
-                title="Groups"
-                description="Crea espacios privados, gestiona miembros y mantén el contexto social de la app bajo un mismo sistema visual."
-                meta={
-                    <>
-                        <span className="hero-meta-pill">{groups.length} grupos</span>
-                        <span className="hero-meta-pill">{incomingInvites.length} invitaciones</span>
-                    </>
-                }
+                title="Social"
                 actions={
-                    <button onClick={() => setShowForm((value) => !value)} className="btn-primary">
-                        <Plus className="w-4 h-4" />
-                        {showForm ? 'Cerrar' : 'Nuevo grupo'}
+                    <button onClick={() => setShowForm(true)} className="btn-primary !px-4">
+                        <Plus className="h-4 w-4" />
+                        Nuevo
                     </button>
                 }
             />
-
-            <Tabs
-                active="groups"
-                items={[
-                    { label: 'Groups', value: 'groups', href: ROUTES.GROUPS },
-                    { label: 'Connections', value: 'connections', href: ROUTES.CONNECTIONS },
-                ]}
-            />
-
-            {showForm ? (
-                <section className="card p-5 md:p-6">
-                    <div className="mb-5">
-                        <p className="page-kicker">Create Space</p>
-                        <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Nuevo grupo privado</h2>
-                        <p className="mt-2 text-sm text-gray-400">La logica de creacion sigue conectada a Supabase y al flujo real del owner.</p>
-                    </div>
-                    <GroupForm onSubmit={handleCreateGroup} isLoading={isSubmitting} />
-                </section>
-            ) : null}
-
-            {error ? (
-                <section className="card border border-red-400/20 bg-red-400/8 p-4">
-                    <div className="flex items-start gap-3">
-                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
-                        <div>
-                            <p className="text-sm font-semibold text-red-200">No pudimos cargar los grupos</p>
-                            <p className="mt-1 text-sm text-red-100/80">{error}</p>
-                        </div>
-                    </div>
-                </section>
-            ) : null}
+            <SocialTabs active="groups" />
 
             {incomingInvites.length > 0 ? (
-                <section className="card p-5">
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="page-kicker">Pending Access</p>
-                            <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Invitaciones pendientes</h2>
-                        </div>
-                        <span className="hero-meta-pill">Responde sin salir de aqui</span>
-                    </div>
-
-                    <div className="mt-5 space-y-3">
+                <section>
+                    <SectionHeader title="Invitaciones" description="Te han invitado a estos grupos." />
+                    <div className="list-group">
                         {incomingInvites.map((invite) => (
-                            <div
-                                key={invite.id}
-                                className="rounded-[1.6rem] border border-white/8 bg-black/15 p-4 md:flex md:items-center md:justify-between"
-                            >
-                                <div className="min-w-0">
-                                    <p className="text-sm font-semibold text-white truncate">{invite.group?.name ?? 'Grupo privado'}</p>
-                                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-gray-500 truncate">
-                                        Invited by {invite.inviter?.display_name ?? 'usuario'}
-                                    </p>
-                                </div>
-                                <div className="mt-3 flex items-center gap-2 md:mt-0">
-                                    <button
-                                        onClick={() => void handleRespondInvitation(invite.id, true)}
-                                        className="btn-secondary !min-h-[2.5rem] bg-emerald-400/12 text-emerald-200"
-                                    >
-                                        <Check className="w-4 h-4" />
-                                        Aceptar
-                                    </button>
-                                    <button
-                                        onClick={() => void handleRespondInvitation(invite.id, false)}
-                                        className="btn-secondary !min-h-[2.5rem] bg-red-400/12 text-red-200"
-                                    >
-                                        <X className="w-4 h-4" />
-                                        Rechazar
-                                    </button>
-                                </div>
+                            <div key={invite.id} className="list-row">
+                                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-400/15 text-brand-200">
+                                    <Mail className="h-5 w-5" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-[15px] font-semibold text-white">{invite.group?.name ?? 'Grupo privado'}</span>
+                                    <span className="block truncate text-[13px] text-gray-400">De {invite.inviter?.display_name ?? 'un miembro'}</span>
+                                </span>
+                                <button
+                                    onClick={() => respond.mutate({ id: invite.id, accept: false, groupId: invite.group_id })}
+                                    disabled={respond.isPending}
+                                    className="icon-btn bg-white/[0.06] text-gray-300"
+                                    aria-label="Rechazar invitación"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                                <button
+                                    onClick={() => respond.mutate({ id: invite.id, accept: true, groupId: invite.group_id })}
+                                    disabled={respond.isPending}
+                                    className="icon-btn bg-emerald-400/15 text-emerald-200"
+                                    aria-label="Aceptar invitación"
+                                >
+                                    <Check className="h-5 w-5" />
+                                </button>
                             </div>
                         ))}
                     </div>
                 </section>
             ) : null}
 
-            {groups.length === 0 ? (
+            {groupsQuery.isLoading ? (
+                <ListSkeleton count={3} />
+            ) : groupsQuery.error ? (
+                <ErrorNotice title="No pudimos cargar tus grupos" error={groupsQuery.error} onRetry={() => void groupsQuery.refetch()} />
+            ) : groups.length === 0 ? (
                 <EmptyState
-                    icon={<Users className="w-7 h-7" />}
-                    title="Aun no tienes grupos"
-                    description="Crea tu primer espacio para compartir musica, actividad y finanzas con tu gente."
+                    icon={<Users className="h-6 w-6" />}
+                    title="Aún no tienes grupos"
+                    description="Crea un espacio para compartir música, planes y cuentas con tu gente, o abre el enlace de invitación que te hayan pasado."
                     action={
                         <button onClick={() => setShowForm(true)} className="btn-primary">
-                            <Plus className="w-4 h-4" />
+                            <Plus className="h-4 w-4" />
                             Crear grupo
                         </button>
                     }
                 />
             ) : (
-                <section className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="page-kicker">Private Rooms</p>
-                            <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Tus grupos</h2>
-                        </div>
-                        <span className="hero-meta-pill">Selecciona un espacio para seguir</span>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <section>
+                    <SectionHeader title="Tus grupos" />
+                    <div className="list-group">
                         {groups.map((group) => (
-                            <GroupCard key={group.id} group={group} memberCount={groupCounts[group.id] || 0} />
+                            <GroupCard key={group.id} group={group} memberCount={counts[group.id]} isActive={group.id === activeGroup?.id} />
                         ))}
                     </div>
                 </section>
             )}
+
+            <Modal open={showForm} onClose={closeForm} title="Nuevo grupo" description="Serás el propietario y podrás invitar a quien quieras." size="sm">
+                <GroupForm onSubmit={async (data) => void (await createGroup.mutateAsync(data))} isLoading={createGroup.isPending} />
+            </Modal>
         </div>
     )
 }

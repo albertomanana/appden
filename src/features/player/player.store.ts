@@ -36,6 +36,8 @@ interface PlayerStoreState {
     catalog: PlayerSong[]
     continueOffer: ContinueOffer
     hasInitialized: boolean
+    /** Last playback error, surfaced as a toast by the shell. */
+    lastError: { message: string; at: number } | null
 
     initialize: (catalog?: PlayerSong[], userId?: string) => Promise<void>
     setCatalog: (catalog: PlayerSong[]) => void
@@ -43,13 +45,15 @@ interface PlayerStoreState {
     pause: () => void
     resume: () => Promise<void>
     togglePlayPause: () => Promise<void>
-    next: () => Promise<void>
+    /** `auto` is true when the track ended by itself (repeat-one only applies then). */
+    next: (auto?: boolean) => Promise<void>
     previous: () => Promise<void>
     seekTo: (time: number) => void
     setVolume: (volume: number) => void
     setRepeatMode: (mode: RepeatMode) => void
     toggleShuffle: () => void
     addToQueue: (song: PlayerSong) => void
+    playNext: (song: PlayerSong) => void
     removeFromQueue: (songId: string) => void
     reorderQueue: (fromIndex: number, toIndex: number) => void
     clearQueue: () => void
@@ -78,6 +82,7 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
     catalog: [],
     continueOffer: null,
     hasInitialized: false,
+    lastError: null,
 
     initialize: async (catalog = [], userId = 'local-user') => {
         await playerEngine.initialize()
@@ -92,8 +97,15 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
                 },
                 onPlaybackState: (isPlaying) => set({ isPlaying }),
                 onTrackEnded: () => {
-                    void get().next()
+                    void get().next(true)
                 },
+                onError: (message) => set({ lastError: { message, at: Date.now() } }),
+            })
+            playerEngine.bindMediaSession({
+                play: () => void get().resume(),
+                pause: () => get().pause(),
+                next: () => void get().next(),
+                previous: () => void get().previous(),
             })
             engineBound = true
         }
@@ -149,8 +161,19 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
             }
         }
 
+        // Optimistic UI: show the new track immediately, then resolve fresh media URLs.
+        set({
+            currentSong: song,
+            queue: nextQueue,
+            queueIndex: nextIndex,
+            isPlaying: true,
+            metrics: { currentTime: startAt, duration: song.duration_seconds ?? 0, buffered: 0 },
+        })
+
         const playableSong = await refreshSongMedia(song)
-        nextQueue = replaceQueueSongAt(nextQueue, nextIndex, playableSong)
+        if (get().currentSong?.id !== song.id) return
+        nextQueue = replaceQueueSongAt(get().queue, nextIndex, playableSong)
+        set({ currentSong: playableSong, queue: nextQueue })
 
         await playerEngine.playSong(playableSong, startAt)
         const playedAt = new Date().toISOString()
@@ -161,13 +184,7 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
         }
         const updatedHistory = [entry, ...state.history].slice(0, 200)
 
-        set({
-            currentSong: playableSong,
-            queue: nextQueue,
-            queueIndex: nextIndex,
-            isPlaying: true,
-            history: updatedHistory,
-        })
+        set({ history: updatedHistory })
 
         playerPersistence.saveQueue({ queue: nextQueue, queueIndex: nextIndex })
         playerPersistence.saveHistory(updatedHistory)
@@ -203,8 +220,16 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
     },
 
     resume: async () => {
-        await playerEngine.resume()
+        const state = get()
+        // After a reload the queue is restored but the audio element has no source yet.
+        if (!playerEngine.getCurrentSong() && state.currentSong) {
+            const snapshot = state.continueOffer
+            const startAt = snapshot && snapshot.songId === state.currentSong.id ? snapshot.time : 0
+            await state.playSong(state.currentSong, state.queue, state.queueIndex, startAt)
+            return
+        }
         set({ isPlaying: true })
+        await playerEngine.resume()
     },
 
     togglePlayPause: async () => {
@@ -216,9 +241,10 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
         await state.resume()
     },
 
-    next: async () => {
+    next: async (auto = false) => {
         const state = get()
-        const nextIndex = getNextIndex(state.queue, state.queueIndex, state.repeatMode, state.isShuffle)
+        const repeatMode = !auto && state.repeatMode === 'one' ? 'all' : state.repeatMode
+        const nextIndex = getNextIndex(state.queue, state.queueIndex, repeatMode, state.isShuffle)
         if (nextIndex == null) {
             state.pause()
             return
@@ -230,8 +256,15 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
 
     previous: async () => {
         const state = get()
-        const prevIndex = getPreviousIndex(state.queue, state.queueIndex)
 
+        // Standard behaviour: restart the current track unless we are at its very beginning.
+        if (state.metrics.currentTime > 3) {
+            playerEngine.seek(0)
+            set({ metrics: { ...state.metrics, currentTime: 0 } })
+            return
+        }
+
+        const prevIndex = getPreviousIndex(state.queue, state.queueIndex)
         if (prevIndex != null && prevIndex !== state.queueIndex) {
             const prevSong = state.queue[prevIndex]
             if (!prevSong) return
@@ -239,11 +272,7 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
             return
         }
 
-        if (state.metrics.currentTime > 3) {
-            playerEngine.seek(0)
-            set({ metrics: { ...state.metrics, currentTime: 0 } })
-            return
-        }
+        playerEngine.seek(0)
     },
 
     seekTo: (time) => {
@@ -265,6 +294,21 @@ export const useAdvancedPlayerStore = create<PlayerStoreState>((set, get) => ({
         const queueState = addSongToQueue({ queue: state.queue, queueIndex: state.queueIndex }, song)
         set({ queue: queueState.queue, queueIndex: queueState.queueIndex })
         playerPersistence.saveQueue(queueState)
+    },
+
+    playNext: (song) => {
+        const state = get()
+        if (!state.currentSong) {
+            void state.playSong(song, [song], 0, 0)
+            return
+        }
+        const withoutSong = state.queue.filter((item, index) => item.id !== song.id || index === state.queueIndex)
+        const currentIndex = withoutSong.findIndex((item) => item.id === state.currentSong?.id)
+        const insertAt = Math.max(currentIndex, 0) + 1
+        const queue = [...withoutSong.slice(0, insertAt), song, ...withoutSong.slice(insertAt)]
+        const queueIndex = Math.max(currentIndex, 0)
+        set({ queue, queueIndex })
+        playerPersistence.saveQueue({ queue, queueIndex })
     },
 
     removeFromQueue: (songId) => {

@@ -35,6 +35,16 @@ export const resetPasswordSchema = z.object({
     email: z.string().email('Email inválido'),
 })
 
+export const updatePasswordSchema = z
+    .object({
+        password: z.string().min(8, 'Mínimo 8 caracteres'),
+        confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+        path: ['confirmPassword'],
+        message: 'Las contraseñas no coinciden',
+    })
+
 // ── Profile validators ───────────────────────────────────────
 
 export const profileSchema = z.object({
@@ -173,10 +183,10 @@ export function validateDocumentFile(file: File): string | null {
 export type LoginFormData = z.infer<typeof loginSchema>
 export type RegisterFormData = z.infer<typeof registerSchema>
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
+export type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>
 export type ProfileFormData = z.infer<typeof profileSchema>
 export type SongFormData = z.infer<typeof songSchema>
 export type PlaylistFormData = z.infer<typeof playlistSchema>
 export type DebtFormData = z.infer<typeof debtSchema>
 export type PaymentFormData = z.infer<typeof paymentSchema>
 export type FileFormData = z.infer<typeof fileSchema>
-

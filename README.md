@@ -121,7 +121,7 @@ the-appden/
    ```bash
    npm run dev
    ```
-   - Open http://localhost:5173
+   - Open http://127.0.0.1:4173
    - Register a new account to test
 
 ## Team Workflow
@@ -366,11 +366,11 @@ Strict mode enabled via `tsconfig.json`:
 
 ### "Connection refused" when starting dev
 - Check Node version: `node --version` (should be 18+)
-- Check port 5173 is free or update Vite config
+- Check port 4173 is free or update Vite config
 
 ### "CORS error" on Supabase calls
 - In Supabase dashboard → Project Settings → API → CORS settings
-- Add your domain (e.g., `http://localhost:5173`)
+- Add your local domain (e.g., `http://127.0.0.1:4173`)
 
 ### "Auth fails" on registration
 - Check `.env.local` has correct `VITE_SUPABASE_URL` and key
@@ -462,4 +462,3 @@ MIT License - feel free to use this for personal or commercial projects.
 **Built with 🎵 & ☕ for private friend groups.**
 
 Made with React, Supabase, and lots of coffee ☕
-

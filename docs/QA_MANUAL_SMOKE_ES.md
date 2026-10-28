@@ -25,7 +25,7 @@ Esta pensado para validar sobre todo:
 
 ## Como usarlo
 
-1. Aplica las migraciones `001` -> `012`.
+1. Aplica las migraciones `001` -> `014`.
 2. Abre Supabase SQL Editor.
 3. Si quieres limpiar una pasada anterior, ejecuta:
 

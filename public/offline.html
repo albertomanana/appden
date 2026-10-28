@@ -118,18 +118,30 @@
             font-weight: bold;
             margin-right: 6px;
         }
+
+        .retry {
+            margin-top: 20px;
+            border: 0;
+            border-radius: 10px;
+            padding: 12px 18px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+            color: #fff;
+            cursor: pointer;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="icon">📱</div>
         <h1>You're Offline</h1>
-        <p>The Appden is designed to work offline, but you need to be online to load this page for the first time.</p>
+        <p>The Appden cannot reach the application right now. Check your connection and try again.</p>
 
         <div class="status">
             <span class="spinner"></span>
             Waiting for connection...
         </div>
+        <button class="retry" type="button" onclick="recoverApplication()">Retry</button>
 
         <div class="suggestion">
             <h3>What you can do:</h3>
@@ -141,23 +153,29 @@
         </div>
 
         <p style="margin-top: 40px; font-size: 12px; color: #666;">
-            Once you've opened The Appden while online, you'll be able to use many features offline too.
+            Once the application has loaded successfully, cached pages may remain available offline.
         </p>
     </div>
 
     <script>
-        // Check for connection periodically
-        window.addEventListener('online', () => {
-            window.location.reload()
-        })
+        async function recoverApplication() {
+            if (!navigator.onLine) return
+
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations()
+                await Promise.all(registrations.map((registration) => registration.unregister()))
+            }
+
+            window.location.replace(`/?recovered=${Date.now()}`)
+        }
+
+        window.addEventListener('online', recoverApplication)
 
         // Attempt to reload every 5 seconds
         setInterval(async () => {
             try {
                 const response = await fetch(window.location.href, { method: 'HEAD', cache: 'no-store' })
-                if (response.ok) {
-                    window.location.reload()
-                }
+                if (response.ok) await recoverApplication()
             } catch {
                 // Still offline
             }

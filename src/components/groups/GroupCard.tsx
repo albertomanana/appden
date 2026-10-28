@@ -1,41 +1,32 @@
 ﻿import React from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Users } from 'lucide-react'
+import { Check, ChevronRight } from 'lucide-react'
+import { ROUTES } from '@lib/constants'
+import { getInitials } from '@lib/utils'
 import type { Group } from '@/types'
 
 interface GroupCardProps {
     group: Group
     memberCount?: number
+    isActive?: boolean
 }
 
-export const GroupCard: React.FC<GroupCardProps> = ({ group, memberCount = 0 }) => {
-    return (
-        <Link to={`/groups/${group.id}`} className="card-interactive group block overflow-hidden p-5">
-            <div className="absolute" />
-            <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                    <p className="page-kicker">Private group</p>
-                    <h3 className="mt-2 truncate text-2xl font-headline font-extrabold tracking-tight text-white group-hover:text-brand-100">
-                        {group.name}
-                    </h3>
-                    {group.description ? (
-                        <p className="mt-3 truncate-2 text-sm leading-relaxed text-gray-400">{group.description}</p>
-                    ) : (
-                        <p className="mt-3 text-sm text-gray-500">Espacio listo para compartir musica, actividad y colaboracion.</p>
-                    )}
-                </div>
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.25rem] bg-white/6 text-gray-400 transition-colors group-hover:bg-brand-400/12 group-hover:text-brand-200">
-                    <ArrowRight className="h-4 w-4" />
-                </div>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between gap-3">
-                <span className="hero-meta-pill !px-3 !py-1.5">
-                    <Users className="h-3.5 w-3.5 text-brand-300" />
-                    {memberCount} {memberCount === 1 ? 'member' : 'members'}
-                </span>
-                <span className="text-[11px] uppercase tracking-[0.22em] text-gray-500">Open detail</span>
-            </div>
-        </Link>
-    )
-}
+export const GroupCard: React.FC<GroupCardProps> = ({ group, memberCount, isActive = false }) => (
+    <Link to={ROUTES.GROUP(group.id)} className="list-row">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-400/80 to-violet-500/80 text-sm font-bold text-white">
+            {getInitials(group.name)}
+        </span>
+        <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5">
+                <span className="truncate text-[15px] font-semibold text-white">{group.name}</span>
+                {isActive ? <Check className="h-4 w-4 shrink-0 text-brand-300" aria-label="Grupo activo" /> : null}
+            </span>
+            <span className="block truncate text-[13px] text-gray-400">
+                {memberCount != null ? `${memberCount} ${memberCount === 1 ? 'miembro' : 'miembros'}` : null}
+                {memberCount != null && group.description ? ' · ' : null}
+                {group.description}
+            </span>
+        </span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-gray-600" />
+    </Link>
+)

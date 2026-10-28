@@ -2,6 +2,15 @@
 
 Snapshot date: 2026-04-07
 
+## Current local runtime context
+
+- The Appden is a separate project from CarCare.
+- Run it from `C:\Users\Alberto\Desktop\The Appden` on
+  `http://127.0.0.1:4173`; CarCare uses port `5173`.
+- The startup screen must not remain blocked by an unavailable Supabase
+  connection. Auth session, profile, and group bootstrap requests have bounded
+  timeouts and must fall back to the logged-out or empty-groups state.
+
 ## Product
 
 The Appden is a private PWA for friend groups to:

@@ -1,106 +1,138 @@
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect } from 'react'
 import { authService } from '@services/auth.service'
 import { profileService } from '@services/profile.service'
 import { useAuthStore } from '@app/store/auth.store'
 import { useGroupStore } from '@app/store/group.store'
 import { groupsService } from '@services/groups.service'
+import { clearSignedUrlCache } from '@lib/supabase/client'
+import { useAdvancedPlayerStore } from '@features/player/player.store'
+import type { AuthUser } from '@/types'
+
+const SESSION_TIMEOUT_MS = 15000
+const PROFILE_TIMEOUT_MS = 10000
+const GROUPS_TIMEOUT_MS = 10000
+
+const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> =>
+    Promise.race([
+        promise,
+        new Promise<T>((_resolve, reject) => {
+            window.setTimeout(() => reject(new Error(`${label} timeout`)), timeoutMs)
+        }),
+    ])
 
 /**
  * AuthProvider - initializes session on app boot and listens for auth changes.
  * Must wrap the entire router. Renders nothing visually.
+ *
+ * Store access goes through `getState()` so this effect runs once: depending on the
+ * active group made every group switch re-run the whole session bootstrap.
  */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { setUser, setLoading, setInitialized } = useAuthStore()
-    const { setMyGroups, setActiveGroup, activeGroup } = useGroupStore()
+    useEffect(() => {
+        let disposed = false
+        let currentUserId: string | null | undefined
 
-    const initUser = useCallback(async (userId: string | null) => {
-        if (!userId) {
-            setUser(null)
-            setMyGroups([])
-            setLoading(false)
-            setInitialized(true)
-            return
+        const finish = () => {
+            const auth = useAuthStore.getState()
+            auth.setLoading(false)
+            auth.setInitialized(true)
         }
 
-        try {
-            const profile = await profileService.getProfile(userId)
-            // If the profile exists but hasn't been approved by an admin, force logout
-            if (profile && (profile as any).is_approved === false) {
-                console.warn('[Auth] Account not approved yet, signing out')
-                try {
-                    await authService.hardResetClientState()
-                    await authService.logout()
-                } catch (e) {
-                    console.warn('[Auth] error during forced logout for unapproved account', e)
-                }
+        const loadUser = async (userId: string | null, email: string | null) => {
+            const auth = useAuthStore.getState()
+            const groups = useGroupStore.getState()
 
-                setUser(null)
-                setMyGroups([])
-                setLoading(false)
-                setInitialized(true)
+            if (!userId) {
+                if (currentUserId) {
+                    // Signed out (here, in another tab or because the session expired):
+                    // drop the previous user's player state.
+                    const player = useAdvancedPlayerStore.getState()
+                    player.pause()
+                    player.clearQueue()
+                }
+                currentUserId = null
+                auth.setUser(null)
+                groups.setMyGroups([])
+                clearSignedUrlCache()
+                finish()
                 return
             }
-            const session = await authService.getSession()
-            setUser({
-                id: userId,
-                email: session?.user?.email ?? null,
-                profile,
-            })
 
+            currentUserId = userId
             try {
-                // Load groups without dropping authenticated session on failure
-                const groups = await groupsService.getMyGroups(userId)
-                setMyGroups(groups)
+                const profile = await withTimeout(profileService.getProfile(userId), PROFILE_TIMEOUT_MS, 'Profile connection')
+                if (disposed || currentUserId !== userId) return
 
-                // Select active group if not already set or if the saved one is no longer valid
-                if (groups.length > 0) {
-                    const savedGroupValid = activeGroup && groups.some((g) => g.id === activeGroup.id)
-                    if (!savedGroupValid) {
-                        setActiveGroup(groups[0])
+                // Accounts created after migration 013 need an admin approval before using the app.
+                if (profile && profile.is_approved === false) {
+                    auth.setNotice('pending-approval')
+                    auth.setUser(null)
+                    groups.setMyGroups([])
+                    finish()
+                    try {
+                        await authService.logout()
+                    } catch (error) {
+                        console.warn('[Auth] Error signing out unapproved account', error)
                     }
+                    return
                 }
-            } catch (groupErr) {
-                console.error('[Auth] Failed to load groups, keeping session active:', groupErr)
-                setMyGroups([])
-            }
-        } catch (err) {
-            console.error('Failed to initialize user session:', err)
-            setUser(null)
-        } finally {
-            setLoading(false)
-            setInitialized(true)
-        }
-    }, [setUser, setLoading, setInitialized, setMyGroups, setActiveGroup, activeGroup])
 
-    useEffect(() => {
-        // Initialize session from existing stored session with timeout.
-        // If it fails, continue as logged-out to avoid blocking the app.
+                const user: AuthUser = { id: userId, email, profile }
+                auth.setUser(user)
+
+                try {
+                    // Load groups without dropping the authenticated session on failure.
+                    const myGroups = await withTimeout(groupsService.getMyGroups(userId), GROUPS_TIMEOUT_MS, 'Groups connection')
+                    if (disposed || currentUserId !== userId) return
+                    groups.setMyGroups(myGroups)
+                    const active = useGroupStore.getState().activeGroup
+                    const fresh = active ? myGroups.find((group) => group.id === active.id) : null
+                    groups.setActiveGroup(fresh ?? myGroups[0] ?? null)
+                } catch (groupErr) {
+                    console.error('[Auth] Failed to load groups, keeping session active:', groupErr)
+                    groups.setMyGroups([])
+                }
+            } catch (err) {
+                console.error('[Auth] Failed to initialize user session:', err)
+                auth.setUser(null)
+            } finally {
+                if (!disposed) finish()
+            }
+        }
+
         void (async () => {
             try {
-                const timeoutPromise: Promise<never> = new Promise((_resolve, reject) => {
-                    setTimeout(() => {
-                        reject(new Error('Supabase connection timeout. Check your .env.local credentials.'))
-                    }, 15000)
+                const timeout = new Promise<never>((_resolve, reject) => {
+                    window.setTimeout(() => reject(new Error('Supabase connection timeout')), SESSION_TIMEOUT_MS)
                 })
-
-                const sessionPromise = authService.getSession()
-                const session = await Promise.race([sessionPromise, timeoutPromise])
-                await initUser(session?.user?.id ?? null)
+                const session = await Promise.race([authService.getSession(), timeout])
+                if (disposed) return
+                await loadUser(session?.user?.id ?? null, session?.user?.email ?? null)
             } catch (err) {
-                const errorMsg = err instanceof Error ? err.message : 'Failed to load session'
-                console.error('[Auth] Session init failed, falling back to logged-out state:', errorMsg)
+                console.error('[Auth] Session init failed, falling back to logged-out state:', err instanceof Error ? err.message : err)
                 authService.clearStoredSession()
-                await initUser(null)
+                await loadUser(null, null)
             }
         })()
 
-        // Listen for later auth changes (login, logout, token refresh)
-        const unsubscribe = authService.onAuthStateChange((userId) => {
-            void initUser(userId)
+        const { data } = authService.subscribe((event, session) => {
+            // Token refreshes and the initial event don't change who is signed in.
+            if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return
+            const nextUserId = session?.user?.id ?? null
+            if (event !== 'USER_UPDATED' && nextUserId === currentUserId) return
+
+            // Never call Supabase inside the auth callback: the auth lock is still held
+            // and nested calls (getSession, queries) can deadlock. Defer to the next tick.
+            window.setTimeout(() => {
+                if (!disposed) void loadUser(nextUserId, session?.user?.email ?? null)
+            }, 0)
         })
 
-        return unsubscribe
-    }, [initUser])
+        return () => {
+            disposed = true
+            data.subscription.unsubscribe()
+        }
+    }, [])
 
     return <>{children}</>
 }

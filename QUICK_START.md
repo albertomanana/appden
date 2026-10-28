@@ -43,7 +43,7 @@ En Supabase → **Storage**, crea 4 buckets **privados**:
 npm run dev
 ```
 
-✅ Abre http://localhost:5173
+✅ Abre http://127.0.0.1:4173
 
 ---
 

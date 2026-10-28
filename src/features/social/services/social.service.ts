@@ -1,4 +1,5 @@
 ﻿import { supabase } from '@lib/supabase/client'
+import { reportLocalFallback } from '@lib/diagnostics/fallback'
 import { groupActivityService } from '@features/social/services/activity-feed.service'
 import type { SongComment, SongReactionType } from '@/types'
 import type { SongSocialState } from '@features/social/types'
@@ -144,6 +145,7 @@ export const songSocialService = {
 
         if (existingError) {
             if (isMissingRelationError(existingError)) {
+                reportLocalFallback('song social', existingError)
                 const liked = toggleLikeFallback(songId, userId)
                 await logActivity(songId, userId, 'song_liked', { liked })
                 return liked
@@ -182,6 +184,7 @@ export const songSocialService = {
 
             if (error) {
                 if (isMissingRelationError(error)) {
+                    reportLocalFallback('song social', error)
                     setReactionFallback(songId, userId, null)
                     return
                 }
@@ -198,6 +201,7 @@ export const songSocialService = {
 
         if (error) {
             if (isMissingRelationError(error)) {
+                reportLocalFallback('song social', error)
                 setReactionFallback(songId, userId, reaction)
                 await logActivity(songId, userId, 'song_reacted', { reaction })
                 return
@@ -484,4 +488,3 @@ function isMissingRelationError(error: unknown): boolean {
     const raw = `${anyError.code ?? ''} ${anyError.message ?? ''} ${anyError.details ?? ''}`.toLowerCase()
     return raw.includes('42p01') || raw.includes('pgrst205') || raw.includes('does not exist')
 }
-

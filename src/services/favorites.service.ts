@@ -1,34 +1,39 @@
 import { supabase } from '@lib/supabase/client'
+import { songsService } from '@services/songs.service'
 import type { Song } from '@/types'
 
 export const favoritesService = {
     /**
-     * Fetch all favorite songs for a user.
+     * Favorite songs of a user, most recently added first. Songs go through the
+     * regular hydration (signed audio/cover URLs, credits), otherwise they could
+     * not be played. When `groupId` is given only that group's songs are returned.
      */
-    async getFavorites(userId: string): Promise<Song[]> {
+    async getFavorites(userId: string, groupId?: string | null): Promise<Song[]> {
         const { data, error } = await supabase
             .from('favorites')
-            .select('song:songs(*, uploader:profiles!songs_uploaded_by_fkey(id, display_name, avatar_url))')
+            .select('song_id, created_at')
             .eq('user_id', userId)
             .order('created_at', { ascending: false })
 
         if (error) throw error
-        const rows = (data ?? []) as Array<{ song: Song | Song[] | null }>
-        return rows
-            .map((row) => (Array.isArray(row.song) ? row.song[0] : row.song))
-            .filter((song): song is Song => !!song)
+
+        const songIds = ((data ?? []) as Array<{ song_id: string }>).map((row) => row.song_id)
+        const songs = await songsService.getSongsByIds(songIds, userId)
+
+        return songs
+            .filter((song) => !groupId || song.group_id === groupId)
             .map((song) => ({ ...song, is_favorite: true }))
     },
 
     /**
-     * Add a song to favorites.
+     * Add a song to favorites. Adding an existing favorite is not an error.
      */
     async addFavorite(userId: string, songId: string): Promise<void> {
         const { error } = await supabase
             .from('favorites')
             .insert({ user_id: userId, song_id: songId })
 
-        if (error) throw error
+        if (error && error.code !== '23505') throw error
     },
 
     /**

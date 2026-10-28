@@ -58,7 +58,7 @@ Fix already present in repo state:
 | Critical | Breaks functionality, deployment risk | `NotificationsPage` is disconnected from the real `notifications` table and currently reflects client-session state instead of backend truth. | Wire the notifications page/store to Supabase reads/writes before launch, or explicitly hide/de-scope the module. |
 | High | Technical debt, QA masking | Several services can silently fall back to `localStorage` when backend relations/tables are missing, making broken environments look partially healthy. | Add explicit QA warnings/telemetry for fallback mode and treat fallback as non-launchable behavior in staging/prod checks. |
 | High | Breaks UX, deployment risk | Avatar handling still stores signed URLs in `profiles.avatar_url`; signed links expire and are not consistently re-signed across joined profile views. | Store stable storage paths instead of signed URLs, then sign on read. Revisit avatar bucket visibility rules with social/profile requirements. |
-| High | Deployment risk | Migrations `010_groups_rls_rpc_hardening.sql` and `011_song_upload_storage_hardening.sql` are operationally required for stable auth/group/music flows. | Treat `001-011` as mandatory baseline. Add an environment readiness checklist before any QA session. |
+| High | Deployment risk | Migrations `010_groups_rls_rpc_hardening.sql`, `011_song_upload_storage_hardening.sql`, and later privacy/posts migrations are required for the current application surface. | Treat `001-014` as mandatory baseline. Add an environment readiness checklist before any QA session. |
 | High | Breaks UX, technical debt | The product still contains backend-dependent modules whose UI can appear “alive” even if the backing schema is incomplete. This is especially visible in social, reports, changelog and debt-pro fallbacks. | Document fallback boundaries, add runtime warnings in QA mode, and verify seeded/staging environments with real tables only. |
 | High | Technical debt | Avatar/profile, debt-pro and social/report services are oversized and mix compatibility logic with domain logic. | Split service layers by capability and by backend source. Start with `debt-pro.service.ts`, `social.service.ts`, `reports.service.ts`, `songs.service.ts`. |
 | Medium | Breaks functionality | Shared file route/preview is still incomplete and does not yet provide a polished or fully trustworthy file access flow. | Finish shared file resolution and improve missing/expired/not-supported states. |
@@ -111,7 +111,7 @@ Fix already present in repo state:
 
 The Appden is suitable for a serious QA phase with seeded data now, but not yet for blind public launch without:
 
-1. verifying migrations `001-011` in the target Supabase project
+1. verifying migrations `001-014` in the target Supabase project
 2. deciding whether notifications ship or are explicitly hidden
 3. resolving or accepting the avatar signed-URL design risk
 4. running full device QA on auth, groups, upload, player, debts and reports

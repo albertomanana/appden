@@ -1,330 +1,365 @@
 ﻿import React from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Search, UserCheck2, UserPlus2, Users, X } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { Check, ChevronRight, Inbox, MoreHorizontal, Search, UserMinus, UserPlus, UserRound, Users, X } from 'lucide-react'
+import { FriendRelationButton } from '@components/social/FriendRelationButton'
+import { InviteToGroupSheet } from '@components/social/InviteToGroupSheet'
+import { PersonRow, type PersonSummary } from '@components/social/PersonRow'
+import { SocialTabs } from '@components/social/SocialTabs'
+import { ActionSheet } from '@components/ui/ActionSheet'
 import { Avatar } from '@components/common/Avatar'
+import { ConfirmDialog } from '@components/ui/ConfirmDialog'
 import { EmptyState } from '@components/ui/EmptyState'
-import { LoadingSkeleton } from '@components/ui/LoadingSkeleton'
-import { PageHeader } from '@components/ui/PageHeader'
+import { ErrorNotice } from '@components/ui/ErrorNotice'
+import { ListSkeleton } from '@components/ui/LoadingSkeleton'
+import { PageHeader, SectionHeader } from '@components/ui/PageHeader'
 import { Tabs } from '@components/ui/Tabs'
 import { useAuth } from '@hooks/useAuth'
-import { useToast } from '@components/ui/Toast'
-import { connectionsService } from '@features/social/services/connections.service'
+import { useActiveGroup } from '@hooks/useActiveGroup'
+import { useDebouncedValue } from '@hooks/useDebouncedValue'
+import { useFriendActions, useFriends } from '@hooks/useFriends'
+import { friendsService } from '@services/friends.service'
 import { ROUTES } from '@lib/constants'
+import { formatRelative } from '@lib/utils'
+
+type View = 'amigos' | 'solicitudes' | 'buscar'
+const VIEWS: View[] = ['amigos', 'solicitudes', 'buscar']
+
+const firstName = (name?: string | null) => (name ?? '').trim().split(/\s+/)[0] || 'esta persona'
 
 export default function ConnectionsPage() {
     const { userId } = useAuth()
-    const { success, error } = useToast()
-    const queryClient = useQueryClient()
+    const { activeGroup, myGroups } = useActiveGroup()
+    const navigate = useNavigate()
+    const [searchParams, setSearchParams] = useSearchParams()
+    const rawView = searchParams.get('vista') as View | null
+    const view: View = rawView && VIEWS.includes(rawView) ? rawView : 'amigos'
 
-    const [query, setQuery] = React.useState('')
-    const [message, setMessage] = React.useState('')
-
-    const { data: incoming = [], isLoading: loadingIncoming } = useQuery({
-        queryKey: ['connections', 'incoming', userId],
-        queryFn: () => connectionsService.listIncoming(userId!),
-        enabled: !!userId,
-    })
-
-    const { data: outgoing = [], isLoading: loadingOutgoing } = useQuery({
-        queryKey: ['connections', 'outgoing', userId],
-        queryFn: () => connectionsService.listOutgoing(userId!),
-        enabled: !!userId,
-    })
-
-    const { data: friends = [], isLoading: loadingFriends } = useQuery({
-        queryKey: ['connections', 'friends', userId],
-        queryFn: () => connectionsService.listFriends(userId!),
-        enabled: !!userId,
-    })
-
-    const { data: searchResults = [], isLoading: loadingSearch } = useQuery({
-        queryKey: ['connections', 'search', userId, query],
-        queryFn: () => connectionsService.searchPeople(query.trim(), userId!),
-        enabled: !!userId && query.trim().length >= 2,
-    })
-
-    const refreshAll = async () => {
-        await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['connections', 'incoming', userId] }),
-            queryClient.invalidateQueries({ queryKey: ['connections', 'outgoing', userId] }),
-            queryClient.invalidateQueries({ queryKey: ['connections', 'friends', userId] }),
-        ])
+    const setView = (next: string) => {
+        if (next === 'amigos') searchParams.delete('vista')
+        else searchParams.set('vista', next)
+        setSearchParams(searchParams, { replace: true })
     }
 
-    const sendMutation = useMutation({
-        mutationFn: (toUserId: string) => connectionsService.sendRequest(userId!, toUserId, message),
-        onSuccess: async () => {
-            setMessage('')
-            await refreshAll()
-            success('Solicitud enviada', 'La persona la vera en sus conexiones pendientes.')
-        },
-        onError: (err) => {
-            error('No se pudo enviar', err instanceof Error ? err.message : 'Error inesperado')
-        },
-    })
+    const { friends, incoming, outgoing, relationOf, isLoading, error, refetch } = useFriends()
+    const { accept, reject, cancel, remove } = useFriendActions()
 
-    const acceptMutation = useMutation({
-        mutationFn: (requestId: string) => connectionsService.respond(requestId, true),
-        onSuccess: async () => {
-            await refreshAll()
-            success('Conexion aceptada')
-        },
-        onError: () => error('No se pudo aceptar la solicitud'),
-    })
+    const [menuFriend, setMenuFriend] = React.useState<PersonSummary | null>(null)
+    const [inviteFriend, setInviteFriend] = React.useState<PersonSummary | null>(null)
+    const [removingFriend, setRemovingFriend] = React.useState<PersonSummary | null>(null)
 
-    const rejectMutation = useMutation({
-        mutationFn: (requestId: string) => connectionsService.respond(requestId, false),
-        onSuccess: async () => {
-            await refreshAll()
-            success('Solicitud rechazada')
-        },
-        onError: () => error('No se pudo rechazar la solicitud'),
-    })
-
-    const cancelMutation = useMutation({
-        mutationFn: (requestId: string) => connectionsService.cancel(requestId),
-        onSuccess: async () => {
-            await refreshAll()
-            success('Solicitud cancelada')
-        },
-        onError: () => error('No se pudo cancelar la solicitud'),
-    })
-
-    const removeMutation = useMutation({
-        mutationFn: (friendUserId: string) => connectionsService.removeFriend(userId!, friendUserId),
-        onSuccess: async () => {
-            await refreshAll()
-            success('Conexion eliminada')
-        },
-        onError: () => error('No se pudo eliminar la conexion'),
-    })
-
-    const incomingByUser = React.useMemo(() => new Map(incoming.map((item) => [item.from_user_id, item])), [incoming])
-    const outgoingByUser = React.useMemo(() => new Map(outgoing.map((item) => [item.to_user_id, item])), [outgoing])
-    const friendIds = React.useMemo(
-        () => new Set(friends.map((item) => item.friend_profile?.id).filter((id): id is string => !!id)),
+    const friendPeople = React.useMemo(
+        () => friends.map((row) => row.friend_profile).filter((person): person is NonNullable<typeof person> => !!person),
         [friends]
     )
 
-    if (!userId) return null
+    // Groups shared with friends and with people in pending requests (only my groups are visible).
+    const peopleIds = React.useMemo(
+        () =>
+            Array.from(
+                new Set([...friendPeople.map((p) => p.id), ...incoming.map((r) => r.from_user_id), ...outgoing.map((r) => r.to_user_id)])
+            ).sort(),
+        [friendPeople, incoming, outgoing]
+    )
+    const myGroupIds = myGroups.map((group) => group.id)
+    const { data: mutualGroups = {} } = useQuery({
+        queryKey: ['friends', 'mutual-groups', userId, myGroupIds.join(','), peopleIds.join(',')],
+        queryFn: () => friendsService.listMutualGroups(myGroupIds, peopleIds),
+        enabled: !!userId && myGroupIds.length > 0 && peopleIds.length > 0,
+        staleTime: 60_000,
+    })
+
+    const groupName = (groupId: string) => myGroups.find((group) => group.id === groupId)?.name
+    const mutualLabel = (personId: string) => {
+        const shared = mutualGroups[personId] ?? []
+        if (shared.length === 0) return null
+        if (shared.length === 1) return groupName(shared[0]) ?? '1 grupo en común'
+        return `${shared.length} grupos en común`
+    }
+
+    /** Inside a shared group the member profile shows songs and money; otherwise the public profile. */
+    const profileHref = (personId: string) => {
+        const shared = mutualGroups[personId] ?? []
+        const groupId = activeGroup && shared.includes(activeGroup.id) ? activeGroup.id : shared[0]
+        return groupId ? ROUTES.GROUP_MEMBER(groupId, personId) : ROUTES.PROFILE_ID(personId)
+    }
+
+    const subtitle = (person: PersonSummary, extra?: string | null) =>
+        [person.username ? `@${person.username}` : null, extra].filter(Boolean).join(' · ') || 'Sin grupos en común'
 
     return (
         <div className="page-shell animate-fade-in">
-            <PageHeader
-                kicker="People Layer"
-                title="Conexiones"
-                description="Busca usuarios, envia solicitudes y crea una red social privada que alimente la invitacion a grupos y la colaboracion real dentro de la app."
-                meta={
-                    <>
-                        <span className="hero-meta-pill">{friends.length} conexiones</span>
-                        <span className="hero-meta-pill">{incoming.length} pendientes</span>
-                    </>
-                }
-            />
+            <PageHeader title="Social" />
+            <SocialTabs active="connections" requests={incoming.length} />
 
             <Tabs
-                active="connections"
+                active={view}
+                onChange={setView}
+                stretch
                 items={[
-                    { label: 'Groups', value: 'groups', href: ROUTES.GROUPS },
-                    { label: 'Connections', value: 'connections', href: ROUTES.CONNECTIONS },
+                    { label: 'Amigos', value: 'amigos' },
+                    { label: 'Solicitudes', value: 'solicitudes', badge: incoming.length },
+                    { label: 'Buscar', value: 'buscar' },
                 ]}
             />
 
-            <section className="card p-5 space-y-4">
-                <div>
-                    <p className="page-kicker">Search Directory</p>
-                    <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Buscar personas</h2>
-                </div>
+            {view === 'buscar' ? (
+                <SearchView userId={userId} relationOf={relationOf} />
+            ) : isLoading ? (
+                <ListSkeleton count={3} />
+            ) : error ? (
+                <ErrorNotice title="No pudimos cargar tus amigos" error={error} onRetry={() => void refetch()} />
+            ) : view === 'amigos' ? (
+                <>
+                    {incoming.length > 0 ? (
+                        <button type="button" onClick={() => setView('solicitudes')} className="card-interactive flex w-full items-center gap-3 p-3 text-left">
+                            <span className="flex -space-x-2">
+                                {incoming.slice(0, 3).map((request) => (
+                                    <Avatar
+                                        key={request.id}
+                                        src={request.from_profile?.avatar_url}
+                                        name={request.from_profile?.display_name}
+                                        size="sm"
+                                        className="ring-2 ring-[#141416]"
+                                    />
+                                ))}
+                            </span>
+                            <span className="min-w-0 flex-1 text-sm text-gray-200">
+                                {incoming.length === 1 ? (
+                                    <>
+                                        <strong className="font-semibold text-white">{firstName(incoming[0].from_profile?.display_name)}</strong> te ha enviado una solicitud de amistad
+                                    </>
+                                ) : (
+                                    <>
+                                        Tienes <strong className="font-semibold text-white">{incoming.length} solicitudes</strong> de amistad
+                                    </>
+                                )}
+                            </span>
+                            <ChevronRight className="h-5 w-5 shrink-0 text-gray-500" />
+                        </button>
+                    ) : null}
 
-                <div className="grid gap-3 md:grid-cols-[1fr,0.9fr]">
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                        <input
-                            className="input pl-11"
-                            value={query}
-                            onChange={(event) => setQuery(event.target.value)}
-                            placeholder="Nombre o username"
-                        />
-                    </div>
-                    <textarea
-                        className="input min-h-[112px] resize-none"
-                        rows={3}
-                        maxLength={280}
-                        value={message}
-                        onChange={(event) => setMessage(event.target.value)}
-                        placeholder="Mensaje opcional para acompanar la solicitud"
-                    />
-                </div>
-
-                {loadingSearch ? (
-                    <LoadingSkeleton count={2} />
-                ) : searchResults.length === 0 && query.trim().length >= 2 ? (
-                    <p className="text-sm text-gray-400">No encontramos usuarios con esa busqueda.</p>
-                ) : (
-                    <div className="space-y-2">
-                        {searchResults.map((profile) => {
-                            const incomingRequest = incomingByUser.get(profile.id)
-                            const outgoingRequest = outgoingByUser.get(profile.id)
-                            const isFriend = friendIds.has(profile.id)
-
-                            return (
-                                <div
-                                    key={profile.id}
-                                    className="rounded-[1.5rem] border border-white/8 bg-black/15 p-3 sm:flex sm:items-center sm:justify-between"
-                                >
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <Avatar src={profile.avatar_url} name={profile.display_name} size="sm" />
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-white">{profile.display_name}</p>
-                                            <p className="truncate text-xs uppercase tracking-[0.18em] text-gray-500">@{profile.username ?? 'sin-username'}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-3 sm:mt-0">
-                                        {isFriend ? (
-                                            <div className="badge bg-emerald-400/14 text-emerald-200 border border-emerald-300/20">
-                                                <UserCheck2 className="w-3.5 h-3.5" />
-                                                Conexion activa
-                                            </div>
-                                        ) : incomingRequest ? (
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    className="btn-secondary !min-h-[2.5rem] bg-emerald-400/12 text-emerald-200"
-                                                    onClick={() => acceptMutation.mutate(incomingRequest.id)}
-                                                    title="Aceptar"
-                                                >
-                                                    <Check className="w-4 h-4" />
-                                                    Aceptar
-                                                </button>
-                                                <button
-                                                    className="btn-secondary !min-h-[2.5rem] bg-red-400/12 text-red-200"
-                                                    onClick={() => rejectMutation.mutate(incomingRequest.id)}
-                                                    title="Rechazar"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                    Rechazar
-                                                </button>
-                                            </div>
-                                        ) : outgoingRequest ? (
-                                            <button className="btn-secondary" onClick={() => cancelMutation.mutate(outgoingRequest.id)}>
-                                                Pendiente
-                                            </button>
-                                        ) : (
-                                            <button
-                                                className="btn-primary"
-                                                onClick={() => sendMutation.mutate(profile.id)}
-                                                disabled={sendMutation.isPending}
-                                            >
-                                                <UserPlus2 className="w-3.5 h-3.5" />
-                                                Conectar
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
-            </section>
-
-            <section className="grid gap-4 xl:grid-cols-[0.9fr,0.9fr,1.2fr]">
-                <div className="card p-5 space-y-3">
-                    <div>
-                        <p className="page-kicker">Incoming</p>
-                        <h3 className="mt-2 text-2xl font-headline font-extrabold text-white">Solicitudes recibidas</h3>
-                    </div>
-                    {loadingIncoming ? (
-                        <LoadingSkeleton count={2} />
-                    ) : incoming.length === 0 ? (
-                        <p className="text-sm text-gray-500">Sin solicitudes pendientes.</p>
-                    ) : (
-                        incoming.map((request) => (
-                            <div key={request.id} className="rounded-[1.35rem] border border-white/8 bg-black/15 p-3">
-                                <p className="truncate text-sm font-semibold text-white">{request.from_profile?.display_name ?? 'Usuario'}</p>
-                                <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-gray-500">@{request.from_profile?.username ?? 'sin-username'}</p>
-                                <div className="mt-3 flex items-center gap-2">
-                                    <button className="btn-secondary !min-h-[2.4rem] bg-emerald-400/12 text-emerald-200" onClick={() => acceptMutation.mutate(request.id)}>
-                                        <Check className="w-4 h-4" />
-                                        Aceptar
-                                    </button>
-                                    <button className="btn-secondary !min-h-[2.4rem] bg-red-400/12 text-red-200" onClick={() => rejectMutation.mutate(request.id)}>
-                                        <X className="w-4 h-4" />
-                                        Rechazar
-                                    </button>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-
-                <div className="card p-5 space-y-3">
-                    <div>
-                        <p className="page-kicker">Outgoing</p>
-                        <h3 className="mt-2 text-2xl font-headline font-extrabold text-white">Solicitudes enviadas</h3>
-                    </div>
-                    {loadingOutgoing ? (
-                        <LoadingSkeleton count={2} />
-                    ) : outgoing.length === 0 ? (
-                        <p className="text-sm text-gray-500">No tienes solicitudes enviadas.</p>
-                    ) : (
-                        outgoing.map((request) => (
-                            <div key={request.id} className="rounded-[1.35rem] border border-white/8 bg-black/15 p-3">
-                                <p className="truncate text-sm font-semibold text-white">{request.to_profile?.display_name ?? 'Usuario'}</p>
-                                <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-gray-500">@{request.to_profile?.username ?? 'sin-username'}</p>
-                                <div className="mt-3">
-                                    <button className="btn-secondary" onClick={() => cancelMutation.mutate(request.id)}>
-                                        Cancelar
-                                    </button>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-
-                <div className="card p-5 space-y-4">
-                    <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-brand-300" />
-                        <div>
-                            <p className="page-kicker">Trusted Network</p>
-                            <h3 className="mt-2 text-2xl font-headline font-extrabold text-white">Tus conexiones</h3>
-                        </div>
-                    </div>
-
-                    {loadingFriends ? (
-                        <LoadingSkeleton count={3} />
-                    ) : friends.length === 0 ? (
+                    {friendPeople.length === 0 ? (
                         <EmptyState
-                            icon={<Users className="w-7 h-7" />}
-                            title="Aun no tienes conexiones"
-                            description="Empieza enviando solicitudes para invitar mas rapido a tus grupos."
+                            icon={<Users className="h-6 w-6" />}
+                            title="Aún no tienes amigos aquí"
+                            description="Añade a tu gente y podrás invitarla a tus grupos con un toque."
+                            action={
+                                <button type="button" onClick={() => setView('buscar')} className="btn-primary">
+                                    <Search className="h-4 w-4" />
+                                    Buscar gente
+                                </button>
+                            }
                         />
                     ) : (
-                        <div className="space-y-2">
-                            {friends.map((friend) => (
-                                <div key={friend.id} className="rounded-[1.35rem] border border-white/8 bg-black/15 p-3 sm:flex sm:items-center sm:justify-between">
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <Avatar src={friend.friend_profile?.avatar_url} name={friend.friend_profile?.display_name} size="sm" />
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-white">{friend.friend_profile?.display_name ?? 'Usuario'}</p>
-                                            <p className="truncate text-xs uppercase tracking-[0.18em] text-gray-500">@{friend.friend_profile?.username ?? 'sin-username'}</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        className="btn-secondary mt-3 sm:mt-0"
-                                        onClick={() => {
-                                            const friendUserId = friend.friend_profile?.id
-                                            if (!friendUserId) return
-                                            removeMutation.mutate(friendUserId)
-                                        }}
+                        <section>
+                            <SectionHeader
+                                title="Tus amigos"
+                                description={`${friendPeople.length} ${friendPeople.length === 1 ? 'persona' : 'personas'} · invítalas a tus grupos desde aquí`}
+                            />
+                            <div className="list-group">
+                                {friendPeople.map((person) => (
+                                    <PersonRow
+                                        key={person.id}
+                                        person={person}
+                                        subtitle={subtitle(person, mutualLabel(person.id))}
+                                        onOpen={() => navigate(profileHref(person.id))}
+                                        openLabel={`Ver el perfil de ${person.display_name}`}
                                     >
-                                        Quitar
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setMenuFriend(person)}
+                                            className="icon-btn -mr-2 text-gray-400"
+                                            aria-label={`Opciones de ${person.display_name}`}
+                                        >
+                                            <MoreHorizontal className="h-5 w-5" />
+                                        </button>
+                                    </PersonRow>
+                                ))}
+                            </div>
+                        </section>
                     )}
-                </div>
-            </section>
+                </>
+            ) : (
+                <>
+                    {incoming.length === 0 && outgoing.length === 0 ? (
+                        <EmptyState
+                            icon={<Inbox className="h-6 w-6" />}
+                            title="No tienes solicitudes pendientes"
+                            description="Cuando alguien quiera ser tu amigo, aparecerá aquí."
+                            action={
+                                <button type="button" onClick={() => setView('buscar')} className="btn-secondary">
+                                    <Search className="h-4 w-4" />
+                                    Buscar gente
+                                </button>
+                            }
+                        />
+                    ) : null}
+
+                    {incoming.length > 0 ? (
+                        <section>
+                            <SectionHeader title="Recibidas" />
+                            <div className="list-group">
+                                {incoming.map((request) => {
+                                    const person = request.from_profile ?? { id: request.from_user_id, display_name: 'Usuario' }
+                                    return (
+                                        <PersonRow
+                                            key={request.id}
+                                            person={person}
+                                            subtitle={request.message || subtitle(person, mutualLabel(person.id) ?? formatRelative(request.created_at))}
+                                            onOpen={() => navigate(profileHref(person.id))}
+                                            openLabel={`Ver el perfil de ${person.display_name}`}
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() => reject.mutate(request)}
+                                                disabled={reject.isPending || accept.isPending}
+                                                className="icon-btn bg-white/[0.06] text-gray-300"
+                                                aria-label={`Rechazar la solicitud de ${person.display_name}`}
+                                            >
+                                                <X className="h-5 w-5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => accept.mutate(request)}
+                                                disabled={reject.isPending || accept.isPending}
+                                                className="icon-btn bg-emerald-400/15 text-emerald-200"
+                                                aria-label={`Aceptar la solicitud de ${person.display_name}`}
+                                            >
+                                                <Check className="h-5 w-5" />
+                                            </button>
+                                        </PersonRow>
+                                    )
+                                })}
+                            </div>
+                        </section>
+                    ) : null}
+
+                    {outgoing.length > 0 ? (
+                        <section>
+                            <SectionHeader title="Enviadas" description="Esperando respuesta." />
+                            <div className="list-group">
+                                {outgoing.map((request) => {
+                                    const person = request.to_profile ?? { id: request.to_user_id, display_name: 'Usuario' }
+                                    return (
+                                        <PersonRow
+                                            key={request.id}
+                                            person={person}
+                                            subtitle={subtitle(person, `enviada ${formatRelative(request.created_at)}`)}
+                                            onOpen={() => navigate(profileHref(person.id))}
+                                            openLabel={`Ver el perfil de ${person.display_name}`}
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() => cancel.mutate(request)}
+                                                disabled={cancel.isPending}
+                                                className="btn-ghost !px-3 text-gray-300"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </PersonRow>
+                                    )
+                                })}
+                            </div>
+                        </section>
+                    ) : null}
+                </>
+            )}
+
+            <ActionSheet
+                open={!!menuFriend}
+                onClose={() => setMenuFriend(null)}
+                header={
+                    menuFriend ? (
+                        <div className="flex items-center gap-3">
+                            <Avatar src={menuFriend.avatar_url} name={menuFriend.display_name} size="md" />
+                            <div className="min-w-0">
+                                <p className="truncate font-semibold text-white">{menuFriend.display_name}</p>
+                                <p className="truncate text-sm text-gray-400">{subtitle(menuFriend, mutualLabel(menuFriend.id))}</p>
+                            </div>
+                        </div>
+                    ) : null
+                }
+                items={[
+                    { label: 'Ver perfil', icon: UserRound, onSelect: () => menuFriend && navigate(profileHref(menuFriend.id)) },
+                    { label: 'Invitar a un grupo', icon: UserPlus, onSelect: () => setInviteFriend(menuFriend) },
+                    { label: 'Eliminar amistad', icon: UserMinus, tone: 'danger', onSelect: () => setRemovingFriend(menuFriend) },
+                ]}
+            />
+
+            <InviteToGroupSheet person={inviteFriend} onClose={() => setInviteFriend(null)} />
+
+            <ConfirmDialog
+                isOpen={!!removingFriend}
+                title={`¿Eliminar a ${firstName(removingFriend?.display_name)} de tus amigos?`}
+                description="Seguiréis compartiendo los grupos en los que estéis juntos. Podrás volver a enviarle una solicitud cuando quieras."
+                confirmLabel="Eliminar amistad"
+                isLoading={remove.isPending}
+                onConfirm={() => removingFriend && remove.mutate(removingFriend, { onSettled: () => setRemovingFriend(null) })}
+                onCancel={() => setRemovingFriend(null)}
+            />
         </div>
+    )
+}
+
+const SearchView: React.FC<{ userId: string | null; relationOf: ReturnType<typeof useFriends>['relationOf'] }> = ({ userId, relationOf }) => {
+    const navigate = useNavigate()
+    const [query, setQuery] = React.useState('')
+    const term = useDebouncedValue(query.trim(), 300)
+    const enabled = !!userId && term.replace(/^@+/, '').length >= 2
+
+    const results = useQuery({
+        queryKey: ['friends', 'search', userId, term],
+        queryFn: () => friendsService.searchPeople(term, userId!),
+        enabled,
+        staleTime: 30_000,
+    })
+
+    return (
+        <section className="space-y-4">
+            <label className="relative block">
+                <span className="sr-only">Buscar personas</span>
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                <input
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Nombre o @usuario"
+                    autoFocus
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    enterKeyHint="search"
+                    className="input pl-12"
+                />
+            </label>
+
+            {!enabled ? (
+                <p className="px-1 text-sm text-gray-400">Escribe al menos 2 letras para encontrar a alguien de The Appden.</p>
+            ) : results.isLoading ? (
+                <ListSkeleton count={3} />
+            ) : results.error ? (
+                <ErrorNotice title="No pudimos buscar" error={results.error} onRetry={() => void results.refetch()} />
+            ) : (results.data ?? []).length === 0 ? (
+                <EmptyState
+                    compact
+                    icon={<Search className="h-6 w-6" />}
+                    title={`Nadie coincide con «${term}»`}
+                    description="Prueba con su nombre o con su @usuario."
+                />
+            ) : (
+                <div className="list-group">
+                    {(results.data ?? []).map((person) => (
+                        <PersonRow
+                            key={person.id}
+                            person={person}
+                            onOpen={() => navigate(ROUTES.PROFILE_ID(person.id))}
+                            openLabel={`Ver el perfil de ${person.display_name}`}
+                        >
+                            <FriendRelationButton person={person} relation={relationOf(person.id)} />
+                        </PersonRow>
+                    ))}
+                </div>
+            )}
+        </section>
     )
 }

@@ -14,7 +14,8 @@ export default function NotificationsPage() {
         markAllAsRead,
         removeNotification,
         addNotification,
-    } = useNotifications()
+        loadError,
+    } = useNotifications({ loadPersisted: true })
 
     const [permission, setPermission] = React.useState<NotificationPermission | 'unsupported'>(() => {
         if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported'
@@ -80,6 +81,12 @@ export default function NotificationsPage() {
                     { label: 'Alerts', value: 'notifications', href: ROUTES.NOTIFICATIONS },
                 ]}
             />
+
+            {loadError ? (
+                <div role="alert" className="mb-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                    {loadError}
+                </div>
+            ) : null}
 
             {notifications.length === 0 ? (
                 <EmptyState

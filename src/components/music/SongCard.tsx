@@ -1,16 +1,11 @@
-﻿import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Edit2, Heart, Music, Pause, Play, Trash2 } from 'lucide-react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+﻿import React, { useState } from 'react'
+import { Heart, MoreHorizontal, Play } from 'lucide-react'
 import { usePlayerStore } from '@app/store/player.store'
-import { ConfirmDialog } from '@components/ui/ConfirmDialog'
-import { useToast } from '@components/ui/Toast'
-import { useAuth } from '@hooks/useAuth'
-import { useActiveGroup } from '@hooks/useActiveGroup'
-import { ROUTES } from '@lib/constants'
+import type { ActionSheetItem } from '@components/ui/ActionSheet'
+import { Cover, EqualizerBars } from '@components/music/Cover'
+import { SongActionsSheet } from '@components/music/SongActionsSheet'
+import { useFavoriteToggle } from '@hooks/useFavoriteToggle'
 import { cn, formatDuration } from '@lib/utils'
-import { favoritesService } from '@services/favorites.service'
-import { songsService } from '@services/songs.service'
 import type { Song } from '@/types'
 
 interface SongCardProps {
@@ -18,150 +13,118 @@ interface SongCardProps {
     onPlay: () => void
     showArtist?: boolean
     onEdit?: () => void
+    /** Extra contextual actions (e.g. "Quitar de la playlist"). */
+    extraActions?: ActionSheetItem[]
+    /** Optional track number shown on the left of the cover. */
+    index?: number
+    /** Hide the cover (album tracklists). */
+    hideCover?: boolean
 }
 
-export const SongCard: React.FC<SongCardProps> = ({ song, onPlay, showArtist = true, onEdit }) => {
-    const { userId } = useAuth()
-    const { groupId } = useActiveGroup()
+/**
+ * Compact, touch-first song row. Tapping the row plays the song; the "more"
+ * button opens a bottom sheet with every secondary action.
+ */
+export const SongCard: React.FC<SongCardProps> = ({ song, onPlay, showArtist = true, onEdit, extraActions, index, hideCover = false }) => {
     const currentSong = usePlayerStore((state) => state.currentSong)
     const isPlaying = usePlayerStore((state) => state.isPlaying)
     const togglePlay = usePlayerStore((state) => state.togglePlay)
-    const { success, error: toastError } = useToast()
-    const queryClient = useQueryClient()
+    const favorite = useFavoriteToggle(song.id, song.is_favorite)
     const isCurrentSong = currentSong?.id === song.id
     const isThisPlaying = isCurrentSong && isPlaying
-    const isOwner = userId === song.uploaded_by
-    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-    const [coverFailed, setCoverFailed] = useState(false)
+    const [showActions, setShowActions] = useState(false)
+    // The sheets are only mounted once the menu has been opened (long lists stay light).
+    const [actionsMounted, setActionsMounted] = useState(false)
 
-    useEffect(() => {
-        setCoverFailed(false)
-    }, [song.id, song.cover_url])
+    const handlePrimary = () => {
+        if (isCurrentSong) {
+            togglePlay()
+            return
+        }
+        onPlay()
+    }
 
-    const { mutate: toggleFavorite, isPending } = useMutation({
-        mutationFn: async () => {
-            if (!userId) return
-            if (song.is_favorite) {
-                await favoritesService.removeFavorite(userId, song.id)
-            } else {
-                await favoritesService.addFavorite(userId, song.id)
-            }
-        },
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: ['songs', groupId] })
-            void queryClient.invalidateQueries({ queryKey: ['favorites'] })
-        },
-        onError: () => {
-            toastError('Error', 'No se pudo actualizar favoritos.')
-        },
-    })
+    const openActions = () => {
+        setActionsMounted(true)
+        setShowActions(true)
+    }
 
-    const { mutate: deleteSong, isPending: isDeleting } = useMutation({
-        mutationFn: async () => {
-            await songsService.deleteSong(song.id)
-        },
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: ['songs', groupId] })
-            void queryClient.invalidateQueries({ queryKey: ['favorites'] })
-            void queryClient.invalidateQueries({ queryKey: ['playlists', groupId] })
-            void queryClient.invalidateQueries({ queryKey: ['song', song.id] })
-            success('Cancion', 'Cancion eliminada correctamente')
-            setShowDeleteDialog(false)
-        },
-        onError: () => {
-            toastError('Error', 'No se pudo eliminar la cancion')
-        },
-    })
+    const subtitle = showArtist ? song.artist_name : song.album_name ?? song.artist_name
 
     return (
         <>
-            <article
+            <div
                 className={cn(
-                    'card-interactive group relative overflow-hidden p-3',
-                    isCurrentSong && 'border-brand-400/25 bg-brand-400/8'
+                    'group flex items-center gap-3 rounded-2xl py-1.5 pl-1.5 pr-0.5 transition-colors',
+                    isCurrentSong ? 'bg-brand-400/[0.08]' : 'active:bg-white/[0.05] md:hover:bg-white/[0.04]'
                 )}
             >
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => {
-                            if (isCurrentSong) {
-                                togglePlay()
-                                return
-                            }
-                            onPlay()
-                        }}
-                        className="group/play relative h-16 w-16 shrink-0 overflow-hidden rounded-[1.35rem] bg-surface-700"
-                        aria-label={isThisPlaying ? 'Pausar' : 'Reproducir'}
-                    >
-                        {song.cover_url && !coverFailed ? (
-                            <img src={song.cover_url} alt={song.title} className="h-full w-full object-cover" onError={() => setCoverFailed(true)} />
-                        ) : (
-                            <div className="grid h-full w-full place-items-center text-gray-500">
-                                <Music className="h-5 w-5" />
-                            </div>
-                        )}
-                        <div className="absolute inset-0 grid place-items-center bg-black/45 opacity-0 transition-opacity group-hover/play:opacity-100">
-                            {isThisPlaying ? <Pause className="h-5 w-5 text-white" /> : <Play className="ml-0.5 h-5 w-5 text-white" />}
-                        </div>
-                        {isThisPlaying ? <div className="absolute bottom-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-brand-300 shadow-[0_0_12px_rgba(133,173,255,0.55)]" /> : null}
-                    </button>
+                {index != null ? (
+                    <span className="grid w-6 shrink-0 place-items-center text-center text-sm font-medium tabular text-gray-500">
+                        {isCurrentSong ? <EqualizerBars playing={isThisPlaying} className="text-brand-300" /> : index + 1}
+                    </span>
+                ) : null}
 
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                            <Link to={ROUTES.SONG(song.id)} className="min-w-0">
-                                <p className={cn('truncate text-base font-semibold', isCurrentSong ? 'text-brand-200' : 'text-white')}>
-                                    {song.title}
-                                </p>
-                            </Link>
-                            {song.is_favorite ? <span className="badge-brand !px-2 !py-0.5">Fav</span> : null}
-                        </div>
-
-                        {showArtist ? <p className="mt-1 truncate text-sm text-gray-400">{song.artist_name}</p> : null}
-
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <span className="hero-meta-pill !px-3 !py-1">{formatDuration(song.duration_seconds)}</span>
-                            {isCurrentSong ? <span className="hero-meta-pill !px-3 !py-1">En reproduccion</span> : null}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
-                        <button
-                            onClick={() => toggleFavorite()}
-                            disabled={isPending}
-                            aria-label={song.is_favorite ? 'Quitar de favoritos' : 'Anadir a favoritos'}
-                            className={cn(
-                                'btn-icon !h-10 !w-10 !rounded-full',
-                                song.is_favorite ? 'text-pink-300' : 'text-gray-400'
+                <button
+                    type="button"
+                    onClick={handlePrimary}
+                    className={cn('flex min-w-0 flex-1 items-center gap-3 text-left', hideCover && 'min-h-[3rem]')}
+                    aria-label={isThisPlaying ? `Pausar ${song.title}` : `Reproducir ${song.title}`}
+                >
+                    {hideCover ? null : (
+                        <Cover src={song.cover_url} alt="" seed={song.id} className="h-12 w-12 rounded-xl">
+                            {isCurrentSong && index == null ? (
+                                <span className="absolute inset-0 grid place-items-center bg-black/45 text-white">
+                                    <EqualizerBars playing={isThisPlaying} />
+                                </span>
+                            ) : (
+                                <span className="absolute inset-0 hidden place-items-center bg-black/45 text-white md:group-hover:grid">
+                                    <Play className="ml-0.5 h-5 w-5 fill-current" />
+                                </span>
                             )}
-                        >
-                            <Heart className={cn('h-4 w-4', song.is_favorite && 'fill-current')} />
-                        </button>
+                        </Cover>
+                    )}
+                    <span className="min-w-0 flex-1">
+                        <span className={cn('block truncate text-[15px] font-semibold', isCurrentSong ? 'text-brand-200' : 'text-white')}>
+                            {song.title}
+                        </span>
+                        <span className="mt-0.5 flex items-center gap-1.5 text-[13px] text-gray-400">
+                            {favorite.isFavorite ? <Heart className="h-3 w-3 shrink-0 fill-pink-400 text-pink-400" aria-label="Favorita" /> : null}
+                            <span className="truncate">
+                                {subtitle}
+                                {song.duration_seconds ? <span className="text-gray-500"> · {formatDuration(song.duration_seconds)}</span> : null}
+                            </span>
+                        </span>
+                    </span>
+                </button>
 
-                        {isOwner && onEdit ? (
-                            <button onClick={onEdit} className="btn-icon !h-10 !w-10 !rounded-full" aria-label="Editar">
-                                <Edit2 className="h-4 w-4" />
-                            </button>
-                        ) : null}
+                <button
+                    type="button"
+                    onClick={favorite.toggle}
+                    className={cn('icon-btn hidden md:inline-grid', favorite.isFavorite ? 'text-pink-400' : 'text-gray-500')}
+                    aria-label={favorite.isFavorite ? 'Quitar de favoritas' : 'Añadir a favoritas'}
+                    aria-pressed={favorite.isFavorite}
+                >
+                    <Heart className={cn('h-[18px] w-[18px]', favorite.isFavorite && 'fill-current')} />
+                </button>
+                <button type="button" onClick={openActions} className="icon-btn text-gray-400" aria-label={`Más opciones de ${song.title}`}>
+                    <MoreHorizontal className="h-5 w-5" />
+                </button>
+            </div>
 
-                        {isOwner ? (
-                            <button onClick={() => setShowDeleteDialog(true)} className="btn-icon !h-10 !w-10 !rounded-full text-red-200" aria-label="Eliminar">
-                                <Trash2 className="h-4 w-4" />
-                            </button>
-                        ) : null}
-                    </div>
-                </div>
-            </article>
-
-            <ConfirmDialog
-                isOpen={showDeleteDialog}
-                title="Eliminar cancion"
-                description={`Estas seguro de que quieres eliminar "${song.title}"? Esta accion no se puede deshacer.`}
-                variant="danger"
-                isLoading={isDeleting}
-                confirmLabel="Eliminar"
-                onConfirm={() => deleteSong()}
-                onCancel={() => setShowDeleteDialog(false)}
-            />
+            {actionsMounted ? (
+                <SongActionsSheet
+                    song={song}
+                    open={showActions}
+                    onClose={() => setShowActions(false)}
+                    favorite={favorite}
+                    isCurrent={isCurrentSong}
+                    isPlaying={isPlaying}
+                    onPrimary={handlePrimary}
+                    onEdit={onEdit}
+                    extraActions={extraActions}
+                />
+            ) : null}
         </>
     )
 }

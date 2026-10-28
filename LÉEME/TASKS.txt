@@ -1,0 +1,65 @@
+Ideas de Producto
+
+Fondo dinámico del player basado en la portada (color principal + degradado + blur).
+Reproductor full-screen estilo Spotify/Apple con transición suave desde mini-player.
+Crossfade entre canciones (2-6s configurable).
+Gapless playback para evitar cortes entre pistas.
+Ecualizador básico (rock/pop/bass boost/voz).
+Normalización de volumen entre canciones.
+Cola editable con drag & drop.
+Historial de reproducción por usuario y por grupo.
+“Continuar escuchando” al abrir la app.
+Modo “radio” desde una canción (similares por artista/tempo/energía).
+Letras (muy buena idea la tuya)
+11. Detección automática de letras con ASR (transcripción) al subir canción.
+12. Sincronización temporal por línea (timestamp) para modo karaoke.
+13. Editor de letras para el dueño con vista previa en tiempo real.
+14. Propuestas de edición por otros miembros + aprobación del dueño.
+15. Versionado de letras (historial y rollback).
+16. Traducción opcional de letras (ES/EN).
+17. Indicador “letra no verificada / verificada por autor”.
+
+Social en Canciones
+18. Comentarios por canción (con respuestas).
+19. Likes por canción y por comentario.
+20. Reacciones rápidas (🔥 ❤️ 🎧).
+21. Menciones @usuario en comentarios.
+22. Compartir timestamp exacto (ej. 01:23) dentro de comentarios.
+23. Feed de actividad del grupo (“X subió canción”, “Y comentó”, etc.).
+
+UI/UX Pro
+24. Portada grande + glassmorphism para controles.
+25. Gestos móvil: swipe para siguiente/anterior, doble tap para like.
+26. Modo compacto/expandido del reproductor.
+27. Estados vacíos más premium con ilustraciones.
+28. Temas visuales (Dark, Neon, Minimal).
+29. Tipografía y espaciado más “music app premium”.
+30. Animación del progreso al ritmo (opcional).
+
+Deudas (muy buen foco)
+31. Calculadora de reparto (igual, por porcentaje, por importe exacto).
+32. “Quién pagó qué” con tickets/fotos.
+33. Recordatorios automáticos al deudor (push/email/whatsapp link).
+34. Frecuencia de recordatorios configurable (suave/normal/estricto).
+35. Plan de pagos (cuotas).
+36. Liquidación inteligente del grupo (minimiza transferencias).
+37. Resumen mensual de balances.
+38. Estado de salud financiera del grupo (score simple).
+
+Retención y valor
+39. Notificaciones push web/mobile.
+40. Objetivos grupales (ej. “cerrar deudas del mes”).
+41. Insignias/gamificación (sin deuda, top contributor, etc.).
+42. Backup/export CSV/JSON.
+43. Panel admin del grupo (permisos por rol).
+
+Roadmap recomendado (orden práctico)
+
+Player Pro v1: fondo dinámico + full-screen + cola editable + crossfade.
+Letras v1: transcripción automática + editor del dueño + sync básica.
+Social v1: comentarios + likes + notificaciones.
+Deudas Pro v1: calculadora reparto + recordatorios + plan de pagos.
+Optimización final: animaciones, analítica y personalización.
+Si quieres, te convierto esta lista en un roadmap por sprints (Sprint 1, 2, 3...) con dificultad estimada y valor de negocio.
+
+

@@ -116,9 +116,10 @@ Date: 2026-03-26
 
 ### Notifications
 
-- `[BLOCKER]` Decide whether the module ships, hides or gets rewired before launch.
-- `[RECOMMENDED]` Verify backend `notifications` rows exist for seeded scenarios.
-- `[AUTO LATER]` Once rewired, add DB-to-UI notification feed tests.
+- `[BLOCKER]` Verify backend `notifications` rows load in `/notifications` for the authenticated user.
+- `[BLOCKER]` Mark a notification read and delete it, then confirm both changes persist after refresh.
+- `[RECOMMENDED]` Verify local UI feedback notifications remain transient and are not written to the backend.
+- `[AUTO LATER]` Add DB-to-UI notification feed tests.
 
 ## B. UI / UX Testing
 
@@ -157,7 +158,7 @@ Date: 2026-03-26
 
 ### Supabase Auth / DB / RLS
 
-- `[BLOCKER]` Confirm migrations `001-011` are applied in the QA/staging project.
+- `[BLOCKER]` Confirm migrations `001-014` are applied in the QA/staging project.
 - `[BLOCKER]` Verify group reads do not recurse or fail under normal login bootstrap.
 - `[BLOCKER]` Validate protected reads/writes for groups, songs, debts, reports and files.
 - `[RECOMMENDED]` Verify admin role behavior in `user_roles`.
@@ -200,4 +201,4 @@ If time is short, these are the minimum tests that should not be skipped:
 7. file upload/list/delete basic flow
 8. changelog rendering from Supabase
 9. mobile dock + toast + safe-area verification
-10. lint, typecheck, build, migrations `001-011`
+10. lint, typecheck, build, migrations `001-014`

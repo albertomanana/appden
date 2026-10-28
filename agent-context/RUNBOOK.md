@@ -19,7 +19,7 @@ copy .env.example .env.local
    - `SUPABASE_SERVICE_ROLE_KEY`
    - optional: `QA_SEED_EMAIL_DOMAIN`, `QA_SEED_DEFAULT_PASSWORD`
 
-4. Run SQL migrations in Supabase SQL Editor (001 -> 012).
+4. Run SQL migrations in Supabase SQL Editor (001 -> 014).
 
 5. Ensure storage buckets exist:
 - `avatars`
@@ -34,7 +34,7 @@ npm run dev
 ```
 
 7. Open:
-- `http://localhost:5173`
+- `http://127.0.0.1:4173`
 
 ## Build and quality
 

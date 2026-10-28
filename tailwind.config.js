@@ -37,6 +37,15 @@ export default {
                     amber: '#ffc966',
                     red: '#ff716c',
                 },
+                // Semantic aliases kept from the Stitch design export.
+                background: '#0b0b0d',
+                'on-background': '#ffffff',
+                primary: '#85adff',
+                secondary: '#ac8aff',
+                'secondary-container': '#3b2a78',
+                error: '#ff716c',
+                'on-surface': '#ffffff',
+                'on-surface-variant': '#a3a3a8',
             },
             fontFamily: {
                 sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -61,6 +70,27 @@ export default {
                 'card-hover': '0 30px 90px rgba(0,0,0,0.42)',
                 'ambient': '0 0 80px rgba(133,173,255,0.08)',
             },
+            // Extra steps used across the UI (e.g. bg-red-400/8). Without them Tailwind silently drops the class.
+            opacity: {
+                3: '0.03',
+                4: '0.04',
+                6: '0.06',
+                8: '0.08',
+                12: '0.12',
+                14: '0.14',
+                16: '0.16',
+                18: '0.18',
+                22: '0.22',
+                35: '0.35',
+                45: '0.45',
+                55: '0.55',
+                65: '0.65',
+                85: '0.85',
+            },
+            spacing: {
+                header: 'var(--header-h)',
+                dock: 'var(--dock-h)',
+            },
             animation: {
                 'fade-in': 'fadeIn 0.2s ease-out',
                 'slide-up': 'slideUp 0.3s ease-out',
@@ -68,6 +98,9 @@ export default {
                 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                 'spin-slow': 'spin 3s linear infinite',
                 'float-soft': 'floatSoft 6s ease-in-out infinite',
+                'eq-1': 'eqBar 0.9s ease-in-out infinite',
+                'eq-2': 'eqBar 0.9s ease-in-out -0.3s infinite',
+                'eq-3': 'eqBar 0.9s ease-in-out -0.6s infinite',
             },
             keyframes: {
                 fadeIn: {
@@ -85,6 +118,10 @@ export default {
                 floatSoft: {
                     '0%, 100%': { transform: 'translateY(0px)' },
                     '50%': { transform: 'translateY(-4px)' },
+                },
+                eqBar: {
+                    '0%, 100%': { transform: 'scaleY(0.3)' },
+                    '50%': { transform: 'scaleY(1)' },
                 },
             },
         },

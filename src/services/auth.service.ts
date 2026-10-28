@@ -1,5 +1,13 @@
 import { STORAGE_KEYS } from '@lib/constants'
 import { supabase, AUTH_STORAGE_KEY, LEGACY_AUTH_STORAGE_KEY } from '@lib/supabase/client'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
+
+// Supabase may emit PASSWORD_RECOVERY while processing the email link, before the
+// reset page mounts. Capture it at module load so the page can still detect it.
+let passwordRecoveryPending = false
+supabase.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') passwordRecoveryPending = true
+})
 
 /**
  * Auth service - wraps Supabase auth methods.
@@ -86,6 +94,9 @@ export const authService = {
             password,
             options: {
                 data: { display_name: displayName },
+                // Without this the confirmation link goes to the dashboard "Site URL",
+                // which breaks sign-up when it still points to localhost.
+                emailRedirectTo: `${window.location.origin}/login`,
             },
         })
         if (error) throw error
@@ -173,5 +184,18 @@ export const authService = {
             callback(session?.user?.id ?? null)
         })
         return () => data.subscription.unsubscribe()
+    },
+
+    /** True once if the current page load came from a password recovery link. */
+    consumePasswordRecovery(): boolean {
+        const value = passwordRecoveryPending
+        passwordRecoveryPending = false
+        return value
+    },
+
+    subscribe(
+        callback: (event: AuthChangeEvent, session: Session | null) => void
+    ) {
+        return supabase.auth.onAuthStateChange(callback)
     },
 }

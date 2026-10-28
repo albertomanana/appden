@@ -1,7 +1,6 @@
 import React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { X, ListMusic } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { playlistsService } from '@services/playlists.service'
 import { playlistSchema, type PlaylistFormData } from '@lib/validators'
@@ -9,68 +8,91 @@ import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { useToast } from '@components/ui/Toast'
 import type { Playlist } from '@/types'
+import { Modal } from '@components/ui/Modal'
 
 interface PlaylistFormProps {
     onClose: () => void
     existing?: Playlist
+    /** Called with the saved playlist (e.g. to add a song right after creating it). */
+    onSaved?: (playlist: Playlist) => void
+    /** Shown under the title, e.g. "Se añadirá «Luces de neón»". */
+    description?: string
 }
 
-export const PlaylistForm: React.FC<PlaylistFormProps> = ({ onClose, existing }) => {
+export const PlaylistForm: React.FC<PlaylistFormProps> = ({ onClose, existing, onSaved, description }) => {
     const { userId } = useAuth()
     const { groupId } = useActiveGroup()
     const { success, error: toastError } = useToast()
     const queryClient = useQueryClient()
 
-    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<PlaylistFormData>({
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+    } = useForm<PlaylistFormData>({
         resolver: zodResolver(playlistSchema),
         defaultValues: { name: existing?.name ?? '', description: existing?.description ?? '' },
     })
 
-    const { mutate } = useMutation({
-        mutationFn: (data: PlaylistFormData) =>
-            existing
-                ? playlistsService.updatePlaylist(existing.id, data)
-                : playlistsService.createPlaylist(userId!, groupId!, data),
-        onSuccess: () => {
+    const { mutate, isPending } = useMutation({
+        mutationFn: (data: PlaylistFormData) => {
+            if (existing) return playlistsService.updatePlaylist(existing.id, data)
+            if (!userId || !groupId) throw new Error('Elige un grupo antes de crear una playlist.')
+            return playlistsService.createPlaylist(userId, groupId, data)
+        },
+        onSuccess: (playlist) => {
             void queryClient.invalidateQueries({ queryKey: ['playlists', groupId] })
             if (existing) {
                 void queryClient.invalidateQueries({ queryKey: ['playlist', existing.id] })
             }
-            success(existing ? 'Playlist actualizada' : 'Playlist creada')
+            if (!onSaved) success(existing ? 'Playlist actualizada' : 'Playlist creada')
+            onSaved?.(playlist)
             onClose()
         },
         onError: (err) => {
-            toastError('Error', err instanceof Error ? err.message : 'No se pudo guardar la playlist.')
+            toastError('No se pudo guardar la playlist', err instanceof Error ? err.message : undefined)
         },
     })
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-0 sm:items-center sm:p-4">
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative my-auto w-full sm:max-w-md card rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up">
-                <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-2">
-                        <ListMusic className="w-5 h-5 text-brand-400" />
-                        <h2 className="text-lg font-bold text-white">{existing ? 'Editar playlist' : 'Nueva playlist'}</h2>
-                    </div>
-                    <button onClick={onClose} className="btn-ghost p-2 rounded-xl"><X className="w-4 h-4" /></button>
+        <Modal
+            open
+            onClose={onClose}
+            title={existing ? 'Editar playlist' : 'Nueva playlist'}
+            description={description}
+            size="sm"
+            footer={
+                <button type="submit" form="playlist-form" disabled={isPending} className="btn-primary w-full">
+                    {isPending ? 'Guardando…' : existing ? 'Guardar cambios' : 'Crear playlist'}
+                </button>
+            }
+        >
+            <form id="playlist-form" onSubmit={handleSubmit((data) => mutate(data))} className="space-y-4">
+                <div>
+                    <label className="label" htmlFor="pl-name">Nombre</label>
+                    <input
+                        id="pl-name"
+                        type="text"
+                        autoComplete="off"
+                        placeholder="Para el coche, Ensayo del jueves…"
+                        className="input"
+                        aria-invalid={!!errors.name}
+                        {...register('name')}
+                    />
+                    {errors.name ? <p className="field-error">{errors.name.message}</p> : null}
                 </div>
-
-                <form onSubmit={handleSubmit((data) => mutate(data))} className="space-y-4">
-                    <div>
-                        <label className="label" htmlFor="pl-name">Nombre *</label>
-                        <input id="pl-name" type="text" placeholder="Mi playlist" className={`input ${errors.name ? 'border-red-500' : ''}`} {...register('name')} />
-                        {errors.name ? <p className="text-xs text-red-400 mt-1">{errors.name.message}</p> : null}
-                    </div>
-                    <div>
-                        <label className="label" htmlFor="pl-desc">Descripcion (opcional)</label>
-                        <textarea id="pl-desc" rows={2} className="input resize-none" placeholder="De que va esta playlist..." {...register('description')} />
-                    </div>
-                    <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-3 font-semibold">
-                        {isSubmitting ? 'Guardando...' : existing ? 'Actualizar' : 'Crear playlist'}
-                    </button>
-                </form>
-            </div>
-        </div>
+                <div>
+                    <label className="label" htmlFor="pl-desc">Descripción (opcional)</label>
+                    <textarea
+                        id="pl-desc"
+                        rows={3}
+                        className="input resize-none"
+                        placeholder="¿De qué va esta playlist?"
+                        {...register('description')}
+                    />
+                    {errors.description ? <p className="field-error">{errors.description.message}</p> : null}
+                </div>
+            </form>
+        </Modal>
     )
 }

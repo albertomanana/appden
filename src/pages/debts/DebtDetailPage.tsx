@@ -20,7 +20,7 @@ const DebtDetailPage: React.FC = () => {
     const navigate = useNavigate()
     const { userId } = useAuth()
     const { groupId } = useActiveGroup()
-    const { success, error: toastError } = useToast()
+    const { success, warning, error: toastError } = useToast()
     const queryClient = useQueryClient()
     const [showPaymentForm, setShowPaymentForm] = useState(false)
     const [showMarkPaid, setShowMarkPaid] = useState(false)
@@ -37,10 +37,11 @@ const DebtDetailPage: React.FC = () => {
     })
 
     const { mutate: registerPayment, isPending: isPaymentPending } = useMutation({
-        mutationFn: (data: PaymentFormData) => debtsService.registerPayment(
-            debtId!, userId!, data, debt!.amount, debt!.amount_paid, receiptFile
-        ),
-        onSuccess: () => {
+        mutationFn: (data: PaymentFormData) =>
+            debtsService.registerPayment(debt!, userId!, { amount: data.amount, note: data.note || null, receiptFile }),
+        onSuccess: (result) => {
+            if (result.historySkipped) warning('Pago aplicado', 'No se guardó en el historial: falta la migración 017 en Supabase.')
+            if (result.receiptFailed) warning('Pago registrado sin justificante', 'No se pudo subir la imagen.')
             void queryClient.invalidateQueries({ queryKey: ['debt', debtId] })
             void queryClient.invalidateQueries({ queryKey: ['debts', groupId] })
             void queryClient.invalidateQueries({ queryKey: ['debts-summary', groupId] })
@@ -53,10 +54,11 @@ const DebtDetailPage: React.FC = () => {
     })
 
     const { mutate: markAsPaid, isPending: isMarkingPaid } = useMutation({
-        mutationFn: () => debtsService.markAsPaid(debtId!, debt!.amount),
+        mutationFn: () => debtsService.markAsPaid(debt!, userId!),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: ['debt', debtId] })
             void queryClient.invalidateQueries({ queryKey: ['debts', groupId] })
+            void queryClient.invalidateQueries({ queryKey: ['debts-summary', groupId] })
             success('Deuda saldada', 'Marcada como completamente pagada.')
             setShowMarkPaid(false)
         },

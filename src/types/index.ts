@@ -15,7 +15,16 @@ export type GroupGoalType = 'debt_reduction' | 'zero_overdue' | 'custom'
 export type FileCategory = 'image' | 'document'
 export type SharedLinkVisibility = 'private' | 'limited'
 export type SharedLinkResourceType = 'song' | 'playlist' | 'debt' | 'file'
-export type NotificationType = 'song_added' | 'debt_created' | 'debt_paid' | 'playlist_created' | 'file_uploaded'
+export type NotificationType =
+    | 'song_added'
+    | 'debt_created'
+    | 'debt_paid'
+    | 'playlist_created'
+    | 'file_uploaded'
+    // Social (migration 018)
+    | 'friend_request'
+    | 'friend_accepted'
+    | 'group_invitation'
 
 // -- Profile --
 
@@ -63,6 +72,8 @@ export interface Song {
     title: string
     artist_name: string
     album_name: string | null
+    /** Present once migration 016 (albums) is applied. */
+    album_id?: string | null
     cover_url: string | null
     audio_url: string
     duration_seconds: number | null
@@ -139,8 +150,8 @@ export interface GroupInvitation {
     created_at: string
     responded_at: string | null
     group?: Pick<Group, 'id' | 'name' | 'description' | 'avatar_url'>
-    inviter?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>
-    invited?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>
+    inviter?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'> & Partial<Pick<Profile, 'username'>>
+    invited?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'> & Partial<Pick<Profile, 'username'>>
 }
 
 export type LyricsSource = 'manual' | 'auto'
@@ -234,7 +245,12 @@ export interface Post {
     group_id?: string | null
     created_at: string
     author?: Pick<Profile, 'id' | 'display_name' | 'username' | 'avatar_url'>
+    group?: Pick<Group, 'id' | 'name'> | null
+    // Derived on read
+    like_count?: number
+    liked_by_me?: boolean
 }
+
 export interface SongComment {
     id: string
     song_id: string
@@ -333,6 +349,8 @@ export interface Playlist {
     // Joined
     creator?: Profile
     song_count?: number
+    /** First song ids by position, used to build the cover mosaic. */
+    preview_song_ids?: string[]
     songs?: PlaylistSong[]
 }
 
@@ -361,6 +379,10 @@ export interface Debt {
     amount_paid: number
     created_at: string
     updated_at: string
+    /** Member who wrote the debt down (migration 017; absent before it). */
+    created_by?: string | null
+    /** Optional due date, YYYY-MM-DD (migration 017). */
+    due_date?: string | null
     // Joined
     creditor?: Profile
     debtor?: Profile
@@ -375,6 +397,8 @@ export interface DebtPayment {
     receipt_url?: string | null
     receipt_mime_type?: string | null
     paid_by: string
+    /** Member who registered the payment (migration 017). */
+    recorded_by?: string | null
     created_at: string
     // Joined
     payer?: Profile
@@ -506,7 +530,8 @@ export interface SharedLink {
 export interface AppNotification {
     id: string
     user_id: string
-    group_id: string
+    /** Null for social notifications that do not belong to a group (migration 018). */
+    group_id: string | null
     type: NotificationType
     title: string
     body: string

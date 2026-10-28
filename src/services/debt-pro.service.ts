@@ -1,12 +1,13 @@
 import { supabase } from '@lib/supabase/client'
-import { buildWhatsAppUrl } from '@lib/utils'
+import { reportLocalFallback } from '@lib/diagnostics/fallback'
+import { buildWhatsAppUrl, formatMoney } from '@lib/utils'
+import { amountToCents, centsToAmount, settleOpenDebts } from '@features/debts/split'
 import type {
     Debt,
     DebtCurrency,
     DebtInstallment,
     DebtReminder,
     DebtReminderFrequency,
-    DebtSplitMode,
     GroupFinancialHealth,
     GroupGoal,
     GroupGoalStatus,
@@ -25,22 +26,6 @@ const STORAGE_KEYS = {
     badges: 'appden:debt-badges:v1',
     permissions: 'appden:group-permissions:v1',
 } as const
-
-type SplitParticipantInput = {
-    debtorId: string
-    percentage?: number
-    exactAmount?: number
-}
-
-type CreateSplitDebtsInput = {
-    groupId: string
-    creditorId: string
-    concept: string
-    totalAmount: number
-    currency: DebtCurrency
-    mode: DebtSplitMode
-    participants: SplitParticipantInput[]
-}
 
 type ReminderChannels = {
     push: boolean
@@ -86,39 +71,11 @@ type PermissionInput = {
 }
 
 export const debtProService = {
-    calculateSplitShares(
-        totalAmount: number,
-        mode: DebtSplitMode,
-        participants: SplitParticipantInput[]
-    ): Array<{ debtorId: string; amount: number }> {
-        const validParticipants = participants.filter((item) => !!item.debtorId)
-        if (totalAmount <= 0 || validParticipants.length === 0) return []
-
-        if (mode === 'equal') return splitEqual(totalAmount, validParticipants)
-        if (mode === 'percentage') return splitByPercentage(totalAmount, validParticipants)
-        return splitByExact(totalAmount, validParticipants)
-    },
-
-    async createSplitDebts(input: CreateSplitDebtsInput): Promise<Debt[]> {
-        const shares = this.calculateSplitShares(input.totalAmount, input.mode, input.participants)
-        if (shares.length === 0) return []
-
-        const payload = shares
-            .filter((share) => share.amount > 0)
-            .map((share) => ({
-                group_id: input.groupId,
-                creditor_id: input.creditorId,
-                debtor_id: share.debtorId,
-                amount: roundMoney(share.amount),
-                currency: input.currency,
-                concept: `${input.concept} (${splitLabel(input.mode)})`,
-                status: 'pending',
-                amount_paid: 0,
-            }))
-
-        const { data, error } = await supabase.from('debts').insert(payload).select('*')
-        if (error) throw error
-        return (data ?? []) as Debt[]
+    /** Friendly reminder text for WhatsApp ("Hola Marcos, ..."). */
+    buildReminderText(debt: Pick<Debt, 'concept' | 'amount' | 'amount_paid' | 'currency'>, debtorName: string): string {
+        const remaining = centsToAmount(Math.max(0, amountToCents(debt.amount) - amountToCents(debt.amount_paid)))
+        const firstName = debtorName.trim().split(/\s+/)[0] || debtorName
+        return `¡Hola, ${firstName}! Te recuerdo que tienes pendientes ${formatMoney(remaining, debt.currency)} de «${debt.concept}». Cuando puedas, me lo pasas. ¡Gracias! 🙌`
     },
 
     async getReminderConfig(debtId: string): Promise<DebtReminder | null> {
@@ -129,7 +86,10 @@ export const debtProService = {
             .maybeSingle()
 
         if (error) {
-            if (isMissingRelationError(error)) return readReminderFallback(debtId)
+            if (isMissingRelationError(error)) {
+                reportLocalFallback('debt pro reminders', error)
+                return readReminderFallback(debtId)
+            }
             throw error
         }
 
@@ -156,7 +116,10 @@ export const debtProService = {
             .single()
 
         if (error) {
-            if (isMissingRelationError(error)) return upsertReminderFallback(payload)
+            if (isMissingRelationError(error)) {
+                reportLocalFallback('debt pro reminders', error)
+                return upsertReminderFallback(payload)
+            }
             throw error
         }
 
@@ -167,8 +130,7 @@ export const debtProService = {
         debtorName: string,
         reminder: DebtReminder
     ): Promise<{ whatsappUrl: string | null }> {
-        const remaining = Math.max(0, debt.amount - debt.amount_paid)
-        const text = `Recordatorio: ${debtorName}, tienes pendiente ${remaining.toFixed(2)} ${debt.currency} por "${debt.concept}".`
+        const text = this.buildReminderText(debt, debtorName)
 
         if (reminder.channels.push && typeof window !== 'undefined' && 'Notification' in window) {
             if (Notification.permission === 'granted') {
@@ -276,73 +238,31 @@ export const debtProService = {
 
         if (error) throw error
 
-        const byCurrency = new Map<DebtCurrency, Array<{ creditorId: string; debtorId: string; remaining: number }>>()
-        for (const row of data ?? []) {
-            const remaining = Math.max(0, Number(row.amount) - Number(row.amount_paid))
-            if (remaining <= 0) continue
-            const currency = row.currency as DebtCurrency
-            const list = byCurrency.get(currency) ?? []
-            list.push({ creditorId: String(row.creditor_id), debtorId: String(row.debtor_id), remaining })
-            byCurrency.set(currency, list)
-        }
-
-        const transfers: GroupSettlementTransfer[] = []
-
-        for (const [currency, rows] of byCurrency.entries()) {
-            const net = new Map<string, number>()
-            for (const row of rows) {
-                net.set(row.creditorId, (net.get(row.creditorId) ?? 0) + row.remaining)
-                net.set(row.debtorId, (net.get(row.debtorId) ?? 0) - row.remaining)
-            }
-
-            const creditors = Array.from(net.entries())
-                .filter(([, amount]) => amount > 0.009)
-                .map(([userId, amount]) => ({ userId, amount }))
-                .sort((a, b) => b.amount - a.amount)
-
-            const debtors = Array.from(net.entries())
-                .filter(([, amount]) => amount < -0.009)
-                .map(([userId, amount]) => ({ userId, amount: Math.abs(amount) }))
-                .sort((a, b) => b.amount - a.amount)
-
-            let creditorIndex = 0
-            let debtorIndex = 0
-
-            while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
-                const creditor = creditors[creditorIndex]
-                const debtor = debtors[debtorIndex]
-                const amount = roundMoney(Math.min(creditor.amount, debtor.amount))
-
-                if (amount > 0) {
-                    transfers.push({
-                        from_user_id: debtor.userId,
-                        to_user_id: creditor.userId,
-                        amount,
-                        currency,
-                    })
-                }
-
-                creditor.amount = roundMoney(creditor.amount - amount)
-                debtor.amount = roundMoney(debtor.amount - amount)
-
-                if (creditor.amount <= 0.009) creditorIndex += 1
-                if (debtor.amount <= 0.009) debtorIndex += 1
-            }
-        }
-
-        return transfers
+        // Integer-cent settlement per currency (never mixes € with $).
+        return settleOpenDebts((data ?? []) as Array<Pick<Debt, 'creditor_id' | 'debtor_id' | 'amount' | 'amount_paid' | 'status' | 'currency'>>).flatMap(
+            (bucket) =>
+                bucket.transfers.map((transfer) => ({
+                    from_user_id: transfer.fromId,
+                    to_user_id: transfer.toId,
+                    amount: centsToAmount(transfer.cents),
+                    currency: bucket.currency as DebtCurrency,
+                }))
+        )
     },
 
-    async getMonthlySummary(groupId: string, month?: string): Promise<MonthlyDebtSummary> {
+    /** Monthly figures for one currency (amounts in other currencies are left out, not added up). */
+    async getMonthlySummary(groupId: string, currency: DebtCurrency = 'EUR', month?: string): Promise<MonthlyDebtSummary> {
         const target = month ?? currentMonthKey()
         const [year, monthNum] = target.split('-').map(Number)
-        const start = new Date(Date.UTC(year, monthNum - 1, 1, 0, 0, 0)).toISOString()
-        const end = new Date(Date.UTC(year, monthNum, 1, 0, 0, 0)).toISOString()
+        // Local-time month boundaries: a debt written on the 1st at 00:30 in Spain belongs to that month.
+        const start = new Date(year, monthNum - 1, 1).toISOString()
+        const end = new Date(year, monthNum, 1).toISOString()
 
         const { data: debts, error: debtsError } = await supabase
             .from('debts')
-            .select('id, amount, amount_paid, status, created_at')
+            .select('id, amount, amount_paid, status, created_at, currency')
             .eq('group_id', groupId)
+            .eq('currency', currency)
 
         if (debtsError) throw debtsError
 
@@ -428,7 +348,10 @@ export const debtProService = {
             .order('created_at', { ascending: false })
 
         if (error) {
-            if (isMissingRelationError(error)) return readGoalFallback(groupId)
+            if (isMissingRelationError(error)) {
+                reportLocalFallback('debt pro goals', error)
+                return readGoalFallback(groupId)
+            }
             throw error
         }
 
@@ -450,7 +373,10 @@ export const debtProService = {
         const { data, error } = await supabase.from('group_goals').insert(payload).select('*').single()
 
         if (error) {
-            if (isMissingRelationError(error)) return createGoalFallback(payload)
+            if (isMissingRelationError(error)) {
+                reportLocalFallback('debt pro goals', error)
+                return createGoalFallback(payload)
+            }
             throw error
         }
 
@@ -603,7 +529,10 @@ export const debtProService = {
         const { data, error } = await supabase.from('group_member_permissions').select('*').eq('group_id', groupId)
 
         if (error) {
-            if (isMissingRelationError(error)) return readPermissionFallback(groupId)
+            if (isMissingRelationError(error)) {
+                reportLocalFallback('debt pro permissions', error)
+                return readPermissionFallback(groupId)
+            }
             throw error
         }
 
@@ -629,7 +558,10 @@ export const debtProService = {
             .single()
 
         if (error) {
-            if (isMissingRelationError(error)) return upsertPermissionFallback(payload)
+            if (isMissingRelationError(error)) {
+                reportLocalFallback('debt pro permissions', error)
+                return upsertPermissionFallback(payload)
+            }
             throw error
         }
 
@@ -672,44 +604,6 @@ export const debtProService = {
         return (data as GroupGoal | null) ?? null
     },
 }
-function splitLabel(mode: DebtSplitMode): string {
-    if (mode === 'equal') return 'igual'
-    if (mode === 'percentage') return 'porcentaje'
-    return 'exacto'
-}
-
-function splitEqual(totalAmount: number, participants: SplitParticipantInput[]): Array<{ debtorId: string; amount: number }> {
-    const base = roundMoney(totalAmount / participants.length)
-    let assigned = 0
-    return participants.map((item, index) => {
-        const amount = index === participants.length - 1 ? roundMoney(totalAmount - assigned) : base
-        assigned += amount
-        return { debtorId: item.debtorId, amount }
-    })
-}
-
-function splitByPercentage(totalAmount: number, participants: SplitParticipantInput[]): Array<{ debtorId: string; amount: number }> {
-    const percentageSum = participants.reduce((sum, item) => sum + (item.percentage ?? 0), 0)
-    const safeSum = percentageSum > 0 ? percentageSum : 100
-
-    let assigned = 0
-    return participants.map((item, index) => {
-        const weight = (item.percentage ?? 0) / safeSum
-        const amount = index === participants.length - 1 ? roundMoney(totalAmount - assigned) : roundMoney(totalAmount * weight)
-        assigned += amount
-        return { debtorId: item.debtorId, amount }
-    })
-}
-
-function splitByExact(totalAmount: number, participants: SplitParticipantInput[]): Array<{ debtorId: string; amount: number }> {
-    let assigned = 0
-    return participants.map((item, index) => {
-        const amount = index === participants.length - 1 ? roundMoney(totalAmount - assigned) : roundMoney(item.exactAmount ?? 0)
-        assigned += amount
-        return { debtorId: item.debtorId, amount }
-    })
-}
-
 function nextReminderDate(frequency: DebtReminderFrequency): string {
     const days = frequency === 'suave' ? 7 : frequency === 'normal' ? 3 : 1
     return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()

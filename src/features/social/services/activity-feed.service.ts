@@ -1,4 +1,5 @@
 ﻿import { supabase } from '@lib/supabase/client'
+import { reportLocalFallback } from '@lib/diagnostics/fallback'
 import type { GroupActivity, GroupActivityAction } from '@/types'
 
 const FALLBACK_STORAGE_KEY = 'appden:group-activity:fallback:v1'
@@ -24,7 +25,10 @@ export const groupActivityService = {
             .limit(limit)
 
         if (error) {
-            if (isMissingRelationError(error)) return fallback.slice(0, limit)
+            if (isMissingRelationError(error)) {
+                reportLocalFallback('group activity', error)
+                return fallback.slice(0, limit)
+            }
             throw error
         }
 
@@ -47,6 +51,7 @@ export const groupActivityService = {
 
         if (error) {
             if (isMissingRelationError(error)) {
+                reportLocalFallback('group activity', error)
                 writeFallback(payload)
                 return
             }
@@ -114,4 +119,3 @@ function isMissingRelationError(error: unknown): boolean {
     const raw = `${anyError.code ?? ''} ${anyError.message ?? ''} ${anyError.details ?? ''}`.toLowerCase()
     return raw.includes('42p01') || raw.includes('pgrst205') || raw.includes('does not exist')
 }
-

@@ -1,21 +1,60 @@
-﻿import React, { useMemo } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Crown, Shield, Trash2, UserPlus, Users, X } from 'lucide-react'
+﻿import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Check, Crown, MoreHorizontal, Music2, Shield, ShieldCheck, ShieldOff, UserMinus, UserPlus, UserRound, X } from 'lucide-react'
 import { Avatar } from '@components/common/Avatar'
-import { useAuth } from '@hooks/useAuth'
-import { friendsService, type GroupFriendRequest } from '@services/friends.service'
-import type { GroupMember } from '@/types'
+import { PersonRow, YouPill, type PersonSummary } from '@components/social/PersonRow'
+import { ActionSheet } from '@components/ui/ActionSheet'
+import { ConfirmDialog } from '@components/ui/ConfirmDialog'
+import { useFriendActions, useFriends } from '@hooks/useFriends'
+import type { FriendRelation } from '@services/friends.service'
+import { ROUTES } from '@lib/constants'
+import { cn } from '@lib/utils'
+import type { GroupMember, GroupRole } from '@/types'
 
 interface GroupMemberListProps {
     groupId: string
     members: GroupMember[]
     currentUserId: string
     isManager: boolean
+    /** Only the owner can promote/demote admins. */
     canAssignRoles?: boolean
     onRemoveMember?: (userId: string) => Promise<void>
     onUpdateRole?: (userId: string, role: 'owner' | 'admin' | 'member') => Promise<void>
     isLoading?: boolean
+}
+
+export const ROLE_LABELS: Record<GroupRole, string> = { owner: 'Propietario', admin: 'Admin', member: 'Miembro' }
+const roleRank: Record<GroupRole, number> = { owner: 0, admin: 1, member: 2 }
+const firstName = (name?: string | null) => (name ?? '').trim().split(/\s+/)[0] || 'este miembro'
+
+/** Compact role tag for list sublines and headers. */
+export const RoleTag: React.FC<{ role: GroupRole; className?: string }> = ({ role, className }) => (
+    <span
+        className={cn(
+            'inline-flex items-center gap-1 rounded-full px-1.5 py-px align-[1px] text-[11px] font-semibold',
+            role === 'owner' && 'bg-brand-400/15 text-brand-200',
+            role === 'admin' && 'bg-violet-400/15 text-violet-200',
+            role === 'member' && 'bg-white/[0.06] text-gray-300',
+            className
+        )}
+    >
+        {role === 'owner' ? <Crown className="h-3 w-3" /> : role === 'admin' ? <Shield className="h-3 w-3" /> : null}
+        {ROLE_LABELS[role]}
+    </span>
+)
+
+const toPerson = (member: GroupMember): PersonSummary => ({
+    id: member.user_id,
+    display_name: member.profile?.display_name ?? 'Usuario',
+    username: member.profile?.username ?? null,
+    avatar_url: member.profile?.avatar_url ?? null,
+})
+
+const relationText = (relation: FriendRelation) => {
+    if (relation.kind === 'friend') return 'Amigos'
+    if (relation.kind === 'outgoing') return 'Solicitud enviada'
+    if (relation.kind === 'incoming') return 'Quiere ser tu amigo'
+    return null
 }
 
 export const GroupMemberList: React.FC<GroupMemberListProps> = ({
@@ -29,215 +68,198 @@ export const GroupMemberList: React.FC<GroupMemberListProps> = ({
     isLoading = false,
 }) => {
     const navigate = useNavigate()
-    const { userId: viewerUserId } = useAuth()
-    const queryClient = useQueryClient()
+    const { relationOf } = useFriends()
+    const { send, accept, cancel } = useFriendActions()
+    const [menuMember, setMenuMember] = React.useState<GroupMember | null>(null)
+    const [expelling, setExpelling] = React.useState<GroupMember | null>(null)
+    const [busy, setBusy] = React.useState(false)
 
-    const handleRemove = async (userId: string) => {
-        if (!onRemoveMember) return
-        if (confirm('Remove this member from the group?')) {
-            await onRemoveMember(userId)
+    const sorted = React.useMemo(
+        () =>
+            [...members].sort(
+                (a, b) =>
+                    roleRank[a.role] - roleRank[b.role] ||
+                    (a.profile?.display_name ?? '').localeCompare(b.profile?.display_name ?? '', 'es')
+            ),
+        [members]
+    )
+
+    const canChangeRole = (member: GroupMember) =>
+        canAssignRoles && !!onUpdateRole && member.user_id !== currentUserId && member.role !== 'owner'
+    // Admins can expel members; only the owner can expel admins. Nobody can expel the owner.
+    const canExpel = (member: GroupMember) =>
+        isManager && !!onRemoveMember && member.user_id !== currentUserId && member.role !== 'owner' && (canAssignRoles || member.role === 'member')
+
+    const run = async (task: () => Promise<void>) => {
+        setBusy(true)
+        try {
+            await task()
+        } finally {
+            setBusy(false)
         }
     }
 
-    const { data: requests = [] } = useQuery({
-        queryKey: ['friend-requests', groupId],
-        queryFn: () => friendsService.getRequestsForGroup(groupId),
-        enabled: !!viewerUserId && !!groupId,
-        staleTime: 10_000,
-    })
-
-    const requestIndex = useMemo(() => {
-        const map = new Map<string, GroupFriendRequest>()
-        for (const request of requests) {
-            const a = request.from_user_id
-            const b = request.to_user_id
-            const key = a < b ? `${a}:${b}` : `${b}:${a}`
-            const existing = map.get(key)
-            if (!existing || +new Date(request.created_at) > +new Date(existing.created_at)) {
-                map.set(key, request)
-            }
-        }
-        return map
-    }, [requests])
-
-    const sendMutation = useMutation({
-        mutationFn: (toUserId: string) => friendsService.sendRequest(groupId, toUserId, viewerUserId ?? undefined),
-        onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['friend-requests', groupId] }),
-    })
-
-    const acceptMutation = useMutation({
-        mutationFn: (requestId: string) => friendsService.acceptRequest(requestId),
-        onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['friend-requests', groupId] }),
-    })
-
-    const rejectMutation = useMutation({
-        mutationFn: (requestId: string) => friendsService.rejectRequest(requestId),
-        onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['friend-requests', groupId] }),
-    })
-
-    const cancelMutation = useMutation({
-        mutationFn: (requestId: string) => friendsService.cancelRequest(requestId),
-        onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['friend-requests', groupId] }),
-    })
+    const menuRelation = menuMember ? relationOf(menuMember.user_id) : null
+    const menuPerson = menuMember ? toPerson(menuMember) : null
 
     return (
-        <div className="space-y-3">
-            {members.map((member) => (
-                <div
-                    key={member.id}
-                    className="rounded-[1.55rem] border border-white/8 bg-black/15 p-4 transition-colors hover:border-brand-300/18 hover:bg-white/[0.03]"
-                    onClick={() => navigate(`/groups/${groupId}/members/${member.user_id}`)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                            navigate(`/groups/${groupId}/members/${member.user_id}`)
-                        }
-                    }}
-                >
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="flex min-w-0 items-center gap-3">
-                            <Avatar src={member.profile?.avatar_url} name={member.profile?.display_name} size="sm" />
+        <>
+            <div className="list-group">
+                {sorted.map((member) => {
+                    const person = toPerson(member)
+                    const isMe = member.user_id === currentUserId
+                    const relation = relationOf(member.user_id)
+                    const extra = isMe ? null : relationText(relation)
+                    return (
+                        <PersonRow
+                            key={member.id}
+                            person={person}
+                            badge={isMe ? <YouPill /> : null}
+                            subtitle={
+                                <>
+                                    <RoleTag role={member.role} />
+                                    {person.username ? <span> · @{person.username}</span> : null}
+                                    {extra ? <span className={relation.kind === 'friend' ? 'text-emerald-300/90' : undefined}> · {extra}</span> : null}
+                                </>
+                            }
+                            onOpen={() => navigate(ROUTES.GROUP_MEMBER(groupId, member.user_id))}
+                            openLabel={`Ver el perfil de ${person.display_name}`}
+                        >
+                            {!isMe ? <QuickFriendAction person={person} relation={relation} /> : null}
+                            {!isMe ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setMenuMember(member)}
+                                    className="icon-btn -mr-2 text-gray-400"
+                                    aria-label={`Opciones de ${person.display_name}`}
+                                >
+                                    <MoreHorizontal className="h-5 w-5" />
+                                </button>
+                            ) : null}
+                        </PersonRow>
+                    )
+                })}
+            </div>
+
+            <ActionSheet
+                open={!!menuMember}
+                onClose={() => setMenuMember(null)}
+                header={
+                    menuMember && menuPerson ? (
+                        <div className="flex items-center gap-3">
+                            <Avatar src={menuPerson.avatar_url} name={menuPerson.display_name} size="md" />
                             <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-white">{member.profile?.display_name}</p>
-                                <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-gray-500">
-                                    {member.user_id === currentUserId ? 'You' : 'Member'}
+                                <p className="truncate font-semibold text-white">{menuPerson.display_name}</p>
+                                <p className="truncate text-sm text-gray-400">
+                                    <RoleTag role={menuMember.role} />
+                                    {menuPerson.username ? ` · @${menuPerson.username}` : ''}
                                 </p>
                             </div>
                         </div>
+                    ) : null
+                }
+                items={[
+                    {
+                        label: 'Ver perfil',
+                        icon: UserRound,
+                        onSelect: () => menuMember && navigate(ROUTES.GROUP_MEMBER(groupId, menuMember.user_id)),
+                    },
+                    { label: 'Ver como artista', icon: Music2, onSelect: () => menuMember && navigate(ROUTES.ARTIST(menuMember.user_id)) },
+                    {
+                        label: 'Añadir amigo',
+                        icon: UserPlus,
+                        hidden: menuRelation?.kind !== 'none',
+                        onSelect: () => menuPerson && send.mutate(menuPerson),
+                    },
+                    {
+                        label: 'Aceptar solicitud de amistad',
+                        icon: Check,
+                        hidden: menuRelation?.kind !== 'incoming',
+                        onSelect: () => menuRelation?.kind === 'incoming' && accept.mutate(menuRelation.request),
+                    },
+                    {
+                        label: 'Cancelar solicitud de amistad',
+                        icon: X,
+                        hidden: menuRelation?.kind !== 'outgoing',
+                        onSelect: () => menuRelation?.kind === 'outgoing' && cancel.mutate(menuRelation.request),
+                    },
+                    {
+                        label: 'Hacer admin',
+                        icon: ShieldCheck,
+                        hidden: !menuMember || !canChangeRole(menuMember) || menuMember.role !== 'member',
+                        disabled: busy || isLoading,
+                        onSelect: () => menuMember && onUpdateRole && void run(() => onUpdateRole(menuMember.user_id, 'admin')),
+                    },
+                    {
+                        label: 'Quitar admin',
+                        icon: ShieldOff,
+                        hidden: !menuMember || !canChangeRole(menuMember) || menuMember.role !== 'admin',
+                        disabled: busy || isLoading,
+                        onSelect: () => menuMember && onUpdateRole && void run(() => onUpdateRole(menuMember.user_id, 'member')),
+                    },
+                    {
+                        label: 'Expulsar del grupo',
+                        icon: UserMinus,
+                        tone: 'danger',
+                        hidden: !menuMember || !canExpel(menuMember),
+                        onSelect: () => setExpelling(menuMember),
+                    },
+                ]}
+            />
 
-                        <div className="flex flex-wrap items-center gap-2">
-                            {member.role === 'owner' ? (
-                                <span className="badge bg-brand-400/14 text-brand-100 border border-brand-300/20">
-                                    <Crown className="w-3.5 h-3.5" />
-                                    Owner
-                                </span>
-                            ) : null}
-
-                            {member.role === 'admin' ? (
-                                <span className="badge bg-violet-400/14 text-violet-200 border border-violet-300/20">
-                                    <Shield className="w-3.5 h-3.5" />
-                                    Admin
-                                </span>
-                            ) : null}
-
-                            {viewerUserId && member.user_id !== viewerUserId ? (() => {
-                                const a = viewerUserId
-                                const b = member.user_id
-                                const key = a < b ? `${a}:${b}` : `${b}:${a}`
-                                const request = requestIndex.get(key)
-
-                                if (!request || request.status === 'cancelled' || request.status === 'rejected') {
-                                    return (
-                                        <button
-                                            onClick={(event) => {
-                                                event.stopPropagation()
-                                                sendMutation.mutate(member.user_id)
-                                            }}
-                                            className="btn-secondary !min-h-[2.4rem]"
-                                            title="Agregar amigo"
-                                            disabled={sendMutation.isPending}
-                                        >
-                                            <UserPlus className="w-4 h-4" />
-                                            Agregar
-                                        </button>
-                                    )
-                                }
-
-                                if (request.status === 'accepted') {
-                                    return (
-                                        <div className="badge bg-emerald-400/14 text-emerald-200 border border-emerald-300/20">
-                                            <Users className="w-3.5 h-3.5" />
-                                            Amigos
-                                        </div>
-                                    )
-                                }
-
-                                if (request.status === 'pending' && request.to_user_id === viewerUserId) {
-                                    return (
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={(event) => {
-                                                    event.stopPropagation()
-                                                    acceptMutation.mutate(request.id)
-                                                }}
-                                                className="btn-secondary !min-h-[2.4rem] bg-emerald-400/12 text-emerald-200"
-                                                title="Aceptar"
-                                                disabled={acceptMutation.isPending}
-                                            >
-                                                <Check className="w-4 h-4" />
-                                                Aceptar
-                                            </button>
-                                            <button
-                                                onClick={(event) => {
-                                                    event.stopPropagation()
-                                                    rejectMutation.mutate(request.id)
-                                                }}
-                                                className="btn-secondary !min-h-[2.4rem] bg-red-400/12 text-red-200"
-                                                title="Rechazar"
-                                                disabled={rejectMutation.isPending}
-                                            >
-                                                <X className="w-4 h-4" />
-                                                Rechazar
-                                            </button>
-                                        </div>
-                                    )
-                                }
-
-                                if (request.status === 'pending' && request.from_user_id === viewerUserId) {
-                                    return (
-                                        <button
-                                            onClick={(event) => {
-                                                event.stopPropagation()
-                                                cancelMutation.mutate(request.id)
-                                            }}
-                                            className="btn-secondary !min-h-[2.4rem]"
-                                            title="Cancelar solicitud"
-                                            disabled={cancelMutation.isPending}
-                                        >
-                                            Pendiente
-                                        </button>
-                                    )
-                                }
-
-                                return null
-                            })() : null}
-
-                            {canAssignRoles && member.user_id !== currentUserId ? (
-                                <select
-                                    value={member.role}
-                                    onChange={(event) => {
-                                        event.stopPropagation()
-                                        if (!onUpdateRole) return
-                                        void onUpdateRole(member.user_id, event.target.value as 'owner' | 'admin' | 'member')
-                                    }}
-                                    className="input !min-h-[2.45rem] !max-w-[132px] !px-3 !py-2 text-xs"
-                                    onClick={(event) => event.stopPropagation()}
-                                    aria-label="Cambiar rol"
-                                >
-                                    <option value="member">Member</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="owner">Owner</option>
-                                </select>
-                            ) : null}
-
-                            {isManager && member.user_id !== currentUserId ? (
-                                <button
-                                    onClick={(event) => {
-                                        event.stopPropagation()
-                                        void handleRemove(member.user_id)
-                                    }}
-                                    disabled={isLoading}
-                                    className="btn-icon !h-10 !w-10 !rounded-full text-red-200 disabled:opacity-50"
-                                    title="Remove member"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            ) : null}
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
+            <ConfirmDialog
+                isOpen={!!expelling}
+                title={`¿Expulsar a ${firstName(expelling?.profile?.display_name)}?`}
+                description="Dejará de ver la música, las playlists y las cuentas de este grupo. Podrás volver a invitarle cuando quieras."
+                confirmLabel="Expulsar"
+                isLoading={busy}
+                onConfirm={() =>
+                    expelling &&
+                    onRemoveMember &&
+                    void run(async () => {
+                        await onRemoveMember(expelling.user_id)
+                        setExpelling(null)
+                    })
+                }
+                onCancel={() => setExpelling(null)}
+            />
+        </>
     )
+}
+
+/** Inline shortcut next to a member: "Añadir amigo" or "Aceptar" when they asked first. */
+const QuickFriendAction: React.FC<{ person: PersonSummary; relation: FriendRelation }> = ({ person, relation }) => {
+    const { send, accept } = useFriendActions()
+
+    if (relation.kind === 'none') {
+        return (
+            <button
+                type="button"
+                onClick={() => send.mutate(person)}
+                disabled={send.isPending || send.isSuccess}
+                className="icon-btn text-brand-300"
+                aria-label={`Añadir a ${person.display_name} como amigo`}
+                title="Añadir amigo"
+            >
+                <UserPlus className="h-5 w-5" />
+            </button>
+        )
+    }
+
+    if (relation.kind === 'incoming') {
+        return (
+            <button
+                type="button"
+                onClick={() => accept.mutate(relation.request)}
+                disabled={accept.isPending}
+                className="icon-btn bg-emerald-400/15 text-emerald-200"
+                aria-label={`Aceptar la solicitud de amistad de ${person.display_name}`}
+                title="Aceptar solicitud"
+            >
+                <Check className="h-5 w-5" />
+            </button>
+        )
+    }
+
+    return null
 }

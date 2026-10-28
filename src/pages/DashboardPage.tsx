@@ -1,33 +1,44 @@
 ﻿import React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import {
-    CreditCard,
-    Flag,
-    MessageSquare,
-    Music,
-    Sparkles,
-    TrendingUp,
-    Users,
-} from 'lucide-react'
+import { ArrowRight, ChevronRight, MessageCircle, Music, Play, Plus, Upload, UserPlus, Users, Wallet } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
-import { PageHeader } from '@components/ui/PageHeader'
+import { usePlayerStore } from '@app/store/player.store'
+import { useAdvancedPlayerStore } from '@features/player/player.store'
+import { Avatar } from '@components/common/Avatar'
+import { Cover } from '@components/music/Cover'
+import { SectionHeader } from '@components/ui/PageHeader'
+import { Skeleton } from '@components/ui/LoadingSkeleton'
 import { ROUTES } from '@lib/constants'
+import { cn, formatMoney, formatRelative } from '@lib/utils'
 import { songsService } from '@services/songs.service'
 import { debtsService } from '@services/debts.service'
-import { formatRelative } from '@lib/utils'
+import { postsService } from '@services/posts.service'
+
+function greeting(): string {
+    const hour = new Date().getHours()
+    if (hour < 6) return 'Buenas noches'
+    if (hour < 13) return 'Buenos días'
+    if (hour < 21) return 'Buenas tardes'
+    return 'Buenas noches'
+}
 
 const DashboardPage: React.FC = () => {
     const { profile, userId } = useAuth()
     const { activeGroup, groupId, hasGroup } = useActiveGroup()
+    const setQueue = usePlayerStore((state) => state.setQueue)
+    const currentSong = useAdvancedPlayerStore((state) => state.currentSong)
+    const isPlaying = useAdvancedPlayerStore((state) => state.isPlaying)
+    const resume = useAdvancedPlayerStore((state) => state.resume)
+    const openFullPlayer = useAdvancedPlayerStore((state) => state.toggleFullPlayer)
 
-    const { data: recentSongs } = useQuery({
-        queryKey: ['songs', groupId, 'recent'],
+    const { data: songs, isLoading: songsLoading } = useQuery({
+        queryKey: ['songs', groupId, userId],
         queryFn: () => songsService.getSongs(groupId!, userId!),
         enabled: !!groupId && !!userId,
-        select: (songs) => songs.slice(0, 3),
     })
+    const recentSongs = (songs ?? []).slice(0, 10)
 
     const { data: debts } = useQuery({
         queryKey: ['debts-summary', groupId],
@@ -35,182 +46,206 @@ const DashboardPage: React.FC = () => {
         enabled: !!groupId,
     })
 
-    const myBalance = userId && debts ? (debts[userId] ?? { owed: 0, lent: 0 }) : null
+    const { data: posts } = useQuery({
+        queryKey: ['posts', 'feed'],
+        queryFn: () => postsService.listFeed({ limit: 20, viewerId: userId! }),
+        enabled: !!userId,
+    })
 
-    const quickLinks = [
+    const myBalance = userId && debts ? debts[userId] ?? { owed: 0, lent: 0 } : null
+    const net = myBalance ? myBalance.lent - myBalance.owed : 0
+    const firstName = profile?.display_name?.split(' ')[0] ?? ''
+
+    const quickActions = [
+        { icon: Upload, label: 'Subir', to: `${ROUTES.MUSIC}?subir=1`, tone: 'from-brand-400 to-brand-600', disabled: !hasGroup },
+        { icon: Wallet, label: 'Gasto', to: `${ROUTES.DEBTS}?nueva=1`, tone: 'from-amber-300 to-orange-500', disabled: !hasGroup },
+        { icon: MessageCircle, label: 'Publicar', to: `${ROUTES.SOCIAL}?publicar=1`, tone: 'from-pink-400 to-fuchsia-600', disabled: false },
         {
-            icon: Music,
-            label: 'Musica',
-            subtitle: 'Library and uploads',
-            to: ROUTES.MUSIC,
-            color: 'from-brand-400 via-brand-500 to-brand-600',
-        },
-        {
-            icon: Users,
-            label: 'Grupos',
-            subtitle: 'Private rooms',
-            to: ROUTES.GROUPS,
-            color: 'from-violet-400 via-violet-500 to-indigo-500',
-        },
-        {
-            icon: MessageSquare,
-            label: 'Feed Social',
-            subtitle: 'Nuevos posts',
-            to: ROUTES.SOCIAL,
-            color: 'from-pink-400 via-fuchsia-500 to-violet-500',
-        },
-        {
-            icon: CreditCard,
-            label: 'Deudas',
-            subtitle: 'Shared balance',
-            to: ROUTES.DEBTS,
-            color: 'from-amber-300 via-orange-400 to-orange-500',
-        },
-        {
-            icon: Flag,
-            label: 'Reports',
-            subtitle: 'Issue board',
-            to: ROUTES.REPORTS,
-            color: 'from-cyan-300 via-sky-400 to-brand-500',
+            icon: UserPlus,
+            label: 'Invitar',
+            to: activeGroup ? `${ROUTES.GROUP(activeGroup.id)}?invitar=1` : ROUTES.GROUPS,
+            tone: 'from-violet-400 to-indigo-600',
+            disabled: false,
         },
     ]
 
     return (
         <div className="page-shell animate-fade-in">
-            <PageHeader
-                kicker="Private Sonic Room"
-                title={`Hola, ${profile?.display_name?.split(' ')[0] ?? 'friend'}`}
-                description="Tu base privada para musica compartida, grupos y seguimiento del dia a dia. Todo sigue cableado a la logica real del producto."
-                meta={
-                    <>
-                        <span className="hero-meta-pill">
-                            <Users className="w-3.5 h-3.5 text-brand-400" />
-                            {activeGroup?.name ?? 'Sin grupo activo'}
-                        </span>
-                        <span className="hero-meta-pill">
-                            <Sparkles className="w-3.5 h-3.5 text-brand-400" />
-                            {(recentSongs?.length ?? 0)} tracks recientes
-                        </span>
-                    </>
-                }
-            />
+            <section>
+                <p className="text-sm font-medium text-gray-400">{greeting()}</p>
+                <h1 className="page-title mt-0.5">{firstName ? `Hola, ${firstName}` : 'Hola'}</h1>
+            </section>
 
             {!hasGroup ? (
-                <section className="card p-5">
-                    <p className="page-kicker">Access Layer</p>
-                    <h2 className="mt-2 text-xl font-semibold text-white">Necesitas un grupo para desbloquear toda la app</h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-400">
-                        Cuando tengas un grupo activo podras compartir musica, ver actividad social y trabajar con deudas y reportes dentro del mismo contexto.
-                    </p>
-                    <div className="mt-4">
-                        <Link to={ROUTES.GROUPS} className="btn-primary">
-                            <Users className="w-4 h-4" />
-                            Ir a grupos
-                        </Link>
+                <section className="card overflow-hidden p-5">
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-brand-400 to-violet-500">
+                        <Users className="h-6 w-6 text-white" />
                     </div>
+                    <h2 className="mt-4 text-lg font-bold text-white">Crea o únete a un grupo</h2>
+                    <p className="mt-1 text-sm leading-relaxed text-gray-400">
+                        La música, las cuentas y la actividad se comparten dentro de un grupo. Crea el tuyo o abre el enlace de invitación que te hayan enviado.
+                    </p>
+                    <Link to={`${ROUTES.GROUPS}?nuevo=1`} className="btn-primary mt-4 w-full sm:w-auto">
+                        <Plus className="h-4 w-4" />
+                        Crear grupo
+                    </Link>
                 </section>
             ) : null}
 
-            <section className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                    <div>
-                        <p className="page-kicker">Navigation Grid</p>
-                        <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Accesos rapidos</h2>
-                    </div>
-                    <span className="hero-meta-pill">5 rutas clave</span>
-                </div>
+            {currentSong && !isPlaying ? (
+                <section className="card flex items-center gap-3 p-3">
+                    <button type="button" onClick={() => openFullPlayer(true)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                        <Cover src={currentSong.cover_url} alt="" seed={currentSong.id} className="h-14 w-14 rounded-xl" />
+                        <span className="min-w-0">
+                            <span className="block text-xs font-medium text-brand-300">Continuar escuchando</span>
+                            <span className="block truncate font-semibold text-white">{currentSong.title}</span>
+                            <span className="block truncate text-sm text-gray-400">{currentSong.artist_name}</span>
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => void resume()}
+                        className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-black active:scale-95"
+                        aria-label="Continuar reproducción"
+                    >
+                        <Play className="ml-0.5 h-5 w-5 fill-current" />
+                    </button>
+                </section>
+            ) : null}
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-                    {quickLinks.map(({ icon: Icon, label, subtitle, to, color }) => (
-                        <Link key={to} to={to} className="card-interactive group p-4">
-                            <div className={`flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-gradient-to-br ${color} shadow-[0_18px_40px_rgba(0,0,0,0.25)]`}>
-                                <Icon className="h-5 w-5 text-white" />
-                            </div>
-                            <div className="mt-4 space-y-1">
-                                <p className="text-sm font-semibold text-white group-hover:text-brand-200">{label}</p>
-                                <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{subtitle}</p>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
+            <section className="grid grid-cols-4 gap-2">
+                {quickActions.map(({ icon: Icon, label, to, tone, disabled }) => (
+                    <Link
+                        key={label}
+                        to={to}
+                        aria-disabled={disabled}
+                        className={cn(
+                            'flex flex-col items-center gap-2 rounded-2xl py-3 transition-colors active:bg-white/[0.05]',
+                            disabled && 'pointer-events-none opacity-40'
+                        )}
+                    >
+                        <span className={cn('grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br shadow-[0_10px_24px_rgba(0,0,0,0.3)]', tone)}>
+                            <Icon className="h-5 w-5 text-white" />
+                        </span>
+                        <span className="text-xs font-medium text-gray-300">{label}</span>
+                    </Link>
+                ))}
             </section>
 
-            <div className="grid gap-4 xl:grid-cols-[1.2fr,0.8fr]">
-                <section className="card p-5">
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="page-kicker">Fresh Additions</p>
-                            <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Actividad musical reciente</h2>
-                        </div>
-                        <Link to={ROUTES.MUSIC} className="btn-secondary">
-                            <Music className="w-4 h-4" />
-                            Abrir musica
-                        </Link>
+            {hasGroup ? (
+                <Link to={ROUTES.DEBTS} className="card-interactive block p-5">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-400">Tu balance en {activeGroup?.name}</p>
+                        <ChevronRight className="h-5 w-5 text-gray-500" />
                     </div>
+                    {myBalance ? (
+                        <>
+                            <p
+                                className={cn(
+                                    'mt-1 font-headline text-[2rem] font-extrabold tabular leading-tight',
+                                    net > 0.004 ? 'text-emerald-300' : net < -0.004 ? 'text-red-300' : 'text-white'
+                                )}
+                            >
+                                {net > 0.004 ? '+' : ''}
+                                {formatMoney(net)}
+                            </p>
+                            <p className="mt-1 text-sm text-gray-400">
+                                {myBalance.owed === 0 && myBalance.lent === 0 ? (
+                                    'Estás en paz con todo el grupo.'
+                                ) : (
+                                    <>
+                                        Debes <span className="font-semibold text-red-200">{formatMoney(myBalance.owed)}</span>
+                                        <span className="mx-1.5 text-gray-600">·</span>
+                                        Te deben <span className="font-semibold text-emerald-200">{formatMoney(myBalance.lent)}</span>
+                                    </>
+                                )}
+                            </p>
+                        </>
+                    ) : (
+                        <Skeleton className="mt-2 h-9 w-40" />
+                    )}
+                </Link>
+            ) : null}
 
-                    {recentSongs && recentSongs.length > 0 ? (
-                        <div className="mt-5 space-y-3">
-                            {recentSongs.map((song) => (
-                                <Link
+            {hasGroup ? (
+                <section>
+                    <SectionHeader
+                        title="Recién subidas"
+                        action={
+                            <Link to={ROUTES.MUSIC} className="inline-flex min-h-[2.5rem] items-center gap-1 text-sm font-semibold text-brand-300">
+                                Ver todo <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        }
+                    />
+                    {songsLoading ? (
+                        <div className="scroller-x">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                                <div key={i} className="w-32 shrink-0 space-y-2">
+                                    <Skeleton className="aspect-square w-full rounded-2xl" />
+                                    <Skeleton className="h-3.5 w-3/4" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : recentSongs.length > 0 ? (
+                        <div className="scroller-x">
+                            {recentSongs.map((song, index) => (
+                                <button
                                     key={song.id}
-                                    to={ROUTES.SONG(song.id)}
-                                    className="group flex items-center gap-3 rounded-[1.6rem] border border-white/5 bg-black/20 px-3 py-3 transition-all duration-200 hover:border-brand-400/25 hover:bg-white/[0.03]"
+                                    type="button"
+                                    onClick={() => setQueue(recentSongs, index)}
+                                    className="group w-32 shrink-0 text-left sm:w-36"
                                 >
-                                    <div className="h-14 w-14 overflow-hidden rounded-[1.2rem] bg-surface-700">
-                                        {song.cover_url ? (
-                                            <img src={song.cover_url} alt={song.title} className="h-full w-full object-cover" />
-                                        ) : (
-                                            <div className="grid h-full w-full place-items-center">
-                                                <Music className="h-5 w-5 text-gray-500" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-semibold text-white group-hover:text-brand-200">{song.title}</p>
-                                        <p className="truncate text-xs uppercase tracking-[0.18em] text-gray-500">{song.artist_name}</p>
-                                    </div>
-                                    <p className="shrink-0 text-xs text-gray-500">{formatRelative(song.created_at)}</p>
-                                </Link>
+                                    <Cover src={song.cover_url} alt="" seed={song.id} className="aspect-square w-full rounded-2xl" iconClassName="h-8 w-8">
+                                        <span className="absolute bottom-2 right-2 grid h-9 w-9 place-items-center rounded-full bg-black/55 text-white backdrop-blur transition-transform group-active:scale-90">
+                                            <Play className="ml-0.5 h-4 w-4 fill-current" />
+                                        </span>
+                                    </Cover>
+                                    <p className="mt-2 truncate text-sm font-semibold text-white">{song.title}</p>
+                                    <p className="truncate text-xs text-gray-400">{song.artist_name}</p>
+                                </button>
                             ))}
                         </div>
                     ) : (
-                        <div className="mt-5 rounded-[1.6rem] border border-dashed border-white/10 bg-black/10 px-4 py-8 text-sm text-gray-400">
-                            Aun no hay canciones recientes en tu grupo.
-                        </div>
+                        <Link to={`${ROUTES.MUSIC}?subir=1`} className="card-interactive flex items-center gap-3 p-4">
+                            <span className="grid h-12 w-12 place-items-center rounded-xl bg-white/[0.06]">
+                                <Music className="h-5 w-5 text-gray-400" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block font-semibold text-white">Sube la primera canción</span>
+                                <span className="block text-sm text-gray-400">Todo el grupo podrá escucharla.</span>
+                            </span>
+                            <ChevronRight className="h-5 w-5 text-gray-500" />
+                        </Link>
                     )}
                 </section>
+            ) : null}
 
-                <section className="card p-5">
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="page-kicker">Shared Balance</p>
-                            <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Tu resumen</h2>
-                        </div>
-                        <TrendingUp className="h-5 w-5 text-brand-300" />
-                    </div>
-
-                    {myBalance && (myBalance.owed > 0 || myBalance.lent > 0) ? (
-                        <div className="mt-5 grid gap-3">
-                            <div className="rounded-[1.6rem] border border-red-400/15 bg-red-400/8 p-4">
-                                <p className="text-[11px] uppercase tracking-[0.22em] text-red-200/80">Debes</p>
-                                <p className="mt-2 text-3xl font-headline font-extrabold text-red-200">{myBalance.owed.toFixed(2)} EUR</p>
-                            </div>
-                            <div className="rounded-[1.6rem] border border-emerald-400/15 bg-emerald-400/8 p-4">
-                                <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-200/80">Te deben</p>
-                                <p className="mt-2 text-3xl font-headline font-extrabold text-emerald-200">{myBalance.lent.toFixed(2)} EUR</p>
-                            </div>
-                            <Link to={ROUTES.DEBTS} className="btn-secondary mt-1">
-                                <CreditCard className="w-4 h-4" />
-                                Ver deudas
+            {posts && posts.length > 0 ? (
+                <section>
+                    <SectionHeader
+                        title="Últimas publicaciones"
+                        action={
+                            <Link to={ROUTES.SOCIAL} className="inline-flex min-h-[2.5rem] items-center gap-1 text-sm font-semibold text-brand-300">
+                                Ver feed <ArrowRight className="h-4 w-4" />
                             </Link>
-                        </div>
-                    ) : (
-                        <div className="mt-5 rounded-[1.6rem] border border-dashed border-white/10 bg-black/10 px-4 py-8 text-sm text-gray-400">
-                            Tu balance esta limpio por ahora. Cuando haya movimientos del grupo apareceran aqui.
-                        </div>
-                    )}
+                        }
+                    />
+                    <div className="list-group">
+                        {posts.slice(0, 3).map((post) => (
+                            <Link key={post.id} to={ROUTES.SOCIAL} className="list-row items-start">
+                                <Avatar src={post.author?.avatar_url} name={post.author?.display_name} size="md" />
+                                <span className="min-w-0 flex-1">
+                                    <span className="flex items-baseline gap-2">
+                                        <span className="truncate text-sm font-semibold text-white">{post.author?.display_name ?? 'Usuario'}</span>
+                                        <span className="shrink-0 text-xs text-gray-500">{formatRelative(post.created_at)}</span>
+                                    </span>
+                                    <span className="mt-0.5 block text-sm leading-snug text-gray-300 truncate-2">{post.content}</span>
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
                 </section>
-            </div>
+            ) : null}
         </div>
     )
 }

@@ -63,6 +63,11 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.96 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
+            drag="x"
+            dragSnapToOrigin
+            onDragEnd={(_event, info) => {
+                if (Math.abs(info.offset.x) > 80) onDismiss(toast.id)
+            }}
             className={cn(
                 'relative overflow-hidden w-full max-w-sm rounded-[1.35rem] border backdrop-blur-2xl',
                 'bg-[linear-gradient(180deg,rgba(26,25,25,0.92)_0%,rgba(14,14,14,0.94)_100%)] shadow-card',
@@ -80,7 +85,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
                 </div>
                 <button
                     onClick={() => onDismiss(toast.id)}
-                    className="btn-ghost !min-h-0 !rounded-full p-1 text-gray-500 hover:text-white"
+                    className="-m-1.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-gray-500 hover:text-white"
                     aria-label="Cerrar"
                 >
                     <X className="w-4 h-4" />
@@ -126,7 +131,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return (
         <ToastContext.Provider value={value}>
             {children}
-            <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+6.9rem)] z-[120] flex justify-center px-3 safe-left safe-right md:inset-x-auto md:right-6 md:justify-end md:px-0 md:bottom-6">
+            <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--dock-h)+var(--mini-h)+0.75rem)] z-[120] flex justify-center px-3 safe-left safe-right md:inset-x-auto md:bottom-6 md:right-6 md:justify-end md:px-0">
                 <div className="flex w-full max-w-sm flex-col gap-2">
                     <AnimatePresence initial={false}>
                         {toasts.map((item) => (

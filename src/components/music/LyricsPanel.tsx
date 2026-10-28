@@ -59,7 +59,7 @@ export const LyricsPanel: React.FC<LyricsPanelProps> = ({ song, userId, canEdit 
 
     useEffect(() => {
         if (proposalDraft.trim()) return
-        setProposalDraft(lyrics?.raw_text ?? lyricsService.buildAutoDraft(song))
+        setProposalDraft(lyrics?.raw_text ?? lyricsService.buildAutoDraft())
     }, [lyrics?.raw_text, proposalDraft, song])
 
     const saveMutation = useMutation({
@@ -259,7 +259,7 @@ export const LyricsPanel: React.FC<LyricsPanelProps> = ({ song, userId, canEdit 
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const generated = lyricsService.buildAutoDraft(song)
+                                    const generated = lyricsService.buildAutoDraft()
                                     setDraft(generated)
                                     setIsEditing(true)
                                 }}

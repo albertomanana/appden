@@ -1,4 +1,5 @@
 import { supabase, STORAGE_BUCKETS } from '@lib/supabase/client'
+import { reportLocalFallback } from '@lib/diagnostics/fallback'
 import { generateStoragePath } from '@lib/utils'
 import type {
     ReportItem,
@@ -71,6 +72,7 @@ export const reportsService = {
         }
 
         if (isMissingRelationError(error)) {
+            reportLocalFallback('reports', error)
             return writeFallback(payload)
         }
 
@@ -121,6 +123,7 @@ export const reportsService = {
 
         if (error) {
             if (isMissingRelationError(error) || isLegacyReportsSchemaError(error)) {
+                reportLocalFallback('reports', error)
                 return writeFallback({
                     group_id: input.groupId,
                     user_id: input.userId,
@@ -180,6 +183,7 @@ export const reportsService = {
         }
 
         if (isMissingRelationError(error)) {
+            reportLocalFallback('reports', error)
             return filterFallbackReports(fallback, filters)
         }
 
@@ -231,7 +235,10 @@ export const reportsService = {
             return data ? mapReportRow(data) : fallback
         }
 
-        if (isMissingRelationError(error) || isLegacyReportsSchemaError(error)) return fallback
+        if (isMissingRelationError(error) || isLegacyReportsSchemaError(error)) {
+            reportLocalFallback('reports', error)
+            return fallback
+        }
         throw error
     },
 

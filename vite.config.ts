@@ -67,7 +67,9 @@ export default defineConfig({
                         },
                     },
                 ],
-                navigateFallback: '/offline.html',
+                // The application shell must handle navigations. Using
+                // offline.html here makes every route render the offline page.
+                navigateFallback: '/index.html',
                 navigateFallbackDenylist: [/^\/api/],
             },
             devOptions: {
@@ -89,6 +91,18 @@ export default defineConfig({
             '@styles': path.resolve(__dirname, './src/styles'),
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    react: ['react', 'react-dom', 'react-router-dom'],
+                    supabase: ['@supabase/supabase-js'],
+                    forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
+                    query: ['@tanstack/react-query'],
+                    motion: ['framer-motion'],
+                    icons: ['lucide-react'],
+                },
+            },
+        },
+    },
 })
-
-

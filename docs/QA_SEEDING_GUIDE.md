@@ -81,7 +81,7 @@ Temporary namespace used by the manual SQL seed:
 
 Recommended manual run order:
 
-1. apply migrations `001-012`
+1. apply migrations `001-014`
 2. run `qa_manual_smoke_reset.sql`
 3. run `qa_manual_smoke_seed.sql`
 4. login with any existing user
@@ -188,7 +188,7 @@ Placeholder strategy:
 
 ## Recommended Run Order
 
-1. Apply Supabase migrations `001-011`
+1. Apply Supabase migrations `001-014`
 2. Export or set `SUPABASE_SERVICE_ROLE_KEY`
 3. Run `npm run seed:qa:fresh`
 4. Login with seeded accounts

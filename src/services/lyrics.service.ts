@@ -1,9 +1,11 @@
 ﻿import { supabase } from '@lib/supabase/client'
+import { reportLocalFallback } from '@lib/diagnostics/fallback'
 import { asrService } from '@services/asr.service'
 import { groupActivityService } from '@services/group-activity.service'
 import type {
     LyricsProposalStatus,
     LyricsSource,
+    Profile,
     Song,
     SongLyricLine,
     SongLyrics,
@@ -54,6 +56,7 @@ export const lyricsService = {
 
         if (lyricsError) {
             if (isMissingRelationError(lyricsError)) {
+                reportLocalFallback('lyrics', lyricsError)
                 return readFallbackLyrics(songId)
             }
             throw lyricsError
@@ -200,7 +203,7 @@ export const lyricsService = {
         if (error) {
             if (isMissingRelationError(error)) {
                 const fallback = readFallbackVersions(songId).find((item) => item.id === versionId)
-                if (!fallback) throw new Error('Version no encontrada.')
+                if (!fallback) throw new Error('Versión no encontrada.')
                 return this.saveLyrics({
                     songId,
                     userId,
@@ -214,7 +217,7 @@ export const lyricsService = {
             throw error
         }
 
-        if (!data) throw new Error('Version no encontrada.')
+        if (!data) throw new Error('Versión no encontrada.')
 
         const version = data as SongLyricsVersion
         return this.saveLyrics({
@@ -237,10 +240,12 @@ export const lyricsService = {
             status: 'pending' as LyricsProposalStatus,
         }
 
+        // song_lyrics_proposals has two FKs to profiles (proposed_by, reviewed_by):
+        // an embedded `profiles(...)` select is ambiguous, so proposers are loaded apart.
         const { data, error } = await supabase
             .from('song_lyrics_proposals')
             .insert(payload)
-            .select('*, proposer:profiles(id, display_name, avatar_url)')
+            .select('*')
             .single()
 
         if (error) {
@@ -253,13 +258,14 @@ export const lyricsService = {
         }
 
         await logLyricsActivity(songId, userId, 'lyrics_proposed')
-        return data as SongLyricsProposal
+        const [withProposer] = await attachProposers([data as SongLyricsProposal])
+        return withProposer
     },
 
     async listProposals(songId: string): Promise<SongLyricsProposal[]> {
         const { data, error } = await supabase
             .from('song_lyrics_proposals')
-            .select('*, proposer:profiles(id, display_name, avatar_url)')
+            .select('*')
             .eq('song_id', songId)
             .order('created_at', { ascending: false })
 
@@ -270,7 +276,7 @@ export const lyricsService = {
             throw error
         }
 
-        return (data ?? []) as SongLyricsProposal[]
+        return attachProposers((data ?? []) as SongLyricsProposal[])
     },
 
     async reviewProposal(
@@ -292,7 +298,7 @@ export const lyricsService = {
             throw proposalError
         }
 
-        if (!proposal) throw new Error('Propuesta no encontrada.')
+        if (!proposal) throw new Error('Esta propuesta ya no existe.')
 
         const { error: reviewError } = await supabase
             .from('song_lyrics_proposals')
@@ -405,24 +411,30 @@ export const lyricsService = {
         return data as SongLyricsTranslation
     },
 
-    buildAutoDraft(song: Pick<Song, 'title' | 'artist_name'>): string {
-        const title = song.title.trim() || 'New song'
-        const artist = song.artist_name.trim() || 'Artist'
+    /** Template with timestamps to start writing synced lyrics. */
+    buildAutoDraft(): string {
         const lines = [
-            `[00:00.00] ${title}`,
-            `[00:08.00] ${artist}`,
-            '[00:16.00] Verse 1 - write exact lyric line',
-            '[00:24.00] Verse 1 - continue',
-            '[00:32.00] Pre-chorus',
-            '[00:40.00] Chorus',
-            '[00:48.00] Chorus',
-            '[00:56.00] Verse 2',
-            '[01:04.00] Pre-chorus',
-            '[01:12.00] Chorus',
-            '[01:20.00] Bridge',
-            '[01:28.00] Outro',
+            '[00:00.00] Primera línea de la estrofa',
+            '[00:04.00] Segunda línea',
+            '[00:08.00] Tercera línea',
+            '[00:12.00] Cuarta línea',
+            '[00:16.00] Estribillo',
+            '[00:20.00] Estribillo (continúa)',
+            '[00:24.00] Segunda estrofa',
+            '[00:28.00] Puente',
+            '[00:32.00] Final',
         ]
         return lines.join('\n')
+    },
+
+    /** Machine translation only exists when an endpoint is configured. */
+    canTranslate(): boolean {
+        return !!(import.meta.env.VITE_LYRICS_TRANSLATE_ENDPOINT as string | undefined)
+    },
+
+    /** True when the text uses [mm:ss] timestamps, i.e. it can follow the song. */
+    hasTimestamps(rawText: string | null | undefined): boolean {
+        return /^\s*\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/m.test(rawText ?? '')
     },
 
     parseTimedLyrics(songId: string, rawText: string): SongLyricLine[] {
@@ -430,13 +442,21 @@ export const lyricsService = {
     },
 }
 
+/**
+ * Every save appends the saved text as a new version, so the previous text is already
+ * in the history. Only lyrics written before versioning existed (no versions yet) are
+ * snapshotted once, so they can still be restored.
+ */
 async function snapshotVersion(input: SaveLyricsInput): Promise<void> {
     const existing = await lyricsService.getLyrics(input.songId)
     if (!existing) return
 
     if (existing.raw_text.trim() === input.rawText.trim()) return
 
-    await appendVersion(existing, input.userId)
+    const versions = await lyricsService.listVersions(input.songId)
+    if (versions.length > 0) return
+
+    await appendVersion(existing, existing.updated_by || input.userId)
 }
 
 async function appendVersion(lyrics: SongLyrics, createdBy: string): Promise<void> {
@@ -512,14 +532,9 @@ function parseTimedLyrics(songId: string, rawText: string): SongLyricLine[] {
         } satisfies SongLyricLine
     })
 
+    // Lyrics without timestamps stay unsynced (no fake timings that would highlight wrong lines).
     const hasTimedRows = parsed.some((row) => row.start_seconds != null)
-    if (!hasTimedRows) {
-        return parsed.map((line, idx) => ({
-            ...line,
-            start_seconds: idx * 4,
-            end_seconds: (idx + 1) * 4 - 0.1,
-        }))
-    }
+    if (!hasTimedRows) return parsed
 
     return parsed.map((line, idx) => {
         const currentStart = line.start_seconds
@@ -578,6 +593,24 @@ async function logLyricsActivity(
         songId,
         payload,
     })
+}
+
+async function attachProposers(proposals: SongLyricsProposal[]): Promise<SongLyricsProposal[]> {
+    const ids = Array.from(new Set(proposals.map((proposal) => proposal.proposed_by).filter(Boolean)))
+    if (ids.length === 0) return proposals
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, username, avatar_url, bio, created_at, updated_at')
+        .in('id', ids)
+
+    if (error) {
+        console.warn('[Lyrics] Failed to load proposers:', error)
+        return proposals
+    }
+
+    const byId = new Map(((data ?? []) as Profile[]).map((profile) => [profile.id, profile]))
+    return proposals.map((proposal) => ({ ...proposal, proposer: proposal.proposer ?? byId.get(proposal.proposed_by) }))
 }
 
 function isMissingRelationError(error: unknown): boolean {

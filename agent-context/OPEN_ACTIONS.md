@@ -2,11 +2,11 @@
 
 ## High priority before broader launch
 
-1. Apply Supabase migrations `001-012` in the target QA/staging project.
+1. Apply Supabase migrations `001-014` in the target QA/staging project.
 2. Add `SUPABASE_SERVICE_ROLE_KEY` to the QA environment and run `npm run seed:qa:fresh`.
 3. Execute the blocker subset from `docs/QA_TEST_CHECKLIST.md`.
-4. Wire `/notifications` to the real backend table or explicitly hide/de-scope the module.
-5. Replace signed-avatar persistence with stable storage-path persistence.
+4. Validate the new `/notifications` Supabase read/update/delete flow with seeded backend rows.
+5. Verify stable avatar-path persistence and signed-on-read rendering with an authenticated QA account.
 6. Run full normal-browser session test (non-incognito) on at least 2 devices.
 7. Validate upload end-to-end in production: audio upload, DB insert, feed appearance, signed playback URL.
 8. Confirm bottom dock is centered on real mobile devices with and without the mini player visible.
@@ -22,7 +22,8 @@
 
 ## Medium priority
 
-1. Add explicit QA-mode warnings when fallback-to-localStorage paths activate.
+1. Extend fallback diagnostics to the remaining compatibility branches and
+   surface them in the QA diagnostics screen.
 2. Reduce initial bundle size warning (manual chunks/lazy boundaries).
 3. Improve continue-listening UX (visible resume prompt/modal).
 4. Complete production push pipeline (service worker push + backend trigger).

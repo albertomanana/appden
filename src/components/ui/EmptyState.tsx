@@ -7,6 +7,7 @@ interface EmptyStateProps {
     description?: string
     action?: React.ReactNode
     className?: string
+    compact?: boolean
 }
 
 /**
@@ -18,27 +19,26 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     description,
     action,
     className,
+    compact = false,
 }) => (
     <div
         className={cn(
-            'relative overflow-hidden flex flex-col items-center justify-center text-center py-16 px-6 rounded-[1.5rem] bg-[#131313]',
+            'relative flex flex-col items-center justify-center overflow-hidden rounded-[1.25rem] border border-dashed border-white/10 px-6 text-center',
+            compact ? 'py-8' : 'py-12',
             className
         )}
     >
-        <div className="absolute -top-12 -right-10 w-32 h-32 rounded-full bg-brand-500/20 blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-14 -left-10 w-32 h-32 rounded-full bg-cyan-500/15 blur-2xl pointer-events-none" />
+        <div className="pointer-events-none absolute left-1/2 top-0 h-32 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-500/15 blur-3xl" />
 
-        {icon && (
-            <div className="relative mb-5 flex h-16 w-16 items-center justify-center rounded-[1.2rem] bg-[#201f1f] text-gray-500">
+        {icon ? (
+            <div className="relative mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-white/[0.06] text-gray-400">
                 {icon}
             </div>
-        )}
-        <h3 className="relative text-base font-semibold text-white mb-2">{title}</h3>
-        {description && (
-            <p className="relative text-sm text-gray-400 max-w-xs leading-relaxed mb-6">
-                {description}
-            </p>
-        )}
-        {action && <div className="relative">{action}</div>}
+        ) : null}
+        <h3 className="relative text-base font-semibold text-white">{title}</h3>
+        {description ? (
+            <p className="relative mt-1.5 max-w-xs text-sm leading-relaxed text-gray-400">{description}</p>
+        ) : null}
+        {action ? <div className="relative mt-5">{action}</div> : null}
     </div>
 )

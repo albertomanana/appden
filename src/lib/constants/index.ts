@@ -42,9 +42,9 @@ export const ALLOWED_DOCUMENT_TYPES = [
 
 // Currencies
 export const CURRENCIES = [
-    { label: 'â‚¬ EUR', value: 'EUR' },
+    { label: '€ EUR', value: 'EUR' },
     { label: '$ USD', value: 'USD' },
-    { label: 'Â£ GBP', value: 'GBP' },
+    { label: '£ GBP', value: 'GBP' },
     { label: '$ MXN', value: 'MXN' },
 ] as const
 
@@ -74,10 +74,17 @@ export const ROUTES = {
     PROFILE_ID: (id: string) => `/profile/${id}`,
     GROUPS: '/groups',
     GROUP: (id: string) => `/groups/${id}`,
+    /** Profile of a member inside one group (songs + money between you two). */
+    GROUP_MEMBER: (groupId: string, userId: string) => `/groups/${groupId}/members/${userId}`,
     CONNECTIONS: '/connections',
     NOTIFICATIONS: '/notifications',
     MUSIC: '/music',
     SONG: (id: string) => `/music/${id}`,
+    ALBUMS: '/music/albums',
+    ALBUM: (id: string) => `/music/albums/${encodeURIComponent(id)}`,
+    ARTISTS: '/music/artists',
+    /** Artist page of a group member (same page as the public profile). */
+    ARTIST: (profileId: string) => `/profile/${profileId}`,
     PLAYLISTS: '/playlists',
     PLAYLIST: (id: string) => `/playlists/${id}`,
     FAVORITES: '/favorites',
