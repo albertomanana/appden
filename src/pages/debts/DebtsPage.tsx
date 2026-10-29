@@ -1,22 +1,24 @@
-﻿import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { BarChart3, Calculator, ChevronDown, Plus, Trophy, Wallet } from 'lucide-react'
+import { BarChart3, ChevronDown, Plus, Trophy, Wallet } from 'lucide-react'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { debtsService } from '@services/debts.service'
 import { groupsService } from '@services/groups.service'
+import { BalanceCard } from '@components/debts/BalanceCard'
 import { DebtCard } from '@components/debts/DebtCard'
+import { computeMyBalances } from '@features/debts/balances'
 import { DebtForm } from '@components/debts/DebtForm'
 import { DebtSplitCalculator } from '@components/debts/DebtSplitCalculator'
 import { DebtInsightsPanel } from '@components/debts/DebtInsightsPanel'
 import { DebtGoalsAndBadgesPanel } from '@components/debts/DebtGoalsAndBadgesPanel'
 import { EmptyState } from '@components/ui/EmptyState'
 import { ErrorNotice } from '@components/ui/ErrorNotice'
-import { DebtCardSkeleton, ListSkeleton, Skeleton } from '@components/ui/LoadingSkeleton'
+import { DebtCardSkeleton, ListSkeleton } from '@components/ui/LoadingSkeleton'
 import { PageHeader } from '@components/ui/PageHeader'
 import { Tabs } from '@components/ui/Tabs'
-import { cn, formatMoney } from '@lib/utils'
+import { cn } from '@lib/utils'
 
 type Filter = 'open' | 'mine' | 'paid' | 'all'
 
@@ -34,11 +36,6 @@ const DebtsPage: React.FC = () => {
         enabled: !!groupId,
     })
 
-    const { data: summary } = useQuery({
-        queryKey: ['debts-summary', groupId],
-        queryFn: () => debtsService.getGroupSummary(groupId!),
-        enabled: !!groupId,
-    })
 
     const { data: members } = useQuery({
         queryKey: ['members', groupId],
@@ -76,8 +73,8 @@ const DebtsPage: React.FC = () => {
         }
     }
 
-    const me = userId && summary ? summary[userId] ?? { owed: 0, lent: 0 } : null
-    const net = me ? me.lent - me.owed : 0
+    // Same list as the cards below: the balance can never disagree with what is shown.
+    const balances = useMemo(() => computeMyBalances(debts ?? [], userId), [debts, userId])
 
     return (
         <div className="page-shell animate-fade-in">
@@ -100,36 +97,7 @@ const DebtsPage: React.FC = () => {
                 />
             ) : (
                 <>
-                    <section className="card overflow-hidden p-5">
-                        <p className="text-sm font-medium text-gray-400">Tu balance</p>
-                        {me ? (
-                            <p
-                                className={cn(
-                                    'mt-1 font-headline text-4xl font-extrabold tabular leading-tight',
-                                    net > 0.004 ? 'text-emerald-300' : net < -0.004 ? 'text-red-300' : 'text-white'
-                                )}
-                            >
-                                {net > 0.004 ? '+' : ''}
-                                {formatMoney(net)}
-                            </p>
-                        ) : (
-                            <Skeleton className="mt-2 h-10 w-44" />
-                        )}
-                        <div className="mt-4 grid grid-cols-2 gap-2">
-                            <div className="rounded-2xl bg-red-400/[0.08] px-3.5 py-3">
-                                <p className="text-xs font-medium text-red-200/80">Debes</p>
-                                <p className="mt-0.5 text-lg font-bold tabular text-red-200">{formatMoney(me?.owed ?? 0)}</p>
-                            </div>
-                            <div className="rounded-2xl bg-emerald-400/[0.08] px-3.5 py-3">
-                                <p className="text-xs font-medium text-emerald-200/80">Te deben</p>
-                                <p className="mt-0.5 text-lg font-bold tabular text-emerald-200">{formatMoney(me?.lent ?? 0)}</p>
-                            </div>
-                        </div>
-                        <button type="button" onClick={() => setShowSplitCalculator(true)} className="btn-secondary mt-3 w-full">
-                            <Calculator className="h-4 w-4" />
-                            Repartir un gasto entre varios
-                        </button>
-                    </section>
+                    <BalanceCard balances={balances} isLoading={isLoading} onSplit={() => setShowSplitCalculator(true)} />
 
                     <Tabs
                         active={filter}

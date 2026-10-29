@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, ChevronRight, MessageCircle, Music, Play, Plus, Upload, UserPlus, Users, Wallet } from 'lucide-react'
@@ -15,6 +15,8 @@ import { cn, formatMoney, formatRelative } from '@lib/utils'
 import { songsService } from '@services/songs.service'
 import { debtsService } from '@services/debts.service'
 import { postsService } from '@services/posts.service'
+import { computeMyBalances } from '@features/debts/balances'
+import { centsToAmount } from '@features/debts/split'
 
 function greeting(): string {
     const hour = new Date().getHours()
@@ -41,8 +43,8 @@ const DashboardPage: React.FC = () => {
     const recentSongs = (songs ?? []).slice(0, 10)
 
     const { data: debts } = useQuery({
-        queryKey: ['debts-summary', groupId],
-        queryFn: () => debtsService.getGroupSummary(groupId!),
+        queryKey: ['debts', groupId],
+        queryFn: () => debtsService.getDebts(groupId!),
         enabled: !!groupId,
     })
 
@@ -52,8 +54,12 @@ const DashboardPage: React.FC = () => {
         enabled: !!userId,
     })
 
-    const myBalance = userId && debts ? debts[userId] ?? { owed: 0, lent: 0 } : null
-    const net = myBalance ? myBalance.lent - myBalance.owed : 0
+    // Same computation as the Cuentas page (from the debt list, in cents, main currency first).
+    const mainBalance = debts ? computeMyBalances(debts, userId)[0] : undefined
+    const myBalance = debts
+        ? { owed: centsToAmount(mainBalance?.iOweCents ?? 0), lent: centsToAmount(mainBalance?.owedToMeCents ?? 0) }
+        : null
+    const net = centsToAmount(mainBalance?.netCents ?? 0)
     const firstName = profile?.display_name?.split(' ')[0] ?? ''
 
     const quickActions = [
