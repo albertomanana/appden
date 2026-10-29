@@ -14,6 +14,7 @@ import { useFavoriteToggle } from '@hooks/useFavoriteToggle'
 import { useMediaQuery } from '@hooks/useMediaQuery'
 import { ROUTES } from '@lib/constants'
 import { cn } from '@lib/utils'
+import { getSongAlbumRouteId, getSongMemberCredits } from '@features/music/utils/library'
 
 export const FullPlayer: React.FC = () => {
     const navigate = useNavigate()
@@ -48,6 +49,12 @@ export const FullPlayer: React.FC = () => {
     const [swipeDirection, setSwipeDirection] = useState(0)
 
     const close = () => toggleFullPlayer(false)
+    const primaryArtist = currentSong ? getSongMemberCredits(currentSong)[0] : undefined
+    const albumRouteId = currentSong ? getSongAlbumRouteId(currentSong) : null
+    const goTo = (path: string) => {
+        close()
+        navigate(path)
+    }
 
     useEffect(() => {
         if (!isOpen) return
@@ -164,8 +171,33 @@ export const FullPlayer: React.FC = () => {
                                             {currentSong.title}
                                         </h2>
                                         <p className="mt-1 truncate text-base text-white/65">
-                                            {currentSong.artist_name}
-                                            {currentSong.album_name ? <span className="text-white/40"> · {currentSong.album_name}</span> : null}
+                                            {primaryArtist?.profileId ? (
+                                                <button
+                                                    type="button"
+                                                    onPointerDown={(event) => event.stopPropagation()}
+                                                    onClick={() => goTo(ROUTES.ARTIST(primaryArtist.profileId!))}
+                                                    className="underline-offset-4 transition-colors hover:text-white hover:underline"
+                                                >
+                                                    {currentSong.artist_name}
+                                                </button>
+                                            ) : (
+                                                currentSong.artist_name
+                                            )}
+                                            {currentSong.album_name ? (
+                                                albumRouteId ? (
+                                                    <button
+                                                        type="button"
+                                                        onPointerDown={(event) => event.stopPropagation()}
+                                                        onClick={() => goTo(ROUTES.ALBUM(albumRouteId))}
+                                                        className="text-white/40 transition-colors hover:text-white"
+                                                    >
+                                                        {' · '}
+                                                        {currentSong.album_name}
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-white/40"> · {currentSong.album_name}</span>
+                                                )
+                                            ) : null}
                                         </p>
                                     </div>
                                     <button
