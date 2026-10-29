@@ -109,7 +109,7 @@ export const DebtAutomationPanel: React.FC<DebtAutomationPanelProps> = ({ debt, 
         <section className="space-y-3">
             <article className="card p-4 space-y-3">
                 <p className="text-sm font-semibold text-white inline-flex items-center gap-2">
-                    <BellRing className="w-4 h-4 text-brand-300" /> Recordatorios automaticos
+                    <BellRing className="w-4 h-4 text-brand-300" /> Recordatorios automáticos
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -121,20 +121,20 @@ export const DebtAutomationPanel: React.FC<DebtAutomationPanelProps> = ({ debt, 
                             ))}
                         </select>
                     </div>
-                    <div className="rounded-xl border border-surface-500 bg-surface-700/40 p-3 space-y-2 text-sm text-gray-300">
-                        <label className="inline-flex items-center gap-2">
+                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-200">
+                        <label className="flex min-h-[2.75rem] cursor-pointer items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.04] px-3 accent-brand-400">
                             <input type="checkbox" checked={channelPush} onChange={(event) => setChannelPush(event.target.checked)} />
                             Push
                         </label>
-                        <label className="inline-flex items-center gap-2">
+                        <label className="flex min-h-[2.75rem] cursor-pointer items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.04] px-3 accent-brand-400">
                             <input type="checkbox" checked={channelEmail} onChange={(event) => setChannelEmail(event.target.checked)} />
                             Email
                         </label>
-                        <label className="inline-flex items-center gap-2">
+                        <label className="flex min-h-[2.75rem] cursor-pointer items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.04] px-3 accent-brand-400">
                             <input type="checkbox" checked={channelWhatsapp} onChange={(event) => setChannelWhatsapp(event.target.checked)} />
                             WhatsApp
                         </label>
-                        <label className="inline-flex items-center gap-2">
+                        <label className="flex min-h-[2.75rem] cursor-pointer items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.04] px-3 accent-brand-400">
                             <input type="checkbox" checked={reminderActive} onChange={(event) => setReminderActive(event.target.checked)} />
                             Activo
                         </label>

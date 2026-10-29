@@ -32,7 +32,7 @@ export const Tabs: React.FC<TabsProps> = ({ items, active, onChange, className, 
                 role="tablist"
                 className={cn(
                     'inline-flex min-w-full gap-1 rounded-full border border-white/[0.06] bg-white/[0.04] p-1 md:min-w-0',
-                    stretch && 'flex w-full md:w-full'
+                    stretch && 'w-max md:min-w-full'
                 )}
             >
                 {items.map((item) => {

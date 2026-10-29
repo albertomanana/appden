@@ -104,9 +104,25 @@ const DebtDetailPage: React.FC = () => {
                     </span>
                 </div>
 
-                {/* Amount */}
-                <div className="text-3xl font-extrabold text-white">
-                    {formatMoney(debt.amount, debt.currency)}
+                {/* Amount, from the viewer's perspective */}
+                <div>
+                    <p className="text-sm text-gray-400">
+                        {debt.debtor_id === userId
+                            ? `Le debes a ${debt.creditor?.display_name ?? 'alguien'}`
+                            : debt.creditor_id === userId
+                              ? `${debt.debtor?.display_name ?? 'Alguien'} te debe`
+                              : `${debt.debtor?.display_name ?? '?'} le debe a ${debt.creditor?.display_name ?? '?'}`}
+                    </p>
+                    <p
+                        className={`mt-0.5 font-headline text-4xl font-extrabold tabular ${
+                            debt.status === 'paid' ? 'text-gray-400' : debt.debtor_id === userId ? 'text-red-300' : debt.creditor_id === userId ? 'text-emerald-300' : 'text-white'
+                        }`}
+                    >
+                        {formatMoney(debt.status === 'paid' ? debt.amount : Math.max(debt.amount - debt.amount_paid, 0), debt.currency)}
+                    </p>
+                    {debt.amount_paid > 0 && debt.status !== 'paid' ? (
+                        <p className="mt-0.5 text-sm text-gray-500">de {formatMoney(debt.amount, debt.currency)} en total</p>
+                    ) : null}
                 </div>
 
                 {/* Progress */}
@@ -115,7 +131,7 @@ const DebtDetailPage: React.FC = () => {
                         <div className="progress-bar h-2">
                             <div className="progress-fill" style={{ width: `${progress}%` }} />
                         </div>
-                        <div className="flex justify-between text-xs text-gray-400 mt-1">
+                        <div className="mt-1 flex justify-between text-xs text-gray-400">
                             <span>Pagado: {formatMoney(debt.amount_paid, debt.currency)}</span>
                             <span>{progress}%</span>
                         </div>
@@ -123,19 +139,19 @@ const DebtDetailPage: React.FC = () => {
                 )}
 
                 {/* Parties */}
-                <div className="flex items-center gap-4 pt-2 border-t border-surface-500">
-                    <div className="flex items-center gap-2">
+                <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-3 border-t border-white/[0.06] pt-4">
+                    <div className="flex min-w-0 items-center gap-2">
                         <Avatar src={debt.debtor?.avatar_url} name={debt.debtor?.display_name} size="sm" />
-                        <div>
-                            <p className="text-xs text-gray-400">Deudor</p>
-                            <p className="text-sm font-medium text-white">{debt.debtor?.display_name}</p>
+                        <div className="min-w-0">
+                            <p className="text-xs text-gray-500">Debe</p>
+                            <p className="truncate text-sm font-medium text-white">{debt.debtor_id === userId ? 'Tú' : debt.debtor?.display_name}</p>
                         </div>
                     </div>
-                    <div className="flex-1 border-t border-dashed border-surface-400" />
-                    <div className="flex items-center gap-2">
-                        <div className="text-right">
-                            <p className="text-xs text-gray-400">Acreedor</p>
-                            <p className="text-sm font-medium text-white">{debt.creditor?.display_name}</p>
+                    <span className="text-gray-600">→</span>
+                    <div className="flex min-w-0 items-center justify-end gap-2">
+                        <div className="min-w-0 text-right">
+                            <p className="text-xs text-gray-500">Cobra</p>
+                            <p className="truncate text-sm font-medium text-white">{debt.creditor_id === userId ? 'Tú' : debt.creditor?.display_name}</p>
                         </div>
                         <Avatar src={debt.creditor?.avatar_url} name={debt.creditor?.display_name} size="sm" />
                     </div>

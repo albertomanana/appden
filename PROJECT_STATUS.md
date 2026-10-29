@@ -1,6 +1,6 @@
 # The Appden — Estado del proyecto
 
-Actualizado: 2026-10-28
+Actualizado: 2026-10-29
 
 ## Estado
 
@@ -17,7 +17,9 @@ Nada está commiteado todavía.
 3. `supabase/migrations/017_debts_group_members.sql` — deudas entre cualquier par de
    miembros (necesaria para la calculadora de reparto), pagos registrados por
    cualquiera de las dos partes y fecha límite.
-4. Ajustes de Auth y cómo hacerse administrador: `docs/SUPABASE_AUTH_SETUP.md`.
+4. `supabase/migrations/018_song_artist_permissions.sql` — los artistas acreditados
+   y copropietarios pueden editar la canción (borrar sigue siendo de quien la subió).
+5. Ajustes de Auth y cómo hacerse administrador: `docs/SUPABASE_AUTH_SETUP.md`.
 
 ## Hecho en esta revisión
 
@@ -36,12 +38,21 @@ Nada está commiteado todavía.
 - Interfaz: rediseño móvil (bottom sheets, tabs, tipografía, inputs de 16 px) y
   escritorio con menú lateral plegable y barra de reproductor.
 
+## 2026-10-29
+
+- Cuentas: el balance se calcula desde la misma lista de deudas (céntimos, por moneda)
+  y muestra el neto con cada persona; ficha de deuda desde tu punto de vista.
+- Notificaciones rehechas para móvil (por día, deslizar para borrar, abrir recurso).
+- Mantener pulsada una canción abre sus detalles; artistas, álbum y "subida por"
+  enlazan a sus páginas (ficha de canción, reproductor y menú). Página de artista nueva.
+- Animaciones: elevación al pasar el ratón, zoom de portadas, entrada escalonada,
+  respuesta táctil y vibración.
+
 ## Pendiente (siguiente sesión)
 
-- Rediseño visual (funcionan, pero con el estilo antiguo): ficha de canción
-  (`SongDetailPage`, `LyricsPanel`, comentarios), playlists, favoritas, página de
-  artista (`ArtistProfilePage`), ficha de deuda (`DebtDetailPage`), paneles de
-  estadísticas de deudas, reportes, novedades, archivos y la página pública `/shared`.
+- Rediseño visual pendiente (funcionan con el estilo antiguo): `LyricsPanel`,
+  comentarios de canción, detalle de playlist, paneles de estadísticas de deudas,
+  formulario de reportes y la página pública `/shared`.
 - Selector de álbum existente en el formulario de subida (la API ya está en
   `src/features/music/services/albums.service.ts`).
 - Pasada de tildes en textos antiguos ("cancion", "musica"…).
