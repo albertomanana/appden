@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Bug, ImagePlus, Lightbulb, Send } from 'lucide-react'
@@ -61,10 +61,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({ isSubmitting, onSubmit }
         >
             <div className="grid gap-5 xl:grid-cols-[0.9fr,1.1fr]">
                 <div>
-                    <p className="page-kicker">Issue Intake</p>
-                    <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Enviar reporte</h2>
+                                        <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Enviar reporte</h2>
                     <p className="mt-3 text-sm leading-relaxed text-gray-400">
-                        Este formulario sigue conectado a la feature real de reports. Aqui solo estamos elevando la UX y la claridad del input.
+                        Cuéntanos qué ha pasado y, si puedes, cómo reproducirlo. Lo revisaremos lo antes posible.
                     </p>
 
                     <div className="mt-5 grid gap-2">

@@ -186,7 +186,7 @@ const MusicPage: React.FC = () => {
                                 }
                             />
                         ) : (
-                            <div className="-mx-1.5 space-y-0.5">
+                            <div className="stagger -mx-1.5 space-y-0.5">
                                 {filtered.map((song, index) => (
                                     <SongCard
                                         key={song.id}

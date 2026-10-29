@@ -135,7 +135,7 @@ const DebtsPage: React.FC = () => {
                             }
                         />
                     ) : (
-                        <div className="space-y-2">
+                        <div className="stagger space-y-2">
                             {visible.map((debt) => (
                                 <DebtCard key={debt.id} debt={debt} />
                             ))}

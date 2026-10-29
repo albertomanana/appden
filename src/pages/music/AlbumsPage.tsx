@@ -35,7 +35,7 @@ const AlbumsPage: React.FC = () => {
                     description="Al subir o editar una canción, indica su álbum y aparecerá aquí con todas sus pistas."
                 />
             ) : (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
+                <div className="stagger grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
                     {albums.map((album) => (
                         <AlbumCard key={album.id} album={album} />
                     ))}

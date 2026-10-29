@@ -1,10 +1,9 @@
-﻿import React, { useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, FileText, FolderOpen, Image, Plus, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@components/ui/ConfirmDialog'
 import { EmptyState } from '@components/ui/EmptyState'
 import { PageHeader } from '@components/ui/PageHeader'
-import { Tabs } from '@components/ui/Tabs'
 import { useToast } from '@components/ui/Toast'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
@@ -94,24 +93,15 @@ const FilesPage: React.FC = () => {
     return (
         <div className="page-shell animate-fade-in">
             <PageHeader
-                kicker="Shared Assets"
+                back={ROUTES.PROFILE}
                 title="Archivos"
-                description={files ? `${files.length} archivos compartidos` : 'Repositorio privado del grupo para imagenes y documentos.'}
+                description={files ? `${files.length} archivos compartidos` : 'Imágenes y documentos del grupo'}
                 actions={
                     <button onClick={() => fileInputRef.current?.click()} className="btn-primary" disabled={!hasGroup || isPending}>
                         {isPending ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
                         {isPending ? 'Subiendo...' : 'Subir'}
                     </button>
                 }
-            />
-
-            <Tabs
-                active="files"
-                items={[
-                    { label: 'Reports', value: 'reports', href: ROUTES.REPORTS },
-                    { label: 'Changelog', value: 'changelog', href: ROUTES.CHANGELOG },
-                    { label: 'Files', value: 'files', href: ROUTES.FILES },
-                ]}
             />
 
             <input
@@ -143,8 +133,8 @@ const FilesPage: React.FC = () => {
             ) : !files || files.length === 0 ? (
                 <EmptyState
                     icon={<FolderOpen className="w-7 h-7" />}
-                    title="Sin archivos todavia"
-                    description="Comparte imagenes o documentos con el grupo."
+                    title="Aún no hay archivos"
+                    description="Comparte imágenes o documentos con el grupo."
                     action={hasGroup ? (
                         <button onClick={() => fileInputRef.current?.click()} className="btn-primary">
                             <Plus className="w-4 h-4" />
@@ -163,7 +153,7 @@ const FilesPage: React.FC = () => {
             <ConfirmDialog
                 isOpen={!!deleteTarget}
                 title="Eliminar archivo"
-                description="Estas seguro de que quieres eliminar este archivo? Esta accion no se puede deshacer."
+                description="Se borrará para todo el grupo. Esta acción no se puede deshacer."
                 confirmLabel="Eliminar"
                 isLoading={isDeleting}
                 onConfirm={() => deleteTarget && deleteFile(deleteTarget)}

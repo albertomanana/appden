@@ -8,7 +8,7 @@ import { EmptyState } from '@components/ui/EmptyState'
 import { ListSkeleton } from '@components/ui/LoadingSkeleton'
 import { PlaylistForm } from '@components/playlists/PlaylistForm'
 import { PageHeader } from '@components/ui/PageHeader'
-import { Tabs } from '@components/ui/Tabs'
+import { MusicTabs } from '@components/music/MusicTabs'
 import { ROUTES } from '@lib/constants'
 import type { Playlist } from '@/types'
 
@@ -54,9 +54,8 @@ const PlaylistsPage: React.FC = () => {
     return (
         <div className="page-shell animate-fade-in">
             <PageHeader
-                kicker="Playlists"
-                title="Playlists"
-                description="Colecciones limpias y reproducibles con las canciones reales del grupo."
+                title="Música"
+                description="Listas para escuchar juntos"
                 meta={<span className="hero-meta-pill">{playlists?.length ?? 0} playlists</span>}
                 actions={
                     <button onClick={() => setShowForm(true)} className="btn-primary" disabled={!hasGroup}>
@@ -65,22 +64,14 @@ const PlaylistsPage: React.FC = () => {
                     </button>
                 }
             />
-
-            <Tabs
-                active="playlists"
-                items={[
-                    { label: 'Music', value: 'music', href: ROUTES.MUSIC },
-                    { label: 'Playlists', value: 'playlists', href: ROUTES.PLAYLISTS },
-                    { label: 'Favorites', value: 'favorites', href: ROUTES.FAVORITES },
-                ]}
-            />
+            <MusicTabs active="playlists" />
 
             <section className="space-y-3">
                 {!hasGroup ? (
                     <EmptyState
                         icon={<ListMusic className="w-7 h-7" />}
                         title="Sin grupo activo"
-                        description="Selecciona o crea un grupo antes de trabajar con playlists."
+                        description="Elige un grupo arriba para ver sus playlists."
                     />
                 ) : isLoading ? (
                     <ListSkeleton count={4} />
@@ -103,7 +94,7 @@ const PlaylistsPage: React.FC = () => {
                     <EmptyState
                         icon={<ListMusic className="w-7 h-7" />}
                         title="Sin playlists"
-                        description="Crea la primera playlist del grupo y empieza a organizar la escucha."
+                        description="Crea la primera playlist del grupo con vuestras canciones favoritas."
                         action={
                             <button onClick={() => setShowForm(true)} className="btn-primary">
                                 <Plus className="w-4 h-4" /> Crear playlist
@@ -113,7 +104,7 @@ const PlaylistsPage: React.FC = () => {
                 ) : (
                     <>
                         <div className="flex items-center justify-between gap-3">
-                            <h2 className="text-2xl font-headline font-extrabold text-white">Colecciones</h2>
+                            <h2 className="text-2xl font-headline font-extrabold text-white">Tus playlists</h2>
                             <span className="hero-meta-pill">{playlists.length} activas</span>
                         </div>
 

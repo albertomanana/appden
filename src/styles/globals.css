@@ -648,3 +648,75 @@
     transform: translateY(0);
   }
 }
+
+/* ------------------------------------------------------------
+   Interaction polish: lift on hover (pointer devices), press
+   feedback on touch, cover zoom and staggered list entrance.
+   ------------------------------------------------------------ */
+@layer components {
+  .card-interactive {
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+  }
+
+  .card-interactive:active {
+    transform: scale(0.985);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .card-interactive:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(133, 173, 255, 0.08);
+    }
+
+    .list-row {
+      transition: background-color 0.15s ease, padding-left 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    a.list-row:hover,
+    button.list-row:hover {
+      padding-left: 1.25rem;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.06);
+      box-shadow: 0 14px 34px rgba(110, 159, 255, 0.32);
+    }
+
+    .group:hover [data-cover] img {
+      transform: scale(1.06);
+    }
+  }
+}
+
+@layer utilities {
+  [data-cover] img {
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Children fade/slide in one after another (first 12 get a growing delay). */
+  .stagger > * {
+    animation: staggerIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .stagger > *:nth-child(2) { animation-delay: 30ms; }
+  .stagger > *:nth-child(3) { animation-delay: 60ms; }
+  .stagger > *:nth-child(4) { animation-delay: 90ms; }
+  .stagger > *:nth-child(5) { animation-delay: 120ms; }
+  .stagger > *:nth-child(6) { animation-delay: 150ms; }
+  .stagger > *:nth-child(7) { animation-delay: 180ms; }
+  .stagger > *:nth-child(8) { animation-delay: 210ms; }
+  .stagger > *:nth-child(9) { animation-delay: 240ms; }
+  .stagger > *:nth-child(10) { animation-delay: 270ms; }
+  .stagger > *:nth-child(11) { animation-delay: 300ms; }
+  .stagger > *:nth-child(n + 12) { animation-delay: 330ms; }
+}
+
+@keyframes staggerIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

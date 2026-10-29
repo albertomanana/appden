@@ -124,7 +124,7 @@ const ArtistProfilePage: React.FC = () => {
                         description="Al subir una canción, acredita a los artistas para que aparezcan aquí."
                     />
                 ) : (
-                    <div className="-mx-1.5 space-y-0.5">
+                    <div className="stagger -mx-1.5 space-y-0.5">
                         {credited.map((song, index) => (
                             <SongCard key={song.id} song={song} onPlay={() => setQueue(allSongs, index)} onEdit={() => setEditingSong(song)} />
                         ))}

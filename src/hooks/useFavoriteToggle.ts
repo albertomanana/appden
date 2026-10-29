@@ -41,6 +41,13 @@ export function useFavoriteToggle(songId: string | null | undefined, initial: bo
         isFavorite,
         toggle: () => {
             if (!songId || mutation.isPending) return
+            if (!isFavorite && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+                try {
+                    navigator.vibrate(10)
+                } catch {
+                    // Vibration not allowed.
+                }
+            }
             mutation.mutate(!isFavorite)
         },
         isPending: mutation.isPending,

@@ -35,7 +35,7 @@ export const Cover: React.FC<CoverProps> = ({ src, alt, className, iconClassName
     }, [src])
 
     return (
-        <div className={cn('relative shrink-0 overflow-hidden bg-surface-600', className)}>
+        <div data-cover className={cn('relative shrink-0 overflow-hidden bg-surface-600', className)}>
             {src && !failed ? (
                 <img
                     src={src}

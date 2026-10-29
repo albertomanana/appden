@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Flag, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -6,7 +6,6 @@ import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
 import { useToast } from '@components/ui/Toast'
 import { PageHeader } from '@components/ui/PageHeader'
-import { Tabs } from '@components/ui/Tabs'
 import { ReportForm } from '@features/reports/components/ReportForm'
 import { ReportsList } from '@features/reports/components/ReportsList'
 import {
@@ -20,22 +19,22 @@ import type { ReportStatus, ReportType } from '@features/reports/types'
 
 const statusOptions: Array<{ value: ReportStatus | 'all'; label: string }> = [
     { value: 'all', label: 'Todos' },
-    { value: 'open', label: 'Open' },
-    { value: 'in_review', label: 'In review' },
-    { value: 'resolved', label: 'Resolved' },
-    { value: 'closed', label: 'Closed' },
+    { value: 'open', label: 'Abiertos' },
+    { value: 'in_review', label: 'En revisión' },
+    { value: 'resolved', label: 'Resueltos' },
+    { value: 'closed', label: 'Cerrados' },
 ]
 
 const typeOptions: Array<{ value: ReportType | 'all'; label: string }> = [
     { value: 'all', label: 'Todos' },
-    { value: 'bug', label: 'Bug' },
+    { value: 'bug', label: 'Fallo' },
     { value: 'error', label: 'Error' },
     { value: 'improvement', label: 'Mejora' },
 ]
 
 export default function ReportsPage() {
     const { userId } = useAuth()
-    const { groupId, activeGroup } = useActiveGroup()
+    const { groupId } = useActiveGroup()
     const { success, error } = useToast()
     const navigate = useNavigate()
     const queryClient = useQueryClient()
@@ -67,9 +66,9 @@ export default function ReportsPage() {
     return (
         <div className="page-shell animate-fade-in">
             <PageHeader
-                kicker="Product Feedback"
-                title="Reports"
-                description={`Visibles para usuarios autenticados. ${groupId ? `Grupo activo: ${activeGroup?.name}.` : 'Sin grupo activo, alcance global.'}`}
+                back={ROUTES.PROFILE}
+                title="Reportes"
+                description="Cuéntanos fallos o ideas para mejorar la app."
                 meta={
                     <>
                         <span className="hero-meta-pill">{reports.length} resultados</span>
@@ -93,15 +92,6 @@ export default function ReportsPage() {
                         </span>
                     )
                 }
-            />
-
-            <Tabs
-                active="reports"
-                items={[
-                    { label: 'Reports', value: 'reports', href: ROUTES.REPORTS },
-                    { label: 'Changelog', value: 'changelog', href: ROUTES.CHANGELOG },
-                    { label: 'Files', value: 'files', href: ROUTES.FILES },
-                ]}
             />
 
             <ReportForm
@@ -130,7 +120,7 @@ export default function ReportsPage() {
             <section className="card p-5 space-y-4">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                     <div>
-                        <p className="page-kicker">Issue Board</p>
+                        
                         <h2 className="mt-2 text-2xl font-headline font-extrabold text-white">Listado de reportes</h2>
                     </div>
                     <div className="grid w-full gap-2 sm:grid-cols-3 xl:w-auto xl:min-w-[620px]">

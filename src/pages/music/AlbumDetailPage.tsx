@@ -109,7 +109,7 @@ const AlbumDetailPage: React.FC = () => {
                 </button>
             </div>
 
-            <div className="-mx-1.5 space-y-0.5">
+            <div className="stagger -mx-1.5 space-y-0.5">
                 {album.songs.map((song, index) => (
                     <SongCard key={song.id} song={song} index={index} onPlay={() => setQueue(album.songs, index)} onEdit={() => setEditingSong(song)} />
                 ))}
