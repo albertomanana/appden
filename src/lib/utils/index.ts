@@ -41,6 +41,20 @@ export function formatRelative(date: string | Date): string {
 /**
  * Format a date as a short string (e.g. "6 mar 2025").
  */
+/** Compact relative time for dense lists: "ahora", "20 min", "3 h", "2 d", "12 oct". */
+export function formatRelativeShort(date: string | Date): string {
+    const value = new Date(date)
+    const diff = Math.max(0, Date.now() - value.getTime())
+    const minutes = Math.floor(diff / 60_000)
+    if (minutes < 1) return 'ahora'
+    if (minutes < 60) return `${minutes} min`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours} h`
+    const days = Math.floor(hours / 24)
+    if (days < 7) return `${days} d`
+    return value.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+}
+
 export function formatDate(date: string | Date): string {
     return format(new Date(date), 'd MMM yyyy', { locale: es })
 }
