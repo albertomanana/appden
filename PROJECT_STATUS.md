@@ -5,7 +5,7 @@ Actualizado: 2026-10-29
 ## Estado
 
 Versión estable en local: `npx tsc --noEmit`, `npm run lint` y `npm run build` pasan.
-Nada está commiteado todavía.
+Todo está publicado en `develop`.
 
 ## Qué hay que hacer en Supabase (en este orden)
 
@@ -56,5 +56,5 @@ Nada está commiteado todavía.
 - Selector de álbum existente en el formulario de subida (la API ya está en
   `src/features/music/services/albums.service.ts`).
 - Pasada de tildes en textos antiguos ("cancion", "musica"…).
-- Verificación con una cuenta real tras aplicar 015–017.
+- Verificación con una cuenta real tras aplicar 015–018.
 - Dejar de versionar `.env.local` (ver `docs/SUPABASE_AUTH_SETUP.md`).
