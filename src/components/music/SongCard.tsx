@@ -1,10 +1,11 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { Heart, MoreHorizontal, Play } from 'lucide-react'
 import { usePlayerStore } from '@app/store/player.store'
 import type { ActionSheetItem } from '@components/ui/ActionSheet'
 import { Cover, EqualizerBars } from '@components/music/Cover'
 import { SongActionsSheet } from '@components/music/SongActionsSheet'
 import { useFavoriteToggle } from '@hooks/useFavoriteToggle'
+import { useLongPress } from '@hooks/useLongPress'
 import { cn, formatDuration } from '@lib/utils'
 import type { Song } from '@/types'
 
@@ -49,14 +50,18 @@ export const SongCard: React.FC<SongCardProps> = ({ song, onPlay, showArtist = t
         setShowActions(true)
     }
 
+    // Hold a row to see the song's details (artists, album, who uploaded it) and its actions.
+    const longPress = useLongPress(openActions)
+
     const subtitle = showArtist ? song.artist_name : song.album_name ?? song.artist_name
 
     return (
         <>
             <div
+                {...longPress}
                 className={cn(
-                    'group flex items-center gap-3 rounded-2xl py-1.5 pl-1.5 pr-0.5 transition-colors',
-                    isCurrentSong ? 'bg-brand-400/[0.08]' : 'active:bg-white/[0.05] md:hover:bg-white/[0.04]'
+                    'group flex select-none items-center gap-3 rounded-2xl py-1.5 pl-1.5 pr-0.5 transition-[background-color,transform] duration-200 [-webkit-touch-callout:none] active:scale-[0.985]',
+                    isCurrentSong ? 'bg-brand-400/[0.08]' : 'active:bg-white/[0.05] md:hover:translate-x-0.5 md:hover:bg-white/[0.04]'
                 )}
             >
                 {index != null ? (

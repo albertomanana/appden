@@ -1,7 +1,7 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Clock, Disc3, Music, Play, Sparkles, User } from 'lucide-react'
+import { Calendar, Clock, Disc3, Edit2, Heart, MoreHorizontal, Music, Pause, Play } from 'lucide-react'
 import { songsService } from '@services/songs.service'
 import { useAuth } from '@hooks/useAuth'
 import { useActiveGroup } from '@hooks/useActiveGroup'
@@ -9,13 +9,23 @@ import { usePlayerStore } from '@app/store/player.store'
 import { Avatar } from '@components/common/Avatar'
 import { LyricsPanel } from '@components/music/LyricsPanel'
 import { SongSocialPanel } from '@features/social/components/SongSocialPanel'
-import { ShareButton } from '@components/share/ShareButton'
-import { formatBytes, formatDate, formatDuration } from '@lib/utils'
+import { Cover } from '@components/music/Cover'
+import { EditSongForm } from '@components/music/EditSongForm'
+import { SongActionsSheet } from '@components/music/SongActionsSheet'
+import { EmptyState } from '@components/ui/EmptyState'
+import { ListSkeleton, Skeleton } from '@components/ui/LoadingSkeleton'
+import { PageHeader } from '@components/ui/PageHeader'
+import { Tabs } from '@components/ui/Tabs'
+import { useDominantColor } from '@features/player/hooks/useDominantColor'
+import { getSongAlbumRouteId, getSongMemberCredits } from '@features/music/utils/library'
+import { canEditSong } from '@features/music/utils/permissions'
+import { useFavoriteToggle } from '@hooks/useFavoriteToggle'
+import { ROUTES } from '@lib/constants'
+import { cn, formatDate, formatDuration } from '@lib/utils'
 
 const SongDetailPage: React.FC = () => {
     const { songId } = useParams<{ songId: string }>()
     const [searchParams] = useSearchParams()
-    const navigate = useNavigate()
     const { userId } = useAuth()
     const { groupId } = useActiveGroup()
 
@@ -24,10 +34,11 @@ const SongDetailPage: React.FC = () => {
     const setPlaying = usePlayerStore((state) => state.setPlaying)
     const togglePlay = usePlayerStore((state) => state.togglePlay)
     const currentSong = usePlayerStore((state) => state.currentSong)
-    const currentTime = usePlayerStore((state) => state.currentTime)
 
-    const [activeTab, setActiveTab] = useState<'overview' | 'lyrics' | 'social'>('overview')
-    const [coverFailed, setCoverFailed] = useState(false)
+    const [activeTab, setActiveTab] = useState<'lyrics' | 'social'>(searchParams.get('tab') === 'comentarios' ? 'social' : 'lyrics')
+    const [showActions, setShowActions] = useState(false)
+    const [editing, setEditing] = useState(false)
+    const isPlaying = usePlayerStore((state) => state.isPlaying)
     const appliedTimestampRef = useRef<string | null>(null)
 
     const { data: song, isLoading } = useQuery({
@@ -67,9 +78,8 @@ const SongDetailPage: React.FC = () => {
         setQueue([song], 0)
     }
 
-    useEffect(() => {
-        setCoverFailed(false)
-    }, [song?.id, song?.cover_url])
+    const favorite = useFavoriteToggle(song?.id, song?.is_favorite)
+    const tint = useDominantColor(song?.cover_url)
 
     useEffect(() => {
         if (!song || sharedTimestamp == null) return
@@ -92,186 +102,159 @@ const SongDetailPage: React.FC = () => {
         setPlaying(true)
     }, [song, sharedTimestamp, currentSong?.id, setCurrentTime, setPlaying, setQueue])
 
-    const tabButtons = useMemo(
-        () => [
-            { id: 'overview', label: 'Resumen' },
-            { id: 'lyrics', label: 'Letras' },
-            { id: 'social', label: 'Comunidad' },
-        ] as const,
-        []
-    )
-
     if (isLoading) {
         return (
-            <div className="p-4 flex items-center justify-center h-64">
-                <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+            <div className="page-shell">
+                <PageHeader back title={<span className="sr-only">Canción</span>} />
+                <Skeleton className="mx-auto aspect-square w-56 rounded-3xl" />
+                <ListSkeleton count={3} />
             </div>
         )
     }
 
     if (!song) {
-        return <div className="p-4 text-gray-400">Cancion no encontrada.</div>
+        return (
+            <div className="page-shell">
+                <PageHeader back={ROUTES.MUSIC} title="Canción" />
+                <EmptyState icon={<Music className="h-6 w-6" />} title="No encontramos esta canción" description="Puede que se haya eliminado o que pertenezca a otro grupo." />
+            </div>
+        )
     }
 
-    const artistCredits = song.artist_credits ?? []
+    const memberCredits = getSongMemberCredits(song)
+    const externalCredits = (song.artist_credits ?? []).filter((credit) => !credit.profile_id && credit.artist_name)
+    const albumRouteId = getSongAlbumRouteId(song)
+    const isCurrent = currentSong?.id === song.id
+    const isThisPlaying = isCurrent && isPlaying
+    const canEdit = canEditSong(song, userId)
+    const wash = tint ? `color-mix(in srgb, ${tint} 45%, transparent)` : 'rgba(55,90,170,0.25)'
 
     return (
-        <div className="relative min-h-full">
-            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(42,64,117,0.18),transparent_28%),linear-gradient(180deg,#09090c_0%,#111114_100%)] opacity-95" />
+        <div className="relative">
+            <div
+                className="pointer-events-none absolute inset-x-0 -top-[var(--header-h)] h-[28rem] transition-[background] duration-700"
+                style={{ background: `linear-gradient(180deg, ${wash} 0%, transparent 100%)` }}
+            />
 
-            <div className="relative p-4 md:p-6 max-w-3xl mx-auto space-y-5 animate-fade-in">
-                <button onClick={() => navigate(-1)} className="btn-ghost gap-2 -ml-1">
-                    <ArrowLeft className="w-4 h-4" /> Volver
-                </button>
+            <div className="page-shell relative animate-fade-in">
+                <PageHeader back title={<span className="sr-only">{song.title}</span>} className="-mb-4" />
 
-                <section className="card overflow-hidden">
-                    <div className="p-4 md:p-5 flex flex-col md:flex-row gap-4 md:gap-5">
-                        <div className="w-full md:w-56 aspect-square rounded-2xl overflow-hidden bg-surface-600 flex-shrink-0">
-                            {song.cover_url && !coverFailed ? (
-                                <img
-                                    src={song.cover_url}
-                                    alt={song.title}
-                                    className="w-full h-full object-cover"
-                                    onError={() => setCoverFailed(true)}
-                                />
+                <section className="flex flex-col items-center text-center md:flex-row md:items-end md:gap-7 md:text-left">
+                    <Cover
+                        src={song.cover_url}
+                        alt={song.title}
+                        seed={song.id}
+                        className="aspect-square w-56 rounded-3xl shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
+                        iconClassName="h-12 w-12"
+                    />
+                    <div className="mt-5 min-w-0 md:mt-0">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/50">Canción</p>
+                        <h1 className="mt-1 break-words font-headline text-3xl font-extrabold tracking-tight text-white md:text-4xl">{song.title}</h1>
+                        <p className="mt-2 text-[15px] text-gray-300">
+                            {memberCredits.length > 0 || externalCredits.length > 0 ? (
+                                <>
+                                    {memberCredits.map((artist, index) => (
+                                        <React.Fragment key={artist.key}>
+                                            {index > 0 ? ', ' : null}
+                                            <Link
+                                                to={ROUTES.ARTIST(artist.profileId!)}
+                                                className="font-semibold text-white underline-offset-4 transition-colors hover:text-brand-200 hover:underline"
+                                            >
+                                                {artist.name}
+                                            </Link>
+                                        </React.Fragment>
+                                    ))}
+                                    {externalCredits.map((credit, index) => (
+                                        <React.Fragment key={credit.id}>
+                                            {memberCredits.length > 0 || index > 0 ? ', ' : null}
+                                            {credit.artist_name}
+                                        </React.Fragment>
+                                    ))}
+                                </>
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <Music className="w-16 h-16 text-gray-600" />
-                                </div>
+                                song.artist_name
                             )}
-                        </div>
-
-                        <div className="flex-1 min-w-0 space-y-4">
-                            <div>
-                                <h1 className="text-2xl md:text-3xl font-extrabold text-white truncate">{song.title}</h1>
-                                <p className="text-base text-gray-300 mt-1 truncate">{song.artist_name}</p>
-                                {song.album_name ? <p className="text-sm text-gray-400">{song.album_name}</p> : null}
-                                {artistCredits.length > 0 ? (
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        {artistCredits.map((credit) => {
-                                            const label = credit.profile?.display_name ?? credit.artist_name ?? 'Artista'
-                                            return credit.profile?.id ? (
-                                                <button
-                                                    key={credit.id}
-                                                    type="button"
-                                                    onClick={() => navigate(`/profile/${credit.profile!.id}`)}
-                                                    className="hero-meta-pill hover:border-brand-300/40 hover:text-white"
-                                                >
-                                                    {label}
-                                                </button>
-                                            ) : (
-                                                <span key={credit.id} className="hero-meta-pill">
-                                                    {label}
-                                                </span>
-                                            )
-                                        })}
-                                    </div>
-                                ) : null}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button onClick={handlePlay} className="btn-primary px-4 py-2.5" aria-label="Reproducir">
-                                    <Play className="w-4 h-4" />
-                                    Reproducir
-                                </button>
-                                <ShareButton
-                                    resourceType="song"
-                                    resourceId={song.id}
-                                    label={`${song.title} - ${song.artist_name}`}
-                                    timestampSeconds={currentSong?.id === song.id ? currentTime : null}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                                <div className="rounded-xl bg-surface-600/70 border border-surface-500 p-2.5">
-                                    <p className="text-[11px] text-gray-500">Duracion</p>
-                                    <p className="text-sm text-white mt-0.5">{formatDuration(song.duration_seconds)}</p>
-                                </div>
-                                {song.file_size ? (
-                                    <div className="rounded-xl bg-surface-600/70 border border-surface-500 p-2.5">
-                                        <p className="text-[11px] text-gray-500">Tamano</p>
-                                        <p className="text-sm text-white mt-0.5">{formatBytes(song.file_size)}</p>
-                                    </div>
-                                ) : null}
-                                <div className="rounded-xl bg-surface-600/70 border border-surface-500 p-2.5">
-                                    <p className="text-[11px] text-gray-500">Fecha</p>
-                                    <p className="text-sm text-white mt-0.5">{formatDate(song.created_at)}</p>
-                                </div>
-                                <div className="rounded-xl bg-surface-600/70 border border-surface-500 p-2.5">
-                                    <p className="text-[11px] text-gray-500">Formato</p>
-                                    <p className="text-sm text-white mt-0.5 truncate">{song.mime_type ?? 'audio/*'}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="px-4 md:px-5 pb-4 md:pb-5">
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                            {tabButtons.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`px-3.5 py-2 rounded-xl text-sm border transition-colors whitespace-nowrap ${
-                                        activeTab === tab.id
-                                            ? 'bg-brand-500/20 text-brand-200 border-brand-400/50'
-                                            : 'bg-surface-700/50 text-gray-300 border-surface-500 hover:text-white'
-                                    }`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
+                        </p>
+                        {song.album_name ? (
+                            albumRouteId ? (
+                                <Link to={ROUTES.ALBUM(albumRouteId)} className="mt-1 inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-white">
+                                    <Disc3 className="h-4 w-4" />
+                                    {song.album_name}
+                                </Link>
+                            ) : (
+                                <p className="mt-1 text-sm text-gray-400">{song.album_name}</p>
+                            )
+                        ) : null}
                     </div>
                 </section>
 
-                {activeTab === 'overview' ? (
-                    <section className="card p-4 space-y-4">
-                        <div className="flex items-center gap-2">
-                            <Disc3 className="w-4 h-4 text-brand-300" />
-                            <h2 className="text-base font-semibold text-white">Detalles de la cancion</h2>
-                        </div>
+                <div className="flex items-center justify-center gap-2 md:justify-start">
+                    <button onClick={handlePlay} className="btn-primary !min-h-[3rem] flex-1 !px-6 sm:flex-none" aria-label={isThisPlaying ? 'Pausar' : 'Reproducir'}>
+                        {isThisPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current" />}
+                        {isThisPlaying ? 'Pausar' : 'Reproducir'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={favorite.toggle}
+                        className={cn('btn-icon !h-12 !w-12', favorite.isFavorite && 'text-pink-400')}
+                        aria-label={favorite.isFavorite ? 'Quitar de favoritas' : 'Añadir a favoritas'}
+                        aria-pressed={favorite.isFavorite}
+                    >
+                        <Heart className={cn('h-5 w-5', favorite.isFavorite && 'fill-current')} />
+                    </button>
+                    {canEdit ? (
+                        <button type="button" onClick={() => setEditing(true)} className="btn-icon !h-12 !w-12" aria-label="Editar canción">
+                            <Edit2 className="h-5 w-5" />
+                        </button>
+                    ) : null}
+                    <button type="button" onClick={() => setShowActions(true)} className="btn-icon !h-12 !w-12" aria-label="Más opciones">
+                        <MoreHorizontal className="h-5 w-5" />
+                    </button>
+                </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="rounded-xl border border-surface-500 bg-surface-700/60 p-3">
-                                <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                                    <User className="w-3.5 h-3.5" /> Subida por
-                                </p>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <Avatar src={song.uploader?.avatar_url} name={song.uploader?.display_name} size="sm" />
-                                    <p className="text-sm text-white">{song.uploader?.display_name ?? 'Usuario'}</p>
-                                </div>
-                            </div>
-                            <div className="rounded-xl border border-surface-500 bg-surface-700/60 p-3">
-                                <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                                    <Clock className="w-3.5 h-3.5" /> Duracion
-                                </p>
-                                <p className="text-sm text-white mt-2">{formatDuration(song.duration_seconds)}</p>
-                            </div>
-                            <div className="rounded-xl border border-surface-500 bg-surface-700/60 p-3 md:col-span-2">
-                                <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                                    <Sparkles className="w-3.5 h-3.5" /> Letras
-                                </p>
-                                <p className="text-sm text-gray-200 mt-2">
-                                    Si quieres, puedes abrir la pestana de letras para editar o sincronizar el texto.
-                                </p>
-                            </div>
-                        </div>
-                    </section>
-                ) : null}
+                <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                    {song.uploader ? (
+                        <Link to={ROUTES.ARTIST(song.uploaded_by)} className="hero-meta-pill transition-colors hover:border-white/20 hover:text-white">
+                            <Avatar src={song.uploader.avatar_url} name={song.uploader.display_name} size="xs" />
+                            Subida por {song.uploader.display_name.split(' ')[0]}
+                        </Link>
+                    ) : null}
+                    <span className="hero-meta-pill">
+                        <Clock className="h-3.5 w-3.5" />
+                        {formatDuration(song.duration_seconds)}
+                    </span>
+                    <span className="hero-meta-pill">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {formatDate(song.created_at)}
+                    </span>
+                </div>
 
-                {activeTab === 'lyrics' && userId ? (
-                    <LyricsPanel
-                        song={song}
-                        userId={userId}
-                        canEdit={song.uploaded_by === userId}
-                    />
-                ) : null}
+                <Tabs
+                    active={activeTab}
+                    stretch
+                    onChange={(value) => setActiveTab(value as 'lyrics' | 'social')}
+                    items={[
+                        { label: 'Letra', value: 'lyrics' },
+                        { label: 'Comentarios', value: 'social' },
+                    ]}
+                />
 
-                {activeTab === 'social' && userId ? (
-                    <SongSocialPanel song={song} userId={userId} groupId={groupId ?? song.group_id} />
-                ) : null}
+                {activeTab === 'lyrics' && userId ? <LyricsPanel song={song} userId={userId} canEdit={canEdit} /> : null}
+                {activeTab === 'social' && userId ? <SongSocialPanel song={song} userId={userId} groupId={groupId ?? song.group_id} /> : null}
             </div>
+
+            <SongActionsSheet
+                song={song}
+                open={showActions}
+                onClose={() => setShowActions(false)}
+                favorite={favorite}
+                isCurrent={isCurrent}
+                isPlaying={isPlaying}
+                onPrimary={handlePlay}
+                onEdit={() => setEditing(true)}
+                context="detail"
+            />
+            {editing ? <EditSongForm song={song} onClose={() => setEditing(false)} /> : null}
         </div>
     )
 }

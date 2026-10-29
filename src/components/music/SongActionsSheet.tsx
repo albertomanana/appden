@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Disc3, Edit2, FileText, Heart, ListEnd, ListMusic, ListPlus, Mic2, Pause, Play, Share2, Trash2 } from 'lucide-react'
 import { useAdvancedPlayerStore } from '@features/player/player.store'
@@ -15,6 +15,8 @@ import { useActiveGroup } from '@hooks/useActiveGroup'
 import { ROUTES } from '@lib/constants'
 import { songsService } from '@services/songs.service'
 import { getSongAlbumRouteId, getSongMemberCredits } from '@features/music/utils/library'
+import { canDeleteSong, canEditSong } from '@features/music/utils/permissions'
+import { formatDuration, formatRelative } from '@lib/utils'
 import type { Song } from '@/types'
 
 export interface SongActionsSheetProps {
@@ -58,7 +60,8 @@ export const SongActionsSheet: React.FC<SongActionsSheetProps> = ({
     const [showArtists, setShowArtists] = useState(false)
     const [showDelete, setShowDelete] = useState(false)
 
-    const isOwner = !!userId && userId === song.uploaded_by
+    const canEdit = canEditSong(song, userId)
+    const canDelete = canDeleteSong(song, userId)
     const memberCredits = getSongMemberCredits(song)
     const albumRouteId = getSongAlbumRouteId(song)
     const isThisPlaying = isCurrent && isPlaying
@@ -145,8 +148,8 @@ export const SongActionsSheet: React.FC<SongActionsSheetProps> = ({
         },
         { label: 'Compartir', icon: Share2, onSelect: () => void share() },
         ...extraActions,
-        { label: 'Editar', icon: Edit2, onSelect: () => onEdit?.(), hidden: !isOwner || !onEdit },
-        { label: 'Eliminar', icon: Trash2, onSelect: () => setShowDelete(true), tone: 'danger', hidden: !isOwner },
+        { label: 'Editar', icon: Edit2, onSelect: () => onEdit?.(), hidden: !canEdit || !onEdit },
+        { label: 'Eliminar', icon: Trash2, onSelect: () => setShowDelete(true), tone: 'danger', hidden: !canDelete },
     ]
 
     return (
@@ -155,13 +158,40 @@ export const SongActionsSheet: React.FC<SongActionsSheetProps> = ({
                 open={open}
                 onClose={onClose}
                 header={
-                    <div className="flex items-center gap-3">
-                        <Cover src={song.cover_url} alt="" seed={song.id} className="h-14 w-14 rounded-xl" />
-                        <div className="min-w-0">
-                            <p className="truncate font-semibold text-white">{song.title}</p>
-                            <p className="truncate text-sm text-gray-400">
-                                {song.artist_name}
-                                {song.album_name ? <span className="text-gray-500"> · {song.album_name}</span> : null}
+                    <div className="flex items-start gap-4">
+                        <Cover src={song.cover_url} alt="" seed={song.id} className="h-20 w-20 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.4)]" iconClassName="h-7 w-7" />
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-lg font-bold text-white">{song.title}</p>
+                            <p className="mt-0.5 text-sm text-gray-300">
+                                {memberCredits.length > 0
+                                    ? memberCredits.map((artist, index) => (
+                                          <React.Fragment key={artist.key}>
+                                              {index > 0 ? ', ' : null}
+                                              <Link to={ROUTES.ARTIST(artist.profileId!)} onClick={onClose} className="font-semibold text-white underline-offset-2 hover:underline">
+                                                  {artist.name}
+                                              </Link>
+                                          </React.Fragment>
+                                      ))
+                                    : song.artist_name}
+                            </p>
+                            {song.album_name ? (
+                                albumRouteId ? (
+                                    <Link to={ROUTES.ALBUM(albumRouteId)} onClick={onClose} className="mt-0.5 flex items-center gap-1 text-sm text-gray-400 hover:text-white">
+                                        <Disc3 className="h-3.5 w-3.5" />
+                                        {song.album_name}
+                                    </Link>
+                                ) : (
+                                    <p className="mt-0.5 text-sm text-gray-400">{song.album_name}</p>
+                                )
+                            ) : null}
+                            <p className="mt-1.5 text-xs text-gray-500">
+                                {[
+                                    song.duration_seconds ? formatDuration(song.duration_seconds) : null,
+                                    song.uploader?.display_name ? `Subida por ${song.uploader.display_name.split(' ')[0]}` : null,
+                                    formatRelative(song.created_at),
+                                ]
+                                    .filter(Boolean)
+                                    .join(' · ')}
                             </p>
                         </div>
                     </div>
