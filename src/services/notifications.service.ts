@@ -14,6 +14,18 @@ export const notificationsService = {
         return (data ?? []) as AppNotification[]
     },
 
+    /** Unread count only (HEAD request: no rows are transferred). */
+    async countUnread(userId: string): Promise<number> {
+        const { count, error } = await supabase
+            .from('notifications')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('read', false)
+
+        if (error) throw error
+        return count ?? 0
+    },
+
     async markAsRead(id: string): Promise<void> {
         const { error } = await supabase
             .from('notifications')

@@ -12,6 +12,7 @@ type UseNotificationsOptions = {
 }
 
 const notificationsKey = (userId: string | null) => ['notifications', userId] as const
+const unreadKey = (userId: string | null) => ['notifications-unread', userId] as const
 
 /**
  * Persisted notifications (Supabase `notifications` table) plus a toast shim.
@@ -30,11 +31,15 @@ export function useNotifications(_options: UseNotificationsOptions = {}) {
         queryFn: () => notificationsService.listForUser(userId!),
         enabled: !!userId,
         staleTime: 30_000,
-        refetchInterval: 60_000,
         refetchOnWindowFocus: true,
     })
 
     const notifications = query.data ?? []
+
+    // Keep the header badge in sync with what this page shows.
+    useEffect(() => {
+        if (query.data) queryClient.setQueryData(unreadKey(userId), query.data.filter((item) => !item.read).length)
+    }, [query.data, queryClient, userId])
 
     useEffect(() => {
         if (query.data) setNotifications(query.data)
@@ -95,16 +100,19 @@ export function useNotifications(_options: UseNotificationsOptions = {}) {
     }
 }
 
-/** Lightweight unread counter for the header bell (shares the same query cache). */
+/**
+ * Unread counter for the header bell. Polls a HEAD count (no rows transferred) every
+ * 3 minutes while the app is visible, so it barely touches the Supabase egress quota.
+ */
 export function useUnreadNotificationsCount(): number {
     const { userId } = useAuth()
     const { data } = useQuery({
-        queryKey: notificationsKey(userId),
-        queryFn: () => notificationsService.listForUser(userId!),
+        queryKey: unreadKey(userId),
+        queryFn: () => notificationsService.countUnread(userId!),
         enabled: !!userId,
-        staleTime: 30_000,
-        refetchInterval: 60_000,
+        staleTime: 60_000,
+        refetchInterval: 180_000,
         refetchOnWindowFocus: true,
     })
-    return (data ?? []).filter((item) => !item.read).length
+    return data ?? 0
 }

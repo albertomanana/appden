@@ -3,6 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@hooks/useAuth'
 import { useToast } from '@components/ui/Toast'
 import { favoritesService } from '@services/favorites.service'
+import { useAdvancedPlayerStore } from '@features/player/player.store'
+import type { Song } from '@/types'
 
 /**
  * Optimistic favourite toggle shared by song rows, the song page and the full player.
@@ -30,10 +32,21 @@ export function useFavoriteToggle(songId: string | null | undefined, initial: bo
             setIsFavorite(!next)
             toastError('No se pudo actualizar favoritos', 'Inténtalo de nuevo en unos segundos.')
         },
+        onSuccess: (_data, next) => {
+            // Patch cached lists in place instead of re-downloading the whole library.
+            const patch = (song: Song) => (song.id === songId ? { ...song, is_favorite: next } : song)
+            queryClient.setQueriesData<Song[]>({ queryKey: ['songs'] }, (songs) => (Array.isArray(songs) ? songs.map(patch) : songs))
+            queryClient.setQueriesData<Song>({ queryKey: ['song', songId] }, (song) => (song && !Array.isArray(song) ? patch(song) : song))
+            const player = useAdvancedPlayerStore.getState()
+            if (player.currentSong?.id === songId || player.queue.some((song) => song.id === songId)) {
+                useAdvancedPlayerStore.setState({
+                    currentSong: player.currentSong ? patch(player.currentSong) : null,
+                    queue: player.queue.map(patch),
+                })
+            }
+        },
         onSettled: () => {
-            void queryClient.invalidateQueries({ queryKey: ['songs'] })
             void queryClient.invalidateQueries({ queryKey: ['favorites'] })
-            if (songId) void queryClient.invalidateQueries({ queryKey: ['song', songId] })
         },
     })
 
