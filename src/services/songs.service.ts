@@ -1,4 +1,4 @@
-import { supabase, STORAGE_BUCKETS, getStorageUrl } from '@lib/supabase/client'
+import { supabase, STORAGE_BUCKETS, getStorageUrl, storage } from '@lib/supabase/client'
 import { generateStoragePath, extractAudioDuration } from '@lib/utils'
 import type { Profile, Song, SongArtistCredit } from '@/types'
 import type { SongFormData } from '@lib/validators'
@@ -133,7 +133,7 @@ async function cleanupUploadedAssets(paths: Array<{ bucket: string; path: string
             .filter((entry): entry is { bucket: string; path: string } => !!entry.path)
             .map(async ({ bucket, path }) => {
                 try {
-                    await supabase.storage.from(bucket).remove([path])
+                    await storage.from(bucket).remove([path])
                 } catch {
                     // Best-effort cleanup only.
                 }
@@ -486,7 +486,7 @@ export const songsService = {
         }
 
         const audioPath = buildSongStoragePath('audio', groupId, userId, audioFile.name)
-        const { error: audioError } = await supabase.storage
+        const { error: audioError } = await storage
             .from(STORAGE_BUCKETS.SONGS)
             .upload(audioPath, audioFile, {
                 cacheControl: '3600',
@@ -499,7 +499,7 @@ export const songsService = {
         let coverPath: string | null = null
         if (coverFile) {
             coverPath = buildSongStoragePath('cover', groupId, userId, coverFile.name)
-            const { error: coverError } = await supabase.storage
+            const { error: coverError } = await storage
                 .from(STORAGE_BUCKETS.COVERS)
                 .upload(coverPath, coverFile, {
                     cacheControl: '3600',

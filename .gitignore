@@ -28,3 +28,8 @@ temp/
 tmpclaude-*
 *.bak
 .vercel
+
+# Cloudflare Worker
+r2-worker/node_modules/
+r2-worker/.wrangler/
+r2-worker/.dev.vars

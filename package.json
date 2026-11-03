@@ -11,7 +11,10 @@
     "changelog:generate": "node scripts/generate-changelog-from-git.mjs",
     "seed:qa": "node scripts/qa-seed/seed.mjs",
     "seed:qa:fresh": "node scripts/qa-seed/seed.mjs --clean",
-    "seed:qa:reset": "node scripts/qa-seed/reset.mjs"
+    "seed:qa:reset": "node scripts/qa-seed/reset.mjs",
+    "storage:migrate": "node scripts/migrate-storage-to-r2.mjs",
+    "storage:migrate:dry": "node scripts/migrate-storage-to-r2.mjs --dry-run",
+    "storage:deploy": "cd r2-worker && npx wrangler deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

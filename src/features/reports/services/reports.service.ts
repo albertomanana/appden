@@ -1,4 +1,4 @@
-import { supabase, STORAGE_BUCKETS } from '@lib/supabase/client'
+import { supabase, STORAGE_BUCKETS, storage } from '@lib/supabase/client'
 import { reportLocalFallback } from '@lib/diagnostics/fallback'
 import { generateStoragePath } from '@lib/utils'
 import type {
@@ -381,7 +381,7 @@ async function uploadReportImage(path: string, imageFile: File): Promise<string 
     const fallbackBucket = STORAGE_BUCKETS.FILES
 
     const tryUpload = async (bucket: string): Promise<string | null> => {
-        const { error } = await supabase.storage
+        const { error } = await storage
             .from(bucket)
             .upload(path, imageFile, { cacheControl: '3600', upsert: false })
 

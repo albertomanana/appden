@@ -1,4 +1,4 @@
-import { getStorageUrl, STORAGE_BUCKETS, supabase } from '@lib/supabase/client'
+import { getStorageUrl, STORAGE_BUCKETS, supabase, storage } from '@lib/supabase/client'
 import { generateStoragePath } from '@lib/utils'
 import { amountToCents, centsToAmount } from '@features/debts/split'
 import type { Debt, DebtCurrency, DebtPayment } from '@/types'
@@ -284,7 +284,7 @@ export const debtsService = {
         let receiptFailed = false
         if (input.receiptFile) {
             const path = generateStoragePath('debt-receipts', recordedBy, input.receiptFile.name)
-            const { error: uploadError } = await supabase.storage
+            const { error: uploadError } = await storage
                 .from(STORAGE_BUCKETS.FILES)
                 .upload(path, input.receiptFile, { upsert: false, cacheControl: '3600' })
             if (uploadError) {

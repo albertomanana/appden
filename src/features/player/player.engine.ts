@@ -151,8 +151,10 @@ export class AdvancedPlayerEngine {
         set('seekto', (details) => {
             if (typeof details.seekTime === 'number') this.seek(details.seekTime)
         })
-        set('seekbackward', (details) => this.seek(this.audio.currentTime - (details.seekOffset ?? 10)))
-        set('seekforward', (details) => this.seek(this.audio.currentTime + (details.seekOffset ?? 10)))
+        // iOS shows "±10 s" instead of previous/next track whenever seek handlers exist:
+        // clear them so the Control Center and lock screen show track skipping.
+        set('seekbackward', null)
+        set('seekforward', null)
     }
 
     destroy(): void {

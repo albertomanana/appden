@@ -1,0 +1,22 @@
+# Cloudflare Worker that serves The Appden media from R2 (see docs/R2_SETUP.md).
+name = "appden-storage"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "appden-media"
+
+[vars]
+# Your Supabase project URL, e.g. https://abcd.supabase.co
+SUPABASE_URL = ""
+# Public anon key (same value as VITE_SUPABASE_ANON_KEY)
+SUPABASE_ANON_KEY = ""
+# Comma separated origins allowed to call the worker, e.g. "https://appden.vercel.app,http://127.0.0.1:4173"
+ALLOWED_ORIGINS = "*"
+MAX_UPLOAD_MB = "60"
+
+# Secrets (never commit them) — set with:
+#   npx wrangler secret put SIGNING_SECRET
+#   npx wrangler secret put ADMIN_SECRET
+#   npx wrangler secret put SUPABASE_JWT_SECRET   (optional, legacy HS256 projects)

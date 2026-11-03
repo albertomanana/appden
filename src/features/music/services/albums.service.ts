@@ -1,4 +1,4 @@
-import { supabase, STORAGE_BUCKETS, getStorageUrl } from '@lib/supabase/client'
+import { supabase, STORAGE_BUCKETS, getStorageUrl, storage } from '@lib/supabase/client'
 import { generateStoragePath } from '@lib/utils'
 import type { AlbumRow } from '@features/music/types'
 
@@ -75,7 +75,7 @@ export const albumsService = {
         let coverPath: string | null | undefined
         if (input.coverFile) {
             coverPath = generateStoragePath(`${album.group_id}/cover`, userId, input.coverFile.name)
-            const { error: uploadError } = await supabase.storage
+            const { error: uploadError } = await storage
                 .from(STORAGE_BUCKETS.COVERS)
                 .upload(coverPath, input.coverFile, {
                     cacheControl: '3600',
@@ -97,19 +97,19 @@ export const albumsService = {
             .select('id')
 
         if (error) {
-            if (coverPath) await supabase.storage.from(STORAGE_BUCKETS.COVERS).remove([coverPath]).catch(() => undefined)
+            if (coverPath) await storage.from(STORAGE_BUCKETS.COVERS).remove([coverPath]).catch(() => undefined)
             if (error.code === '23505') throw new Error('Ya hay otro álbum con ese nombre en el grupo.')
             throw error
         }
 
         if (!data || data.length === 0) {
-            if (coverPath) await supabase.storage.from(STORAGE_BUCKETS.COVERS).remove([coverPath]).catch(() => undefined)
+            if (coverPath) await storage.from(STORAGE_BUCKETS.COVERS).remove([coverPath]).catch(() => undefined)
             throw new Error('Solo quien creó el álbum o un admin del grupo puede editarlo.')
         }
 
         if (coverPath !== undefined && album.cover_path && album.cover_path !== coverPath) {
             // Best effort: the old file may belong to someone else (storage only lets owners delete).
-            await supabase.storage.from(STORAGE_BUCKETS.COVERS).remove([album.cover_path]).catch(() => undefined)
+            await storage.from(STORAGE_BUCKETS.COVERS).remove([album.cover_path]).catch(() => undefined)
         }
     },
 }

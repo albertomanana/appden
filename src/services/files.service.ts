@@ -1,4 +1,4 @@
-import { supabase, STORAGE_BUCKETS, getStorageUrl } from '@lib/supabase/client'
+import { supabase, STORAGE_BUCKETS, getStorageUrl, storage } from '@lib/supabase/client'
 import { generateStoragePath } from '@lib/utils'
 import { ALLOWED_IMAGE_TYPES } from '@lib/constants'
 import type { SharedFile } from '@/types'
@@ -57,7 +57,7 @@ export const filesService = {
         const category = isImage ? 'image' : 'document'
         const path = buildFileStoragePath(groupId, userId, file.name)
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await storage
             .from(STORAGE_BUCKETS.FILES)
             .upload(path, file, {
                 cacheControl: '3600',
@@ -82,7 +82,7 @@ export const filesService = {
             .single()
 
         if (error) {
-            await supabase.storage.from(STORAGE_BUCKETS.FILES).remove([path]).catch(() => {
+            await storage.from(STORAGE_BUCKETS.FILES).remove([path]).catch(() => {
                 // Best-effort cleanup only.
             })
             throw error
@@ -108,7 +108,7 @@ export const filesService = {
         if (error) throw error
 
         if (existing?.file_url && !isExternalUrl(existing.file_url)) {
-            await supabase.storage.from(STORAGE_BUCKETS.FILES).remove([existing.file_url]).catch(() => {
+            await storage.from(STORAGE_BUCKETS.FILES).remove([existing.file_url]).catch(() => {
                 // Best-effort cleanup only.
             })
         }

@@ -1,4 +1,4 @@
-import { supabase, STORAGE_BUCKETS } from '@lib/supabase/client'
+import { supabase, STORAGE_BUCKETS, storage } from '@lib/supabase/client'
 import { generateStoragePath } from '@lib/utils'
 import type { Profile } from '@/types'
 import type { ProfileFormData } from '@lib/validators'
@@ -45,7 +45,7 @@ export const profileService = {
     async uploadAvatar(userId: string, file: File): Promise<string> {
         const path = generateStoragePath('avatars', userId, file.name)
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await storage
             .from(STORAGE_BUCKETS.AVATARS)
             .upload(path, file, {
                 cacheControl: '3600',

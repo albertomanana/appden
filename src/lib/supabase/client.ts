@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { configureR2Auth, isR2Storage, keyFromR2Url, r2Bucket, signR2Key, type StorageBucketApi } from '@lib/storage/r2'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -32,6 +33,18 @@ export const supabase = createClient(
         },
     }
 )
+
+configureR2Auth(async () => (await supabase.auth.getSession()).data.session?.access_token ?? null)
+
+/**
+ * File storage. With `VITE_STORAGE_URL` set, files live in Cloudflare R2 (no egress fees)
+ * behind the appden-storage Worker; otherwise the legacy Supabase Storage buckets are used.
+ */
+export const storage = {
+    from(bucket: string): StorageBucketApi {
+        return isR2Storage ? r2Bucket(bucket) : (supabase.storage.from(bucket) as unknown as StorageBucketApi)
+    },
+}
 
 // Storage bucket names - keep in sync with Supabase dashboard
 export const STORAGE_BUCKETS = {
@@ -74,6 +87,9 @@ export async function getStorageUrl(
     if (!raw) return null
 
     const normalizePathForBucket = (value: string): string | null => {
+        // URL signed earlier by the R2 Worker (e.g. a persisted player queue): re-sign its key.
+        const r2Key = keyFromR2Url(value, bucket)
+        if (r2Key) return r2Key
         if (/^https?:\/\//i.test(value)) {
             try {
                 const url = new URL(value)
@@ -124,6 +140,9 @@ export async function getStorageUrl(
 }
 
 async function signStoragePath(bucket: string, normalized: string): Promise<string | null> {
+    // The Worker resolves legacy "<bucket>/<bucket>/…" paths itself, so one key is enough.
+    if (isR2Storage) return signR2Key(`${bucket}/${normalized}`)
+
     const candidates = Array.from(
         new Set(
             normalized.startsWith(`${bucket}/`)
